@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -28,7 +29,27 @@ var tmpl = template.Must(template.New("blocked").Parse(`
 </html>
 `))
 
-const upstreamDNS = "8.8.8.8:53" // Upstream DNS server (Google's public DNS)
+const (
+	upstreamDNS = "8.8.8.8:53"     // Upstream DNS server (Google's public DNS)
+	hardcodedIP = "128.140.105.18" // Hardcoded IP address for blocked domains
+)
+
+// List of blocked domains
+var blockedDomains = []string{
+	"reddit.com",
+	"google.com",
+	"startmunich.de",
+}
+
+// Function to check if a domain is in the blocked list
+func isBlockedDomain(domain string) bool {
+	for _, blocked := range blockedDomains {
+		if strings.HasSuffix(domain, blocked) {
+			return true
+		}
+	}
+	return false
+}
 
 // Function to handle DNS queries
 func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +58,7 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		fmt.Print("Incoming DNS request via GET")
+		fmt.Println("Incoming DNS request via GET")
 
 		// Handle GET request
 		queryParams := r.URL.Query()
@@ -49,7 +70,7 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		fmt.Print("Incoming DNS request via POST")
+		fmt.Println("Incoming DNS request via POST")
 		// Handle POST request
 		dnsMsg, err = io.ReadAll(r.Body)
 		if err != nil {
@@ -70,7 +91,43 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Forward the DNS query to the upstream DNS server
+	// Check if the domain is blocked
+	for _, question := range msg.Question {
+		domain := question.Name
+		fmt.Println("Requested domain:", domain)
+
+		if isBlockedDomain(domain) {
+			fmt.Printf("Domain %s is blocked. Responding with hardcoded IP: %s\n", domain, hardcodedIP)
+
+			// Create a DNS response with the hardcoded IP
+			response := new(dns.Msg)
+			response.SetReply(msg)
+
+			// Create an A record with the hardcoded IP address
+			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", domain, hardcodedIP))
+			if err != nil {
+				http.Error(w, "Failed to create A record", http.StatusInternalServerError)
+				return
+			}
+
+			// Add the A record to the response
+			response.Answer = append(response.Answer, rr)
+
+			// Pack the DNS response
+			responseBytes, err := response.Pack()
+			if err != nil {
+				http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
+				return
+			}
+
+			// Respond with the DNS response
+			w.Header().Set("Content-Type", "application/dns-message")
+			w.Write(responseBytes)
+			return
+		}
+	}
+
+	// If the domain is not blocked, forward the DNS query to the upstream DNS server
 	client := new(dns.Client)
 	response, _, err := client.Exchange(msg, upstreamDNS)
 	if err != nil {
@@ -85,16 +142,9 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encode response for GET request
-	if r.Method == "GET" {
-		w.Header().Set("Content-Type", "application/dns-message")
-		encodedResponse := base64.RawURLEncoding.EncodeToString(responseBytes)
-		fmt.Fprint(w, encodedResponse)
-	} else {
-		// Respond with raw DNS message for POST request
-		w.Header().Set("Content-Type", "application/dns-message")
-		w.Write(responseBytes)
-	}
+	// Respond with raw DNS message for both GET and POST requests
+	w.Header().Set("Content-Type", "application/dns-message")
+	w.Write(responseBytes)
 }
 
 // Handler that serves the blocked message
@@ -113,19 +163,15 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	// Route specifically for /dns-query, handling both GET and POST requests
+	r.Route("/dns-query", func(r chi.Router) {
+		r.Get("/", dnsQueryHandler)
+		r.Post("/", dnsQueryHandler)
+	})
+
 	// Catch-all route to match any path and show the blocked message
 	r.NotFound(blockedPageHandler)
 	r.MethodNotAllowed(blockedPageHandler)
-
-	// Handle all routes by redirecting them to the blocked handler
-	r.Route("/", func(r chi.Router) {
-		// Route specifically for /dns-query, handling both GET and POST requests
-		r.Get("/dns-query", dnsQueryHandler)
-		r.Post("/dns-query", dnsQueryHandler)
-
-		// Catch-all route for any other GET request
-		r.Get("/*", blockedPageHandler)
-	})
 
 	// Start the server on port :8080
 	log.Println("Starting Leo on :8080")
