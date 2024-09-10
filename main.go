@@ -30,8 +30,8 @@ var tmpl = template.Must(template.New("blocked").Parse(`
 `))
 
 const (
-	upstreamDNS = "8.8.8.8:53"     // Upstream DNS server (Google's public DNS)
-	hardcodedIP = "128.140.105.18" // Hardcoded IP address for blocked domains
+	upstreamDNS = "8.8.8.8:53"   // Upstream DNS server (Google's public DNS)
+	hardcodedIP = "172.217.1.14" // Hardcoded IP address for blocked domains
 )
 
 // List of blocked domains
