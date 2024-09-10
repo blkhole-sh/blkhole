@@ -14,7 +14,9 @@ import (
 	"github.com/miekg/dns"
 )
 
-// Template for the blocked message
+const upstreamDNS = "8.8.8.8:53" // Upstream DNS server (Google's public DNS)
+
+// Template for the blocked message served at root "/"
 var tmpl = template.Must(template.New("blocked").Parse(`
 <!DOCTYPE html>
 <html lang="en">
@@ -25,27 +27,23 @@ var tmpl = template.Must(template.New("blocked").Parse(`
 </head>
 <body>
     <h1>This page has been blocked by Leo</h1>
+    <p>You tried to access <strong>some domain</strong>, but it is blocked on this network.</p>
 </body>
 </html>
 `))
 
-const (
-	upstreamDNS = "8.8.8.8:53"   // Upstream DNS server (Google's public DNS)
-	hardcodedIP = "172.217.1.14" // Hardcoded IP address for blocked domains
-)
-
 // List of blocked domains
 var blockedDomains = []string{
-	"reddit.com.",
-	"google.com.",
-	"startmunich.de.",
+	"example.com",
+	"blockedwebsite.com",
+	"malicioussite.org",
 }
 
 // Function to check if a domain is in the blocked list
 func isBlockedDomain(domain string) bool {
-	fmt.Printf("Checking if %s is blocked\n", domain)
+	// Remove trailing dot if it exists
+	domain = strings.TrimSuffix(domain, ".")
 	for _, blocked := range blockedDomains {
-		fmt.Printf("%s has suffix %s? -> %t\n", domain, blocked, strings.HasSuffix(domain, blocked))
 		if strings.HasSuffix(domain, blocked) {
 			return true
 		}
@@ -96,23 +94,26 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the domain is blocked
 	for _, question := range msg.Question {
 		domain := question.Name
+		// Remove trailing dot from the domain if present
+		domain = strings.TrimSuffix(domain, ".")
 		fmt.Println("Requested domain:", domain)
 
 		if isBlockedDomain(domain) {
-			fmt.Printf("Domain %s is blocked. Responding with hardcoded IP: %s\n", domain, hardcodedIP)
+			fmt.Printf("Domain %s is blocked. Redirecting to the root page at leo.lemon3.studio.\n", domain)
 
-			// Create a DNS response with the hardcoded IP
+			// Respond with a DNS CNAME record to redirect to leo.lemon3.studio
+			blockedURL := "leo.lemon3.studio." // Redirect to the root page of your server
 			response := new(dns.Msg)
 			response.SetReply(msg)
 
-			// Create an A record with the hardcoded IP address
-			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", domain, hardcodedIP))
+			// Create a CNAME record pointing to leo.lemon3.studio
+			rr, err := dns.NewRR(fmt.Sprintf("%s CNAME %s", domain, blockedURL))
 			if err != nil {
-				http.Error(w, "Failed to create A record", http.StatusInternalServerError)
+				http.Error(w, "Failed to create CNAME record", http.StatusInternalServerError)
 				return
 			}
 
-			// Add the A record to the response
+			// Add the CNAME record to the response
 			response.Answer = append(response.Answer, rr)
 
 			// Pack the DNS response
@@ -122,7 +123,7 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Respond with the DNS response
+			// Respond with the DNS CNAME response
 			w.Header().Set("Content-Type", "application/dns-message")
 			w.Write(responseBytes)
 			return
@@ -149,9 +150,11 @@ func dnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBytes)
 }
 
-// Handler that serves the blocked message
+// Handler that serves the blocked message on root "/"
 func blockedPageHandler(w http.ResponseWriter, r *http.Request) {
-	err := tmpl.Execute(w, nil)
+	domain := r.URL.Query().Get("domain") // Get the blocked domain from query parameters
+
+	err := tmpl.Execute(w, struct{ Domain string }{Domain: domain})
 	if err != nil {
 		http.Error(w, "Unable to render template", http.StatusInternalServerError)
 	}
@@ -171,9 +174,8 @@ func main() {
 		r.Post("/", dnsQueryHandler)
 	})
 
-	// Catch-all route to match any path and show the blocked message
-	r.NotFound(blockedPageHandler)
-	r.MethodNotAllowed(blockedPageHandler)
+	// Serve the blocked page on the root "/"
+	r.Get("/", blockedPageHandler)
 
 	// Start the server on port :8080
 	log.Println("Starting Leo on :8080")
