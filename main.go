@@ -36,16 +36,16 @@ const (
 
 // List of blocked domains
 var blockedDomains = []string{
-	"reddit.com",
-	"google.com",
-	"startmunich.de",
+	"reddit.com.",
+	"google.com.",
+	"startmunich.de.",
 }
 
 // Function to check if a domain is in the blocked list
 func isBlockedDomain(domain string) bool {
-	fmt.Printf("Checking if %s is blocked/n", domain)
+	fmt.Printf("Checking if %s is blocked\n", domain)
 	for _, blocked := range blockedDomains {
-		fmt.Printf("%s has suffix %s? -> %t", domain, blocked, strings.HasSuffix(domain, blocked))
+		fmt.Printf("%s has suffix %s? -> %t\n", domain, blocked, strings.HasSuffix(domain, blocked))
 		if strings.HasSuffix(domain, blocked) {
 			return true
 		}
