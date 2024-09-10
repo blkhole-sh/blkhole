@@ -34,9 +34,9 @@ var tmpl = template.Must(template.New("blocked").Parse(`
 
 // List of blocked domains
 var blockedDomains = []string{
-	"example.com",
-	"blockedwebsite.com",
-	"malicioussite.org",
+	"reddit.com",
+	"google.com",
+	"startmunich.de",
 }
 
 // Function to check if a domain is in the blocked list
