@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/miekg/dns v1.1.62
+	github.com/joho/godotenv v1.5.1 // i
 )
 
 require (
