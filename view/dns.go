@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -11,17 +12,16 @@ import (
 	"github.com/miekg/dns"
 )
 
-// List of blocked domains
 var blockedDomains = []string{
 	"reddit.com",
 	"google.com",
 	"startmunich.de",
 }
 
-// Function to check if a domain is in the blocked list
+// Check if the domain is in the blocked list
 func isBlockedDomain(domain string) bool {
-	// Remove trailing dot if it exists
-	domain = strings.TrimSuffix(domain, ".")
+	// Normalize the domain to lowercase and remove trailing dot if present
+	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
 	for _, blocked := range blockedDomains {
 		if strings.HasSuffix(domain, blocked) {
 			return true
@@ -34,11 +34,17 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
 
+	// Fetch the upstream DNS server address from the environment
+	upstreamDnsServer := os.Getenv("UPSTREAM_DNS_SERVER")
+	if upstreamDnsServer == "" {
+		http.Error(w, "UPSTREAM_DNS_SERVER environment variable not set", http.StatusInternalServerError)
+		return
+	}
+
+	// Handle DNS queries sent via GET or POST
 	switch r.Method {
 	case "GET":
-		fmt.Println("Incoming DNS request via GET")
-
-		// Handle GET request
+		// GET request: decode the Base64 DNS message
 		queryParams := r.URL.Query()
 		dnsMsgB64 := queryParams.Get("dns")
 		dnsMsg, err = base64.RawURLEncoding.DecodeString(dnsMsgB64)
@@ -48,8 +54,7 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		fmt.Println("Incoming DNS request via POST")
-		// Handle POST request
+		// POST request: read the DNS message directly from the body
 		dnsMsg, err = io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read DNS query from body", http.StatusBadRequest)
@@ -61,7 +66,7 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a DNS message from the received query
+	// Unpack the DNS message to analyze it
 	msg := new(dns.Msg)
 	err = msg.Unpack(dnsMsg)
 	if err != nil {
@@ -69,62 +74,63 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the domain is blocked
+	// Check if the domain is in the blocked list
 	for _, question := range msg.Question {
-		domain := question.Name
-		// Remove trailing dot from the domain if present
-		domain = strings.TrimSuffix(domain, ".")
+		domain := strings.TrimSuffix(question.Name, ".")
 		fmt.Println("Requested domain:", domain)
 
+		// If the domain is blocked, return NXDomain (Non-Existent Domain)
 		if isBlockedDomain(domain) {
-			redirectUrl := os.Getenv("REDIRECT_URL")
-			fmt.Printf("Domain %s is blocked. Redirecting to %s\n", domain, redirectUrl)
+			fmt.Printf("Domain %s is blocked. Returning NXDOMAIN\n", domain)
 
-			// Respond with a DNS CNAME record to redirect to leo.lemon3.studio
-			blockedURL := redirectUrl + "." // Redirect to the root page of your server
+			// Create a DNS response with RcodeNameError (NXDOMAIN)
 			response := new(dns.Msg)
-			response.SetReply(msg)
+			response.SetRcode(msg, dns.RcodeNameError) // NXDOMAIN response
 
-			// Create a CNAME record pointing to leo.lemon3.studio
-			rr, err := dns.NewRR(fmt.Sprintf("%s CNAME %s", domain, blockedURL))
-			if err != nil {
-				http.Error(w, "Failed to create CNAME record", http.StatusInternalServerError)
-				return
-			}
-
-			// Add the CNAME record to the response
-			response.Answer = append(response.Answer, rr)
-
-			// Pack the DNS response
+			// Pack and send the DNS response
 			responseBytes, err := response.Pack()
 			if err != nil {
-				http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
+				http.Error(w, "Failed to pack NXDOMAIN response", http.StatusInternalServerError)
 				return
 			}
 
-			// Respond with the DNS CNAME response
+			// Respond with the NXDOMAIN DNS message
 			w.Header().Set("Content-Type", "application/dns-message")
 			w.Write(responseBytes)
 			return
 		}
 	}
 
-	// If the domain is not blocked, forward the DNS query to the upstream DNS server
+	// If the domain is not blocked, forward the DNS query to the upstream server
 	client := new(dns.Client)
-	response, _, err := client.Exchange(msg, os.Getenv("UPSTREAM_DNS_SERVER"))
+	response, _, err := client.Exchange(msg, upstreamDnsServer)
 	if err != nil {
-		http.Error(w, "Failed to forward DNS query", http.StatusInternalServerError)
+		log.Printf("Failed to forward DNS query to upstream server: %v", err)
+
+		// Create a DNS response with RcodeServerFailure (SERVFAIL)
+		fallbackResponse := new(dns.Msg)
+		fallbackResponse.SetRcode(msg, dns.RcodeServerFailure)
+
+		// Pack and send the SERVFAIL response
+		responseBytes, err := fallbackResponse.Pack()
+		if err != nil {
+			http.Error(w, "Failed to pack SERVFAIL response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/dns-message")
+		w.Write(responseBytes)
 		return
 	}
 
-	// Pack the DNS response
+	// If the query was successful, return the response from the upstream server
 	responseBytes, err := response.Pack()
 	if err != nil {
 		http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
 		return
 	}
 
-	// Respond with raw DNS message for both GET and POST requests
+	// Respond with the DNS response from the upstream server
 	w.Header().Set("Content-Type", "application/dns-message")
 	w.Write(responseBytes)
 }
