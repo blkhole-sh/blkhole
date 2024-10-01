@@ -18,6 +18,9 @@ var blockedDomains = []string{
 	"youtube.com",
 }
 
+// Fixed IP address to return for blocked domains
+var fixedIP = "128.140.105.18" // Replace this with the desired IP address
+
 // Check if the domain is in the blocked list
 func isBlockedDomain(domain string) bool {
 	// Normalize the domain to lowercase and remove trailing dot if present
@@ -79,22 +82,32 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 		domain := strings.TrimSuffix(question.Name, ".")
 		fmt.Println("Requested domain:", domain)
 
-		// If the domain is blocked, return NXDomain (Non-Existent Domain)
+		// If the domain is blocked, return a fixed IP address
 		if isBlockedDomain(domain) {
-			fmt.Printf("Domain %s is blocked. Returning NXDOMAIN\n", domain)
+			fmt.Printf("Domain %s is blocked. Returning fixed IP: %s\n", domain, fixedIP)
 
-			// Create a DNS response with RcodeNameError (NXDOMAIN)
+			// Create a DNS response with the fixed IP address
 			response := new(dns.Msg)
-			response.SetRcode(msg, dns.RcodeNameError) // NXDOMAIN response
+			response.SetReply(msg)
+
+			// Create an A record for the fixed IP address
+			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", question.Name, fixedIP))
+			if err != nil {
+				http.Error(w, "Failed to create A record", http.StatusInternalServerError)
+				return
+			}
+
+			// Add the A record to the answer section of the response
+			response.Answer = append(response.Answer, rr)
 
 			// Pack and send the DNS response
 			responseBytes, err := response.Pack()
 			if err != nil {
-				http.Error(w, "Failed to pack NXDOMAIN response", http.StatusInternalServerError)
+				http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
 				return
 			}
 
-			// Respond with the NXDOMAIN DNS message
+			// Respond with the DNS message containing the fixed IP
 			w.Header().Set("Content-Type", "application/dns-message")
 			w.Write(responseBytes)
 			return
