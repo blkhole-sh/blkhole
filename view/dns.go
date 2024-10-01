@@ -14,8 +14,8 @@ import (
 
 var blockedDomains = []string{
 	"reddit.com",
-	"google.com",
 	"startmunich.de",
+	"youtube.com",
 }
 
 // Check if the domain is in the blocked list
