@@ -63,3 +63,8 @@ type Schedule struct {
 	Sunday                bool
 	Id                    int
 }
+
+type Quote struct {
+	Quote  string
+	Author string
+}

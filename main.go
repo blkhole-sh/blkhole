@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"server/controller"
 	"server/dns"
 	"server/repo"
-	"server/view"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -61,12 +61,12 @@ func main() {
 
 	// Route specifically for /dns-query, handling both GET and POST requests
 	r.Route("/dns-query", func(r chi.Router) {
-		r.Get("/", view.DnsQueryHandler)
-		r.Post("/", view.DnsQueryHandler)
+		r.Get("/", controller.DnsQueryController)
+		r.Post("/", controller.DnsQueryController)
 	})
 
 	// Serve the blocked page on the root "/"
-	r.Get("/", view.BlockedPageHandler)
+	r.Get("/", controller.BlockedPageController)
 
 	// Read port from .env
 	port := os.Getenv("PORT")

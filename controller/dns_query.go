@@ -1,4 +1,4 @@
-package view
+package controller
 
 import (
 	"encoding/base64"
@@ -31,7 +31,7 @@ func isBlockedDomain(domain string) bool {
 	return false
 }
 
-func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
+func DnsQueryController(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
 
