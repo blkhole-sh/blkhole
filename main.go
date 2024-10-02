@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"server/dns"
 	"server/repo"
 	"server/view"
 
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	// Start DNS server
-	// go dns.ListenAndServe()
+	go dns.ListenAndServe()
 
 	// Create a new router using chi
 	r := chi.NewRouter()

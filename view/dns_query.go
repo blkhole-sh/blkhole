@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/miekg/dns"
@@ -35,9 +34,6 @@ func isBlockedDomain(domain string) bool {
 func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
-
-	// Fetch the upstream DNS server address from the environment
-	upstreamDnsServer := os.Getenv("UPSTREAM_DNS_SERVER")
 
 	// Handle DNS queries sent via GET or POST
 	switch r.Method {
@@ -75,11 +71,11 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the domain is in the blocked list
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
-		fmt.Println("Requested domain:", domain)
+		log.Println("DoH: Requested domain:", domain)
 
 		// If the domain is blocked, return a fixed IP address
 		if isBlockedDomain(domain) {
-			fmt.Printf("Domain %s is blocked. Returning fixed IP: %s\n", domain, localhost)
+			log.Printf("DoH: Domain %s is blocked. Returning fixed IP: %s\n", domain, localhost)
 
 			// Create a DNS response with the fixed IP address
 			response := new(dns.Msg)
@@ -111,9 +107,9 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the domain is not blocked, forward the DNS query to the upstream server
 	client := new(dns.Client)
-	response, _, err := client.Exchange(msg, upstreamDnsServer)
+	response, _, err := client.Exchange(msg, "127.0.0.1:53")
 	if err != nil {
-		log.Printf("Failed to forward DNS query to upstream server: %v", err)
+		log.Printf("DoH: Failed to forward DNS query to upstream server: %v", err)
 
 		// Create a DNS response with RcodeServerFailure (SERVFAIL)
 		fallbackResponse := new(dns.Msg)

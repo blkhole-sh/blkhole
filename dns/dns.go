@@ -3,7 +3,6 @@ package dns
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/miekg/dns"
 )
@@ -16,6 +15,7 @@ func resolve(domain string, qtype uint16, upstream string) ([]dns.RR, error) {
 	m.RecursionDesired = true
 
 	c := new(dns.Client)
+	c.Net = "tcp-tls"
 	in, _, err := c.Exchange(m, upstream)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,6 @@ func resolve(domain string, qtype uint16, upstream string) ([]dns.RR, error) {
 
 func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	// Fetch the upstream DNS server address from the environment
-	upstreamDnsServer := os.Getenv("UPSTREAM_DNS_SERVER")
 
 	msg := new(dns.Msg)
 	msg.SetReply(r)
@@ -34,7 +33,7 @@ func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	for _, question := range r.Question {
 		log.Printf(":53 received query: %s\n", question.Name)
-		answers, err := resolve(question.Name, question.Qtype, upstreamDnsServer)
+		answers, err := resolve(question.Name, question.Qtype, "1.1.1.1:853")
 		if err != nil {
 			fmt.Println(err)
 		}
