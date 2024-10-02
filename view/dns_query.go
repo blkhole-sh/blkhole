@@ -12,14 +12,13 @@ import (
 	"github.com/miekg/dns"
 )
 
+const localhost = "127.0.0.1"
+
 var blockedDomains = []string{
 	"reddit.com",
 	"startmunich.de",
 	"youtube.com",
 }
-
-// Fixed IP address to return for blocked domains
-var fixedIP = "128.140.105.18" // Replace this with the desired IP address
 
 // Check if the domain is in the blocked list
 func isBlockedDomain(domain string) bool {
@@ -39,10 +38,6 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch the upstream DNS server address from the environment
 	upstreamDnsServer := os.Getenv("UPSTREAM_DNS_SERVER")
-	if upstreamDnsServer == "" {
-		http.Error(w, "UPSTREAM_DNS_SERVER environment variable not set", http.StatusInternalServerError)
-		return
-	}
 
 	// Handle DNS queries sent via GET or POST
 	switch r.Method {
@@ -84,14 +79,14 @@ func DnsQueryHandler(w http.ResponseWriter, r *http.Request) {
 
 		// If the domain is blocked, return a fixed IP address
 		if isBlockedDomain(domain) {
-			fmt.Printf("Domain %s is blocked. Returning fixed IP: %s\n", domain, fixedIP)
+			fmt.Printf("Domain %s is blocked. Returning fixed IP: %s\n", domain, localhost)
 
 			// Create a DNS response with the fixed IP address
 			response := new(dns.Msg)
 			response.SetReply(msg)
 
 			// Create an A record for the fixed IP address
-			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", question.Name, fixedIP))
+			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", question.Name, localhost))
 			if err != nil {
 				http.Error(w, "Failed to create A record", http.StatusInternalServerError)
 				return

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"server/dns"
 	"server/repo"
 	"server/view"
 
@@ -47,6 +48,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	// Start DNS server
+	go dns.ListenAndServe()
 
 	// Create a new router using chi
 	r := chi.NewRouter()
