@@ -31,7 +31,7 @@ func Blocked(quote *model.Quote) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script></head><body class=\"h-full flex justify-center px-60\"><div><p class=\"w-full mb-8 text-xl text-center font-serif\">This page has been blocked by Leo.</p><p class=\"w-full text-6xl text-center font-serif\">\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script></head><body class=\"w-8/12 h-full flex justify-center self-center\"><div><p class=\"w-full mb-8 text-xl text-center font-serif\">This page has been blocked by Leo.</p><p class=\"w-full text-6xl text-center font-serif\">\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
