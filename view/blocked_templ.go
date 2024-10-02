@@ -31,27 +31,27 @@ func Blocked(quote *model.Quote) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script></head><body class=\"w-8/12 h-full flex justify-center self-center\"><div><p class=\"w-full mb-8 text-xl text-center font-serif\">This page has been blocked by Leo.</p><p class=\"w-full text-6xl text-center font-serif\">\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\" style=\"height: 100%; width: 100%;\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script><style>\n    p {\n      font-family: Hedvig Letters Serif;\n    }\n  </style></head><body class=\"w-full h-full flex justify-center items-center\"><div class=\"w-9/12 flex flex-col items-center\"><p class=\"mb-8 text-xl text-center \">This page has been blocked by <a href=\"https://lemon3.studio\" class=\"underline\">Leo</a>.</p><p class=\"mb-4 text-5xl text-center\">“")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(quote.Quote)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `view/blocked.templ`, Line: 19, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `view/blocked.templ`, Line: 24, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"</p><p class=\"w-full text-3xl text-end font-serif\">~")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("”</p><p class=\"mb-8 text-2xl text-center\">~")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(quote.Author)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `view/blocked.templ`, Line: 20, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `view/blocked.templ`, Line: 25, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
