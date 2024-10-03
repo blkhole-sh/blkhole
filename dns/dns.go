@@ -15,7 +15,6 @@ func resolve(domain string, qtype uint16, upstream string) ([]dns.RR, error) {
 	m.RecursionDesired = true
 
 	c := new(dns.Client)
-	c.Net = "tcp-tls"
 	in, _, err := c.Exchange(m, upstream)
 	if err != nil {
 		return nil, err
@@ -33,7 +32,7 @@ func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	for _, question := range r.Question {
 		log.Printf(":53 received query: %s\n", question.Name)
-		answers, err := resolve(question.Name, question.Qtype, "1.1.1.2:853")
+		answers, err := resolve(question.Name, question.Qtype, "1.1.1.2:53")
 		if err != nil {
 			fmt.Println(err)
 		}
