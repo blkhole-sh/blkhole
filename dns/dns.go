@@ -33,7 +33,7 @@ func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	for _, question := range r.Question {
 		log.Printf(":53 received query: %s\n", question.Name)
-		answers, err := resolve(question.Name, question.Qtype, "194.242.2.9:853")
+		answers, err := resolve(question.Name, question.Qtype, "1.1.1.2:853")
 		if err != nil {
 			fmt.Println(err)
 		}
