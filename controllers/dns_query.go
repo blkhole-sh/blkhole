@@ -12,10 +12,17 @@ import (
 	"github.com/miekg/dns"
 )
 
+// Define DnsController struct
 type DnsController struct {
 	ContentBlocker *services.ContentBlocker
 }
 
+// Create new DnsController
+func NewDnsController(contentBlocker *services.ContentBlocker) *DnsController {
+	return &DnsController{ContentBlocker: contentBlocker}
+}
+
+// Handle GET and POST requests in order to handle DNS queries
 func (dc *DnsController) DnsQuery(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error

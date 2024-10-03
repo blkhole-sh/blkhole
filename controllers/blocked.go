@@ -9,7 +9,13 @@ import (
 	"github.com/a-h/templ"
 )
 
+// Define BlockedController struct
 type BlockedController struct{}
+
+// Create new BlockedController
+func NewBlockedController() *BlockedController {
+	return &BlockedController{}
+}
 
 // Collection of stoic quotes
 var quotes = []model.Quote{

@@ -12,6 +12,11 @@ type ContentBlocker struct {
 	ScheduleRepo *repos.ScheduleRepoImpl
 }
 
+// Create new ContentBlocker
+func NewContentBlocker(scheduleRepo *repos.ScheduleRepoImpl) *ContentBlocker {
+	return &ContentBlocker{ScheduleRepo: scheduleRepo}
+}
+
 // Define domainRegex to check for valid domains
 var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 

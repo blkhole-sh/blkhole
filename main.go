@@ -8,6 +8,7 @@ import (
 	"server/controllers"
 	"server/dns"
 	"server/repos"
+	"server/services"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -17,13 +18,19 @@ import (
 )
 
 var (
-	userRepo           *repos.UserRepoImpl
-	deviceRepo         *repos.DeviceRepoImpl
-	domainRepo         *repos.DomainRepoImpl
-	categoryRepo       *repos.CategoryRepoImpl
-	scheduleRepo       *repos.ScheduleRepoImpl
-	domainRuleRepo     *repos.DomainRuleRepoImpl
-	categoryRuleRepo   *repos.CategoryRuleRepoImpl
+	// Repos
+	userRepo         *repos.UserRepoImpl
+	deviceRepo       *repos.DeviceRepoImpl
+	domainRepo       *repos.DomainRepoImpl
+	categoryRepo     *repos.CategoryRepoImpl
+	scheduleRepo     *repos.ScheduleRepoImpl
+	domainRuleRepo   *repos.DomainRuleRepoImpl
+	categoryRuleRepo *repos.CategoryRuleRepoImpl
+
+	// Services
+	contentBlocker *services.ContentBlocker
+
+	// Controllers
 	blockedController  *controllers.BlockedController
 	dnsController      *controllers.DnsController
 	scheduleController *controllers.ScheduleController
@@ -44,10 +51,13 @@ func initDependencies() {
 	domainRuleRepo = repos.NewDomainRuleRepo(db)
 	categoryRuleRepo = repos.NewCategoryRuleRepo(db)
 
+	// Initialize services
+	contentBlocker = services.NewContentBlocker(scheduleRepo)
+
 	// Inizialize controllers
-	blockedController = &controllers.BlockedController{}
-	dnsController = &controllers.DnsController{}
-	scheduleController = &controllers.ScheduleController{}
+	blockedController = controllers.NewBlockedController()
+	dnsController = controllers.NewDnsController(contentBlocker)
+	scheduleController = controllers.NewScheduleController(contentBlocker)
 }
 
 func main() {

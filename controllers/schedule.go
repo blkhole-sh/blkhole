@@ -11,6 +11,11 @@ type ScheduleController struct {
 	ContentBlocker *services.ContentBlocker
 }
 
+// Create new ScheduleController
+func NewScheduleController(contentBlocker *services.ContentBlocker) *ScheduleController {
+	return &ScheduleController{ContentBlocker: contentBlocker}
+}
+
 // GET request to check if a domain given as request param is blocked
 func (sc *ScheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) {
 	// Parse domain from request param
