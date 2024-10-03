@@ -31,7 +31,7 @@ func Blocked(quote *model.Quote) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\" style=\"height: 100%; width: 100%;\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script><style>\n    p {\n      font-family: Hedvig Letters Serif;\n    }\n  </style></head><body class=\"w-full h-full flex justify-center items-center\"><div class=\"w-9/12 flex flex-col items-center\"><p class=\"mb-8 text-lg text-center \">This page has been blocked by <a href=\"https://lemon3.studio\" class=\"underline\">Leo</a>.</p><p class=\"mb-4 text-3xl text-center\">“")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\" style=\"height: 100%; width: 100%;\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script><style>\n    p {\n      font-family: Hedvig Letters Serif;\n    }\n  </style></head><body class=\"w-full h-full flex justify-center items-center\"><div class=\"w-9/12 flex flex-col items-center\"><p class=\"mb-8 text-base text-center \">This page has been blocked by <a href=\"https://lemon3.studio\" class=\"underline\">Leo</a>.</p><p class=\"mb-4 text-2xl text-center\">“")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -44,7 +44,7 @@ func Blocked(quote *model.Quote) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("”</p><p class=\"mb-8 text-xl text-center\">~")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("”</p><p class=\"mb-8 text-lg text-center\">~")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
