@@ -9,6 +9,7 @@ import (
 	"github.com/a-h/templ"
 )
 
+// Collection of stoic quotes
 var quotes = []model.Quote{
 	{
 		Quote:  "You become what you give your attention to.",
@@ -31,7 +32,7 @@ var quotes = []model.Quote{
 		Author: "Seneca",
 	},
 	{
-		Quote:  "He ho conquers himself conquers all.",
+		Quote:  "He who conquers himself conquers all.",
 		Author: "Epictetus",
 	},
 	{
@@ -50,8 +51,11 @@ var quotes = []model.Quote{
 
 // Handler that serves the blocked message on root "/"
 func BlockedPageController(w http.ResponseWriter, r *http.Request) {
+	// Pick a random stoic quote
+	quote := quotes[rand.Intn(len(quotes))]
+
 	// Create blocked page
-	page := view.Blocked(&quotes[rand.Intn(len(quotes))])
+	page := view.Blocked(&quote)
 
 	// Serve the template component using templ.Handler
 	templ.Handler(page).ServeHTTP(w, r)
