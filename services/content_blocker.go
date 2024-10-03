@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"server/repos"
 	"strings"
@@ -27,8 +28,14 @@ var blockedDomains = []string{
 	"youtube.com",
 }
 
+func (c *ContentBlocker) Test() {
+	log.Println("Test ContentBlocker()")
+}
+
 // Check if a given domain is blocked
 func (c *ContentBlocker) IsBlocked(domain string) (bool, error) {
+	log.Printf("ContentBlocker | IsBlocked | %s", domain)
+
 	// Check if domain is valid
 	if !domainRegex.MatchString(domain) {
 		return false, fmt.Errorf("%s is not a valid domain\n", domain)

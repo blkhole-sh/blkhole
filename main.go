@@ -67,6 +67,9 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	// Initialize dependencies
+	initDependencies()
+
 	// Start DNS server
 	go dns.ListenAndServe()
 

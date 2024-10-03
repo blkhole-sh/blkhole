@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -67,11 +66,14 @@ func (dc *DnsController) DnsQuery(w http.ResponseWriter, r *http.Request) {
 	// Process each question in the DNS query
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
-		fmt.Println("Requested domain:", domain)
+		log.Println("Requested domain:", domain)
 
-		// Check if the domain is blocked
-		if blocked, _ := dc.ContentBlocker.IsBlocked(domain); blocked {
-			fmt.Printf("Domain %s is blocked. Returning NXDOMAIN for this domain.\n", domain)
+		// Check if domain blocked or invalid
+		blocked, err := dc.ContentBlocker.IsBlocked(domain)
+
+		// If domain blocked or invalid return NXDOMAIN
+		if blocked || err != nil {
+			log.Printf("Domain %s is blocked. Returning NXDOMAIN for this domain.\n", domain)
 
 			// Set the NXDOMAIN response code
 			response.Rcode = dns.RcodeNameError
