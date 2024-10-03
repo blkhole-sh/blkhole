@@ -11,8 +11,6 @@ import (
 	"github.com/miekg/dns"
 )
 
-const localhost = "127.0.0.1"
-
 var blockedDomains = []string{
 	"reddit.com",
 	"startmunich.de",
@@ -68,73 +66,48 @@ func DnsQueryController(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the domain is in the blocked list
+	// Create the response message
+	response := new(dns.Msg)
+	response.SetReply(msg)
+
+	// Process each question in the DNS query
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
-		log.Println("DoH: Requested domain:", domain)
+		fmt.Println("Requested domain:", domain)
 
-		// If the domain is blocked, return a fixed IP address
+		// Check if the domain is blocked
 		if isBlockedDomain(domain) {
-			log.Printf("DoH: Domain %s is blocked. Returning fixed IP: %s\n", domain, localhost)
+			fmt.Printf("Domain %s is blocked. Returning NXDOMAIN for this domain.\n", domain)
 
-			// Create a DNS response with the fixed IP address
-			response := new(dns.Msg)
-			response.SetReply(msg)
-
-			// Create an A record for the fixed IP address
-			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", question.Name, localhost))
-			if err != nil {
-				http.Error(w, "Failed to create A record", http.StatusInternalServerError)
-				return
-			}
-
-			// Add the A record to the answer section of the response
-			response.Answer = append(response.Answer, rr)
-
-			// Pack and send the DNS response
-			responseBytes, err := response.Pack()
-			if err != nil {
-				http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
-				return
-			}
-
-			// Respond with the DNS message containing the fixed IP
-			w.Header().Set("Content-Type", "application/dns-message")
-			w.Write(responseBytes)
-			return
+			// Set the NXDOMAIN response code
+			response.Rcode = dns.RcodeNameError
+			break // Stop processing further questions if one domain is blocked
 		}
 	}
 
-	// If the domain is not blocked, forward the DNS query to the upstream server
-	client := new(dns.Client)
-	response, _, err := client.Exchange(msg, "127.0.0.1:53")
-	if err != nil {
-		log.Printf("DoH: Failed to forward DNS query to upstream server: %v", err)
-
-		// Create a DNS response with RcodeServerFailure (SERVFAIL)
-		fallbackResponse := new(dns.Msg)
-		fallbackResponse.SetRcode(msg, dns.RcodeServerFailure)
-
-		// Pack and send the SERVFAIL response
-		responseBytes, err := fallbackResponse.Pack()
+	// If no domain was blocked, forward the DNS query to the upstream server
+	if response.Rcode == dns.RcodeSuccess {
+		client := new(dns.Client)
+		res, _, err := client.Exchange(msg, "127.0.0.1:53")
 		if err != nil {
-			http.Error(w, "Failed to pack SERVFAIL response", http.StatusInternalServerError)
-			return
-		}
+			log.Printf("Failed to forward DNS query to upstream server: %v", err)
 
-		w.Header().Set("Content-Type", "application/dns-message")
-		w.Write(responseBytes)
-		return
+			// Set SERVFAIL in case of an upstream failure
+			response.SetRcode(msg, dns.RcodeServerFailure)
+		} else {
+			// Append the answer from the upstream server
+			response.Answer = append(response.Answer, res.Answer...)
+		}
 	}
 
-	// If the query was successful, return the response from the upstream server
+	// Pack and send the DNS response
 	responseBytes, err := response.Pack()
 	if err != nil {
 		http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
 		return
 	}
 
-	// Respond with the DNS response from the upstream server
+	// Respond with the DNS message
 	w.Header().Set("Content-Type", "application/dns-message")
 	w.Write(responseBytes)
 }
