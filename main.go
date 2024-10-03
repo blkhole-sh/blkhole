@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"server/controller"
+	"server/controllers"
 	"server/dns"
-	"server/repo"
+	"server/repos"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -17,13 +17,16 @@ import (
 )
 
 var (
-	userRepo         *repo.UserRepoImpl
-	deviceRepo       *repo.DeviceRepoImpl
-	domainRepo       *repo.DomainRepoImpl
-	categoryRepo     *repo.CategoryRepoImpl
-	scheduleRepo     *repo.ScheduleRepoImpl
-	domainRuleRepo   *repo.DomainRuleRepoImpl
-	categoryRuleRepo *repo.CategoryRuleRepoImpl
+	userRepo           *repos.UserRepoImpl
+	deviceRepo         *repos.DeviceRepoImpl
+	domainRepo         *repos.DomainRepoImpl
+	categoryRepo       *repos.CategoryRepoImpl
+	scheduleRepo       *repos.ScheduleRepoImpl
+	domainRuleRepo     *repos.DomainRuleRepoImpl
+	categoryRuleRepo   *repos.CategoryRuleRepoImpl
+	blockedController  *controllers.BlockedController
+	dnsController      *controllers.DnsController
+	scheduleController *controllers.ScheduleController
 )
 
 func initDependencies() {
@@ -34,12 +37,17 @@ func initDependencies() {
 	}
 
 	// Initialize repos
-	userRepo = repo.NewUserRepo(db)
-	deviceRepo = repo.NewDeviceRepo(db)
-	domainRepo = repo.NewDomainRepo(db)
-	scheduleRepo = repo.NewScheduleRepo(db)
-	domainRuleRepo = repo.NewDomainRuleRepo(db)
-	categoryRuleRepo = repo.NewCategoryRuleRepo(db)
+	userRepo = repos.NewUserRepo(db)
+	deviceRepo = repos.NewDeviceRepo(db)
+	domainRepo = repos.NewDomainRepo(db)
+	scheduleRepo = repos.NewScheduleRepo(db)
+	domainRuleRepo = repos.NewDomainRuleRepo(db)
+	categoryRuleRepo = repos.NewCategoryRuleRepo(db)
+
+	// Inizialize controllers
+	blockedController = &controllers.BlockedController{}
+	dnsController = &controllers.DnsController{}
+	scheduleController = &controllers.ScheduleController{}
 }
 
 func main() {
@@ -61,12 +69,15 @@ func main() {
 
 	// Route specifically for /dns-query, handling both GET and POST requests
 	r.Route("/dns-query", func(r chi.Router) {
-		r.Get("/", controller.DnsQueryController)
-		r.Post("/", controller.DnsQueryController)
+		r.Get("/", dnsController.DnsQuery)
+		r.Post("/", dnsController.DnsQuery)
 	})
 
 	// Serve the blocked page on the root "/"
-	r.Get("/", controller.BlockedPageController)
+	r.Get("/", blockedController.BlockedPage)
+
+	// Serve the is blocked endpoint on "/is-blocked"
+	r.Get("/is-blocked", scheduleController.IsBlocked)
 
 	// Read port from .env
 	port := os.Getenv("PORT")

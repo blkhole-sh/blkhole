@@ -1,4 +1,4 @@
-package controller
+package controllers
 
 import (
 	"encoding/base64"
@@ -6,30 +6,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"server/services"
 	"strings"
 
 	"github.com/miekg/dns"
 )
 
-var blockedDomains = []string{
-	"reddit.com",
-	"startmunich.de",
-	"youtube.com",
+type DnsController struct {
+	ContentBlocker *services.ContentBlocker
 }
 
-// Check if the domain is in the blocked list
-func isBlockedDomain(domain string) bool {
-	// Normalize the domain to lowercase and remove trailing dot if present
-	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
-	for _, blocked := range blockedDomains {
-		if strings.HasSuffix(domain, blocked) {
-			return true
-		}
-	}
-	return false
-}
-
-func DnsQueryController(w http.ResponseWriter, r *http.Request) {
+func (dc *DnsController) DnsQuery(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
 
@@ -76,7 +63,7 @@ func DnsQueryController(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Requested domain:", domain)
 
 		// Check if the domain is blocked
-		if isBlockedDomain(domain) {
+		if blocked, _ := dc.ContentBlocker.IsBlocked(domain); blocked {
 			fmt.Printf("Domain %s is blocked. Returning NXDOMAIN for this domain.\n", domain)
 
 			// Set the NXDOMAIN response code

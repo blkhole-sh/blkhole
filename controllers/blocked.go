@@ -1,13 +1,15 @@
-package controller
+package controllers
 
 import (
 	"math/rand"
 	"net/http"
 	"server/model"
-	"server/view"
+	"server/views"
 
 	"github.com/a-h/templ"
 )
+
+type BlockedController struct{}
 
 // Collection of stoic quotes
 var quotes = []model.Quote{
@@ -50,12 +52,12 @@ var quotes = []model.Quote{
 }
 
 // Handler that serves the blocked message on root "/"
-func BlockedPageController(w http.ResponseWriter, r *http.Request) {
+func (bc *BlockedController) BlockedPage(w http.ResponseWriter, r *http.Request) {
 	// Pick a random stoic quote
 	quote := quotes[rand.Intn(len(quotes))]
 
 	// Create blocked page
-	page := view.Blocked(&quote)
+	page := views.Blocked(&quote)
 
 	// Serve the template component using templ.Handler
 	templ.Handler(page).ServeHTTP(w, r)

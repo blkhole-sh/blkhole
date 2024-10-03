@@ -9,6 +9,7 @@ import (
 
 type dnsHandler struct{}
 
+// Resolve DNS question using given upstream server
 func resolve(domain string, qtype uint16, upstream string) ([]dns.RR, error) {
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(domain), qtype)
@@ -23,9 +24,8 @@ func resolve(domain string, qtype uint16, upstream string) ([]dns.RR, error) {
 	return in.Answer, nil
 }
 
+// Parse DNS request and resolve each question
 func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
-	// Fetch the upstream DNS server address from the environment
-
 	msg := new(dns.Msg)
 	msg.SetReply(r)
 	msg.Authoritative = true
@@ -43,6 +43,7 @@ func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	w.WriteMsg(msg)
 }
 
+// Listen on udp port 53 for DNS request, serve DNS
 func ListenAndServe() {
 	handler := new(dnsHandler)
 	server := &dns.Server{
