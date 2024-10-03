@@ -28,10 +28,6 @@ var blockedDomains = []string{
 	"youtube.com",
 }
 
-func (c *ContentBlocker) Test() {
-	log.Println("Test ContentBlocker()")
-}
-
 // Check if a given domain is blocked
 func (c *ContentBlocker) IsBlocked(domain string) (bool, error) {
 	log.Printf("ContentBlocker | IsBlocked | %s", domain)
@@ -46,7 +42,7 @@ func (c *ContentBlocker) IsBlocked(domain string) (bool, error) {
 
 	// Check if domain is blocked
 	for _, blocked := range blockedDomains {
-		if strings.HasSuffix(domain, blocked) {
+		if domain == blocked || strings.HasSuffix(domain, "."+blocked) {
 			return true, nil
 		}
 	}
