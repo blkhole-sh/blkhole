@@ -26,6 +26,10 @@ var blockedDomains = []string{
 	"reddit.com",
 	"startmunich.de",
 	"youtube.com",
+	"dns.google",
+	"1.1.1.1",
+	"1.0.0.1",
+	"one.one.one.one",
 }
 
 // Check if a given domain is blocked
