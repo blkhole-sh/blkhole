@@ -31,14 +31,14 @@ func Blocked(quote *model.Quote) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\" style=\"height: 100%; width: 100%;\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"https://cdn.tailwindcss.com\"></script><style>\n    p {\n      font-family: Hedvig Letters Serif;\n    }\n  </style></head><body class=\"w-full h-full flex justify-center items-center\"><div class=\"w-9/12 flex flex-col items-center\"><p class=\"mb-8 text-base text-center \">This page has been blocked by <a href=\"https://lemon3.studio\" class=\"underline\">Leo</a>.</p><p class=\"mb-4 text-2xl text-center\">“")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<!doctype html><html lang=\"en\" style=\"height: 100%; width: 100%;\"><head><meta charset=\"UTF-8\"><title>Blocked by Leo</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Hedvig+Letters+Sans&amp;display=swap\" rel=\"stylesheet\"><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Hedvig+Letters+Sans&amp;family=Hedvig+Letters+Serif:opsz@12..24&amp;display=swap\" rel=\"stylesheet\"><script src=\"https://cdn.tailwindcss.com\"></script><style>\n    p {\n      font-family: Hedvig Letters;\n    }\n  </style></head><body class=\"w-full h-full flex justify-center items-center\"><div class=\"w-9/12 flex flex-col items-center\"><p class=\"mb-8 text-base text-center \">This page has been blocked.</p><p class=\"mb-4 text-2xl text-center\">“")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(quote.Quote)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blocked.templ`, Line: 26, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blocked.templ`, Line: 33, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -51,7 +51,7 @@ func Blocked(quote *model.Quote) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(quote.Author)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blocked.templ`, Line: 27, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blocked.templ`, Line: 34, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
