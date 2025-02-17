@@ -41,7 +41,7 @@ export default function TimeRangeInput(props: Props & ParentProps) {
         </div>
         <div class="flex flex-row gap-x-2 items-center">
           End
-          <div class="flex items-center rounded-md bg-white pl-3 outline  -outline-offset-1 outline-gray-300 focus-within:outline focus-within:-outline-offset-2 focus-within:outline-black">
+          <div class="flex items-center rounded-md bg-white pl-3 outline -outline-offset-1 outline-gray-300 focus-within:outline focus-within:-outline-offset-2 focus-within:outline-black">
             <input
               type="time"
               name={props.id}
