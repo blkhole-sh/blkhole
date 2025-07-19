@@ -1,3 +1,4 @@
+// Package test provides testing utilities for the Leo DNS blocker application.
 package test
 
 import (

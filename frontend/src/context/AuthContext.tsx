@@ -3,21 +3,21 @@ import { createContext, ParentProps, useContext } from "solid-js";
 export const AuthContext = createContext<string>();
 
 export function useAuth(): string {
-  const context = useContext(AuthContext);
+	const context = useContext(AuthContext);
 
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthContextProvider");
-  }
+	if (!context) {
+		throw new Error("useAuth must be used within an AuthContextProvider");
+	}
 
-  return context;
+	return context;
 }
 
 export default function AuthContextProvider(props: ParentProps) {
-  const userHash = "VN7KGKKMROH233SESMCRTJASL3GUUCO7JJ2E2YSOVA2OAL64S7UA====";
+	const userHash = "XZ7J2U3R2MUJWPBYV36XYDCTQ47LBFKE7GHNFIXKWAU2GETX2HIA====";
 
-  return (
-    <AuthContext.Provider value={userHash}>
-      {props.children}
-    </AuthContext.Provider>
-  );
+	return (
+		<AuthContext.Provider value={userHash}>
+			{props.children}
+		</AuthContext.Provider>
+	);
 }

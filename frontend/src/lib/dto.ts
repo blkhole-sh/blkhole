@@ -16,6 +16,8 @@ export interface DeviceDTO {
 export interface ListDTO {
 	id: number;
 	name: string;
+	description?: string;
+	source?: string;
 }
 
 // Define ScheduleDTO interface

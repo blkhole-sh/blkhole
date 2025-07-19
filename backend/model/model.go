@@ -1,6 +1,7 @@
+// Package model defines the data structures used throughout the Leo DNS blocker application.
 package model
 
-// Define User struct
+// User represents a user in the system
 type User struct {
 	Hash         string   `json:"hash"`
 	Name         string   `json:"name"`
@@ -13,7 +14,7 @@ type User struct {
 
 type OS string
 
-// Define OS enum
+// OS represents the operating system type
 const (
 	MacOS   OS = "macOS"
 	IOS     OS = "iOS"
@@ -22,7 +23,7 @@ const (
 	Windows    = "Windows"
 )
 
-// Define Device struct
+// Device represents a device in the system
 type Device struct {
 	Hash        string `json:"hash"`
 	Name        string `json:"name"`
@@ -31,24 +32,26 @@ type Device struct {
 	ScheduleIds []int  `json:"scheduleIds"`
 }
 
-// Define Domain struct
+// Domain represents a domain entry
 type Domain struct {
 	Name        string `json:"name"`
 	ListIds     []int  `json:"listIds"`
 	ScheduleIds []int  `json:"scheduleIds"`
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 }
 
-// Define List struct
+// List represents a list of domains
 type List struct {
 	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"`
 	UserHash    string `json:"userHash"`
 	DomainIds   []int  `json:"domainIds"`
 	ScheduleIds []int  `json:"scheduleIds"`
-	Id          int    `json:"id"`
+	ID          int    `json:"id"`
 }
 
-// Define Schedule struct
+// Schedule represents a time-based schedule
 type Schedule struct {
 	StartTime    string   `json:"startTime"`
 	EndTime      string   `json:"endTime"`
@@ -64,10 +67,10 @@ type Schedule struct {
 	Friday       bool     `json:"friday"`
 	Saturday     bool     `json:"saturday"`
 	Sunday       bool     `json:"sunday"`
-	Id           int      `json:"id"`
+	ID           int      `json:"id"`
 }
 
-// Define Quote struct
+// Quote represents a quote with author
 type Quote struct {
 	Quote  string `json:"quote"`
 	Author string `json:"author"`

@@ -1,3 +1,4 @@
+// Package services provides business logic services for the Leo DNS blocker application.
 package services
 
 import (
@@ -8,25 +9,25 @@ import (
 	"strings"
 )
 
-// Define ContentBlocker interface
+// ContentBlocker defines the interface for content blocking operations
 type ContentBlocker interface {
 	IsBlocked(domain string, deviceHash string) (bool, error)
 }
 
-// Define ContentBlockerImpl struct
+// ContentBlockerImpl implements the ContentBlocker interface
 type ContentBlockerImpl struct {
 	scheduleRepo repos.ScheduleRepo
 }
 
-// Create new ContentBlocker
+// NewContentBlocker creates a new ContentBlocker instance
 func NewContentBlocker(scheduleRepo repos.ScheduleRepo) ContentBlocker {
 	return &ContentBlockerImpl{scheduleRepo: scheduleRepo}
 }
 
-// Define domainRegex to check for valid domains
+// domainRegex is used to check for valid domain format
 var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
-// Blocked DoH providers (in order to force Chromium to use Leo DoH)
+// dohBlocklist contains blocked DoH providers to force Chromium to use Leo DoH
 var dohBlocklist = []string{
 	"dns.google",
 	"dns.google.com",
@@ -47,7 +48,7 @@ var dohBlocklist = []string{
 	"doh.dnssec.works",
 }
 
-// Hardcoded blocked domains (temporarily)
+// blockedDomains contains hardcoded blocked domains (temporary)
 var blockedDomains = []string{
 	"reddit.com",
 	"startmunich.de",
@@ -55,13 +56,13 @@ var blockedDomains = []string{
 	"dns.google",
 }
 
-// Check if a given domain is blocked
+// IsBlocked checks if a given domain is blocked
 func (cb *ContentBlockerImpl) IsBlocked(domain string, deviceHash string) (bool, error) {
 	log.Printf("ContentBlocker | IsBlocked | %s", domain)
 
 	// Check if domain is valid
 	if !domainRegex.MatchString(domain) {
-		return false, fmt.Errorf("%s is not a valid domain\n", domain)
+		return false, fmt.Errorf("%s is not a valid domain", domain)
 	}
 
 	// Normalize the domain to lowercase and remove trailing dot if present

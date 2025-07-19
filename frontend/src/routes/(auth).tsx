@@ -1,16 +1,17 @@
 import { ParentProps } from "solid-js";
-import SideBar from "~/components/sidebar/SideBar";
 import AuthContextProvider from "~/context/AuthContext";
+import { TabBarLayout } from "~/components/tabbar/TabBarLayout";
 
 export default function AuthLayout(props: ParentProps) {
+	const tabs = [
+		{ title: "Devices", path: "/devices" },
+		{ title: "Lists", path: "/lists" },
+		{ title: "Schedules", path: "/schedules" },
+	];
+
 	return (
 		<AuthContextProvider>
-			<div class="font-inter flex flex-row h-screen w-full overflow-hidden">
-				<div class="w-72 h-full">
-					<SideBar />
-				</div>
-				<div class="flex-1 overflow-hidden">{props.children}</div>
-			</div>
+			<TabBarLayout tabs={tabs}>{props.children}</TabBarLayout>
 		</AuthContextProvider>
 	);
 }

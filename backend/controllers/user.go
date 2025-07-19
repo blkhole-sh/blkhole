@@ -1,3 +1,4 @@
+// Package controllers provides HTTP request handlers for the Leo DNS blocker API.
 package controllers
 
 import (
@@ -11,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Define UserController interface
+// UserController defines the interface for user operations
 type UserController interface {
 	Create(http.ResponseWriter, *http.Request)
 	FindByHash(http.ResponseWriter, *http.Request)
@@ -19,13 +20,13 @@ type UserController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// Define UserControllerImpl struct
+// UserControllerImpl implements the UserController interface
 type UserControllerImpl struct {
 	userRepo      repos.UserRepo
 	cryptoService services.CryptoService
 }
 
-// Create new UserController
+// NewUserController creates a new UserController instance
 func NewUserController(userRepo repos.UserRepo, cryptoService services.CryptoService) UserController {
 	return &UserControllerImpl{
 		userRepo:      userRepo,

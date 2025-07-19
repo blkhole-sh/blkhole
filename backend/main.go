@@ -1,3 +1,4 @@
+// Package main provides the Leo DNS content blocker server application.
 package main
 
 import (
@@ -46,7 +47,7 @@ var (
 
 func initDependencies() {
 	// Initialize repos
-	db, err := sql.Open("sqlite3", "./db/.leo.db")
+	db, err := sql.Open("sqlite3", "./db/leo.db")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,12 +84,11 @@ func initDependencies() {
 	quoteController = controllers.NewQuoteController()
 
 	// Initilaize test
-	/*
-		  t = test.NewTest(userRepo, deviceRepo, domainRepo, listRepo, scheduleRepo, cryptoService)
-			if err := t.Test(); err != nil {
-				log.Fatal(err)
-			}
-	*/
+
+	// t = test.NewTest(userRepo, deviceRepo, domainRepo, listRepo, scheduleRepo, cryptoService)
+	// if err := t.Test(); err != nil {
+	// log.Fatal(err)
+	//}
 }
 
 func main() {
@@ -143,14 +143,14 @@ func main() {
 	r.Delete("/devices/{hash}", deviceController.Delete)
 
 	// Serve list api routes
-	r.Get("/lists/{id}", listController.FindById)
+	r.Get("/lists/{id}", listController.FindByID)
 	r.Get("/users/{userHash}/lists", listController.FindByUser)
 	r.Put("/lists", listController.Create)
 	r.Post("/lists/{id}", listController.Update)
 	r.Delete("/lists/{id}", listController.Delete)
 
 	// Serve schedule api routes
-	r.Get("/schedules/{id}", scheduleController.FindById)
+	r.Get("/schedules/{id}", scheduleController.FindByID)
 	r.Get("/users/{userHash}/schedules", scheduleController.FindByUser)
 	r.Put("/schedules", scheduleController.Create)
 	r.Post("/schedules/{id}", scheduleController.Update)

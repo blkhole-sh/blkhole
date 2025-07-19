@@ -12,23 +12,23 @@ import (
 	"github.com/miekg/dns"
 )
 
-// Define DnsController interface
-type DnsController interface {
-	DnsQuery(http.ResponseWriter, *http.Request)
+// DNSController defines the interface for DNS operations
+type DNSController interface {
+	DNSQuery(http.ResponseWriter, *http.Request)
 }
 
-// Define DnsControllerImpl struct
-type DnsControllerImpl struct {
+// DNSControllerImpl implements the DnsController interface
+type DNSControllerImpl struct {
 	ContentBlocker services.ContentBlocker
 }
 
-// Create new DnsController
-func NewDnsController(contentBlocker services.ContentBlocker) DnsController {
-	return &DnsControllerImpl{ContentBlocker: contentBlocker}
+// NewDNSController creates a new DnsController instance
+func NewDNSController(contentBlocker services.ContentBlocker) DNSController {
+	return &DNSControllerImpl{ContentBlocker: contentBlocker}
 }
 
-// Handle GET and POST requests in order to handle DNS queries
-func (dc *DnsControllerImpl) DnsQuery(w http.ResponseWriter, r *http.Request) {
+// DNSQuery handles GET and POST requests to process DNS queries
+func (dc *DNSControllerImpl) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
 

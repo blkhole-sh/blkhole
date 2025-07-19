@@ -1,4 +1,4 @@
-import { useLocation } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 
 interface Props {
 	icon: string;
@@ -20,14 +20,14 @@ export default function SideBarItem(props: Props) {
 		<li>
 			<ul role="list" class="space-y-1">
 				<li>
-					<a
+					<A
 						href={props.url}
 						class="group flex flex-row gap-x-4 items-center p-2 text-sm text-gray-600 font-medium leading-6"
 						classList={styles()}
 					>
 						<span class="text-lg">{props.icon}</span>
 						{props.title}
-					</a>
+					</A>
 				</li>
 			</ul>
 		</li>

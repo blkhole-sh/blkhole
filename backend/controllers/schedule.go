@@ -12,23 +12,23 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Define ScheduleController interface
+// ScheduleController defines the interface for schedule operations
 type ScheduleController interface {
 	IsBlocked(http.ResponseWriter, *http.Request)
 	Create(http.ResponseWriter, *http.Request)
-	FindById(http.ResponseWriter, *http.Request)
+	FindByID(http.ResponseWriter, *http.Request)
 	FindByUser(http.ResponseWriter, *http.Request)
 	Update(http.ResponseWriter, *http.Request)
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// Define ScheduleControllerImpl struct
+// ScheduleControllerImpl implements the ScheduleController interface
 type ScheduleControllerImpl struct {
 	scheduleRepo   repos.ScheduleRepo
 	contentBlocker services.ContentBlocker
 }
 
-// Create new ScheduleController
+// NewScheduleController creates a new ScheduleController instance
 func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker services.ContentBlocker) ScheduleController {
 	return &ScheduleControllerImpl{
 		contentBlocker: contentBlocker,
@@ -36,7 +36,7 @@ func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker servi
 	}
 }
 
-// GET request to check if a domain given as request param is blocked
+// IsBlocked handles GET requests to check if a domain is blocked
 func (sc *ScheduleControllerImpl) IsBlocked(w http.ResponseWriter, r *http.Request) {
 	// Parse domain from request param
 	domain := r.URL.Query().Get("domain")
@@ -73,7 +73,7 @@ func (sc *ScheduleControllerImpl) Create(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(s)
 }
 
-func (sc *ScheduleControllerImpl) FindById(w http.ResponseWriter, r *http.Request) {
+func (sc *ScheduleControllerImpl) FindByID(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -82,7 +82,7 @@ func (sc *ScheduleControllerImpl) FindById(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Find schedule in db
-	s, err := sc.scheduleRepo.FindById(id)
+	s, err := sc.scheduleRepo.FindByID(id)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find schedule in db", http.StatusNotFound)

@@ -29,6 +29,8 @@ export interface Domain {
 export interface List {
 	id: number;
 	name: string;
+	description?: string;
+	source?: string;
 	userHash: string;
 	domainIds: number[];
 	scheduleIds: number[];

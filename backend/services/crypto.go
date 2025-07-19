@@ -11,16 +11,19 @@ import (
 	"golang.org/x/crypto/blake2s"
 )
 
+// CryptoService defines the interface for cryptographic operations
 type CryptoService interface {
 	RandomHash() (string, error)
 	HashPassword(password string) (string, error)
 	VerifyPassword(password, fullHash string) (bool, error)
 }
 
+// CryptoServiceImpl implements the CryptoService interface
 type CryptoServiceImpl struct {
 	secret []byte
 }
 
+// NewCryptoService creates a new CryptoService instance
 func NewCryptoService(secret []byte) CryptoService {
 	return &CryptoServiceImpl{secret: secret}
 }
@@ -54,12 +57,12 @@ func (cs *CryptoServiceImpl) RandomHash() (string, error) {
 	return base32EncodedHash, nil
 }
 
-// Helper function to split a string into parts by a delimiter
+// split is a helper function to split a string into parts by a delimiter
 func split(s, sep string) []string {
 	return strings.Split(s, sep)
 }
 
-// Helper function to compare two byte slices for equality
+// compareHashes is a helper function to compare two byte slices for equality
 func compareHashes(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
@@ -73,8 +76,7 @@ func compareHashes(a, b []byte) bool {
 	return true
 }
 
-// HashPassword hashes the given password using Argon2.
-// Returns the hash, encoded as a string, along with the salt.
+// HashPassword hashes the given password using Argon2 and returns the hash encoded as a string with salt
 func (cs *CryptoServiceImpl) HashPassword(password string) (string, error) {
 	// Generate a random salt
 	salt := make([]byte, 16) // Recommended size is 16 bytes
@@ -101,7 +103,7 @@ func (cs *CryptoServiceImpl) HashPassword(password string) (string, error) {
 	return fullHash, nil
 }
 
-// VerifyPassword verifies if the given password matches the stored Argon2 hash.
+// VerifyPassword verifies if the given password matches the stored Argon2 hash
 func (cs *CryptoServiceImpl) VerifyPassword(password, fullHash string) (bool, error) {
 	// Split the full hash into salt and hash parts
 	parts := split(fullHash, "$")

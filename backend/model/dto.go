@@ -1,6 +1,6 @@
 package model
 
-// Define UserDTO struct
+// UserDTO represents a user data transfer object
 type UserDTO struct {
 	Hash         string `json:"hash"`
 	Name         string `json:"name"`
@@ -8,7 +8,7 @@ type UserDTO struct {
 	PasswordHash string `json:"-"`
 }
 
-// Define DeviceDTO struct
+// DeviceDTO represents a device data transfer object
 type DeviceDTO struct {
 	Hash     string `json:"hash"`
 	Name     string `json:"name"`
@@ -16,14 +16,16 @@ type DeviceDTO struct {
 	UserHash string `json:"userHash"`
 }
 
-// Define ListDTO struct
+// ListDTO represents a list data transfer object
 type ListDTO struct {
-	Name     string `json:"name"`
-	UserHash string `json:"userHash"`
-	Id       int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"`
+	UserHash    string `json:"userHash"`
+	ID          int    `json:"id"`
 }
 
-// Define ScheduleDTO struct
+// ScheduleDTO represents a schedule data transfer object
 type ScheduleDTO struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
@@ -36,5 +38,5 @@ type ScheduleDTO struct {
 	Friday    bool   `json:"friday"`
 	Saturday  bool   `json:"saturday"`
 	Sunday    bool   `json:"sunday"`
-	Id        int    `json:"id"`
+	ID        int    `json:"id"`
 }

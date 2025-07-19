@@ -7,17 +7,20 @@ import (
 	"server/model"
 )
 
+// QuoteController defines the interface for quote operations
 type QuoteController interface {
 	Random(w http.ResponseWriter, r *http.Request)
 }
 
+// QuoteControllerImpl implements the QuoteController interface
 type QuoteControllerImpl struct{}
 
+// NewQuoteController creates a new QuoteController instance
 func NewQuoteController() QuoteController {
 	return &QuoteControllerImpl{}
 }
 
-// Collection of stoic quotes
+// quotes contains a collection of stoic quotes
 var quotes = []model.Quote{
 	{
 		Quote:  "You become what you give your attention to.",

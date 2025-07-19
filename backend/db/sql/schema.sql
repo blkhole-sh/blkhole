@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS domain (
 CREATE TABLE IF NOT EXISTS list (
     id INTEGER PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    source TEXT,
     user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE
 );
 
@@ -41,13 +43,7 @@ CREATE TABLE IF NOT EXISTS schedule (
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
     user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE,
-    monday INTEGER NOT NULL CHECK (monday IN (0, 1)),      -- 0 (false) or 1 (true)
-    tuesday INTEGER NOT NULL CHECK (monday IN (0, 1)),     -- 0 (false) or 1 (true)
-    wednesday INTEGER NOT NULL CHECK (monday IN (0, 1)),   -- 0 (false) or 1 (true)
-    thursday INTEGER NOT NULL CHECK (monday IN (0, 1)),    -- 0 (false) or 1 (true)
-    friday INTEGER NOT NULL CHECK (monday IN (0, 1)),      -- 0 (false) or 1 (true)
-    saturday INTEGER NOT NULL CHECK (monday IN (0, 1)),    -- 0 (false) or 1 (true)
-    sunday INTEGER NOT NULL CHECK (monday IN (0, 1)),      -- 0 (false) or 1 (true)
+    days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
     CHECK (start_time < end_time)
 );
 

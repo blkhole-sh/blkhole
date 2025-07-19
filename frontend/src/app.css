@@ -1,9 +1,12 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import "tailwindcss";
 
 @import url("https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+@theme {
+	--font-hedvig: "Hedvig Letters Serif", serif;
+	--font-inter: "Inter", sans-serif;
+}
 
 [data-corvu-disclosure-content][data-collapsed] {
 	animation: collapse 200ms linear;

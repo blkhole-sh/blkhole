@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Define DeviceController interface
+// DeviceController defines the interface for device operations
 type DeviceController interface {
 	Create(http.ResponseWriter, *http.Request)
 	FindByHash(http.ResponseWriter, *http.Request)
@@ -20,13 +20,13 @@ type DeviceController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// Define DeviceControllerImpl struct
+// DeviceControllerImpl implements the DeviceController interface
 type DeviceControllerImpl struct {
 	deviceRepo    repos.DeviceRepo
 	cryptoService services.CryptoService
 }
 
-// Create new DeviceController
+// NewDeviceController creates a new DeviceController instance
 func NewDeviceController(deviceRepo repos.DeviceRepo, cryptoService services.CryptoService) DeviceController {
 	return &DeviceControllerImpl{
 		deviceRepo:    deviceRepo,
