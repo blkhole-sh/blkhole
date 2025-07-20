@@ -17,22 +17,22 @@ export interface Device {
 	scheduleIds: number[];
 }
 
-// Define Domain interface
-export interface Domain {
+// Define Rule interface
+export interface Rule {
 	id: number;
-	name: string;
-	listIds: number[];
-	scheduleIds: number[];
+	domain: string;
+	listId: number;
+	allowed: boolean;
 }
 
 // Define List interface
 export interface List {
 	id: number;
 	name: string;
-	description?: string;
-	source?: string;
+	description: string;
+	source: string;
 	userHash: string;
-	domainIds: number[];
+	rules: Rule[];
 	scheduleIds: number[];
 }
 
@@ -44,7 +44,7 @@ export interface Schedule {
 	endTime: Date;
 	userHash: string;
 	deviceHashes: string[];
-	domainIds: number[];
+	domains: string[];
 	listIds: number[];
 	monday: boolean;
 	tuesday: boolean;

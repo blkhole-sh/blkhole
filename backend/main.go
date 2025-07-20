@@ -18,28 +18,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/joho/godotenv"
 )
 
 var (
 	// Repos
 	userRepo     repos.UserRepo
 	deviceRepo   repos.DeviceRepo
-	domainRepo   repos.DomainRepo
+	ruleRepo     repos.RuleRepo
 	listRepo     repos.ListRepo
 	scheduleRepo repos.ScheduleRepo
 
 	// Services
 	contentBlocker services.ContentBlocker
 	cryptoService  services.CryptoService
+	listService    services.ListsService
 
 	// Controllers
-	deviceController   controllers.DeviceController
-	userController     controllers.UserController
-	dnsController      controllers.DnsController
-	listController     controllers.ListController
-	scheduleController controllers.ScheduleController
-	quoteController    controllers.QuoteController
+	deviceController       controllers.DeviceController
+	userController         controllers.UserController
+	dnsController          controllers.DNSController
+	listController         controllers.ListController
+	mobileConfigController controllers.MobileConfigController
+	scheduleController     controllers.ScheduleController
+	quoteController        controllers.QuoteController
 
 	// Test
 	t test.Test
@@ -66,7 +67,7 @@ func initDependencies() {
 
 	// Initialize Repos
 	deviceRepo = repos.NewDeviceRepo(db)
-	domainRepo = repos.NewDomainRepo(db)
+	ruleRepo = repos.NewRuleRepo(db)
 	listRepo = repos.NewListRepo(db)
 	scheduleRepo = repos.NewScheduleRepo(db)
 	userRepo = repos.NewUserRepo(db)
@@ -74,30 +75,26 @@ func initDependencies() {
 	// Initialize services
 	contentBlocker = services.NewContentBlocker(scheduleRepo)
 	cryptoService = services.NewCryptoService(secret)
+	listService = services.NewListsService(listRepo, ruleRepo)
 
 	// Inizialize controllers
 	deviceController = controllers.NewDeviceController(deviceRepo, cryptoService)
 	userController = controllers.NewUserController(userRepo, cryptoService)
-	dnsController = controllers.NewDnsController(contentBlocker)
+	dnsController = controllers.NewDNSController(contentBlocker)
 	listController = controllers.NewListController(listRepo)
+	mobileConfigController = controllers.NewMobileConfigController()
 	scheduleController = controllers.NewScheduleController(scheduleRepo, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 
-	// Initilaize test
+	// Initialize test
 
-	// t = test.NewTest(userRepo, deviceRepo, domainRepo, listRepo, scheduleRepo, cryptoService)
+	t = test.NewTest(userRepo, deviceRepo, ruleRepo, listRepo, listService, scheduleRepo, cryptoService)
 	// if err := t.Test(); err != nil {
-	// log.Fatal(err)
+	//	log.Fatal(err)
 	//}
 }
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	// Initialize dependencies
 	initDependencies()
 
@@ -123,8 +120,8 @@ func main() {
 
 	// Route specifically for /dns-query, handling both GET and POST requests
 	r.Route("/{userHash}/{deviceHash}/dns-query", func(r chi.Router) {
-		r.Get("/", dnsController.DnsQuery)
-		r.Post("/", dnsController.DnsQuery)
+		r.Get("/", dnsController.DNSQuery)
+		r.Post("/", dnsController.DNSQuery)
 	})
 
 	// Serve the blocked page on "/blocked"
@@ -149,6 +146,9 @@ func main() {
 	r.Post("/lists/{id}", listController.Update)
 	r.Delete("/lists/{id}", listController.Delete)
 
+	// Serve mobile config controller
+	r.Get("/config/{userHash}/{deviceHash}", mobileConfigController.GenerateConfig)
+
 	// Serve schedule api routes
 	r.Get("/schedules/{id}", scheduleController.FindByID)
 	r.Get("/users/{userHash}/schedules", scheduleController.FindByUser)
@@ -159,11 +159,11 @@ func main() {
 	r.Get("/quote", quoteController.Random)
 
 	// Read port from .env
-	port := os.Getenv("PORT")
+	port := os.Getenv("SERVER_PORT")
 
 	// Start server on given port
 	log.Printf("Starting Leo on :%s\n", port)
-	err = http.ListenAndServe(":"+port, r)
+	err := http.ListenAndServe(":"+port, r)
 	if err != nil {
 		log.Fatal(err)
 	}

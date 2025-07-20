@@ -65,7 +65,12 @@ func (repo *DeviceRepoImpl) LoadScheduleIDs(hash string) ([]int, error) {
 	var scheduleIDs []int
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &scheduleIDs, sql, hash); err != nil {
-		return nil, err
+		return []int{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if scheduleIDs == nil {
+		return []int{}, nil
 	}
 
 	return scheduleIDs, nil
@@ -95,7 +100,12 @@ func (repo *DeviceRepoImpl) FindByUser(userHash string) ([]*model.Device, error)
 
 	err := sqlscan.Select(repo.ctx, repo.db, &devices, sql, userHash)
 	if err != nil {
-		return nil, err
+		return []*model.Device{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if devices == nil {
+		return []*model.Device{}, nil
 	}
 
 	for _, d := range devices {
@@ -113,7 +123,12 @@ func (repo *DeviceRepoImpl) FindBySchedule(scheduleID int) ([]*model.Device, err
 
 	err := sqlscan.Select(repo.ctx, repo.db, &devices, sql, scheduleID)
 	if err != nil {
-		return nil, err
+		return []*model.Device{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if devices == nil {
+		return []*model.Device{}, nil
 	}
 
 	for _, d := range devices {

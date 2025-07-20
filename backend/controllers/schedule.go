@@ -103,6 +103,11 @@ func (sc *ScheduleControllerImpl) FindByUser(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Unable to find schedules in db", http.StatusNotFound)
 	}
 
+	// Ensure we return an empty array instead of null for empty results
+	if s == nil {
+		s = []*model.Schedule{}
+	}
+
 	// Respond with json encoded schedules
 	json.NewEncoder(w).Encode(s)
 }

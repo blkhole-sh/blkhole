@@ -1,0 +1,10 @@
+Makefile
+.air.toml
+tmp/
+.git
+.gitignore
+README.md
+.env.local
+.env.development
+*.log
+.DS_Store

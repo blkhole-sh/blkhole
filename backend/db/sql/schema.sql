@@ -14,12 +14,6 @@ CREATE TABLE IF NOT EXISTS device (
     user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE
 );
 
--- Create domain table:
-CREATE TABLE IF NOT EXISTS domain (
-    id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
-);
-
 -- Create list table:
 CREATE TABLE IF NOT EXISTS list (
     id INTEGER PRIMARY KEY,
@@ -29,11 +23,12 @@ CREATE TABLE IF NOT EXISTS list (
     user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE
 );
 
--- Create domain - list reference table:
-CREATE TABLE IF NOT EXISTS domain_list (
-    domain_id INTEGER NOT NULL REFERENCES domain (id) ON DELETE CASCADE,
-    list_id INTEGER NOT NULL REFERENCES list (id) ON DELETE CASCADE,
-    PRIMARY KEY (domain_id, list_id)
+-- Create rule reference table:
+CREATE TABLE IF NOT EXISTS rule (
+    id INTEGER PRIMARY KEY,
+    domain TEXT NOT NULL,
+    allowed INTEGER NOT NULL,
+    list_id INTEGER NOT NULL REFERENCES list (id) ON DELETE CASCADE
 );
 
 -- Create schedule table:
@@ -54,14 +49,15 @@ CREATE TABLE IF NOT EXISTS device_schedule (
     PRIMARY KEY (device_hash, schedule_id)
 );
 
--- Create domain - schedule reference table:
-CREATE TABLE IF NOT EXISTS domain_schedule (
-    domain_id INTEGER NOT NULL REFERENCES domain (id) ON DELETE CASCADE,
-    schedule_id INTEGER NOT NULL REFERENCES schedule (id) ON DELETE CASCADE
-);
-
 -- Create list - schedule reference table:
 CREATE TABLE IF NOT EXISTS list_schedule (
     list_id INTEGER NOT NULL REFERENCES list (id) ON DELETE CASCADE,
     schedule_id INTEGER NOT NULL REFERENCES schedule (id) ON DELETE CASCADE
+);
+
+-- Create schedule - domain reference table:
+CREATE TABLE IF NOT EXISTS schedule_domain (
+    schedule_id INTEGER NOT NULL REFERENCES schedule (id) ON DELETE CASCADE,
+    domain TEXT NOT NULL,
+    PRIMARY KEY (schedule_id, domain)
 );

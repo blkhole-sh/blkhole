@@ -83,6 +83,11 @@ func (dc *DeviceControllerImpl) FindByUser(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Unable to find devices in db", http.StatusNotFound)
 	}
 
+	// Ensure we return an empty array instead of null for empty results
+	if d == nil {
+		d = []*model.Device{}
+	}
+
 	// Respond with json encoded devices
 	json.NewEncoder(w).Encode(d)
 }

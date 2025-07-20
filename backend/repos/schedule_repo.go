@@ -15,16 +15,16 @@ type ScheduleRepo interface {
 	Update(id int, s *model.Schedule) error
 	Delete(id int) error
 	LinkDevice(id int, deviceHash string) error
-	LinkDomain(id int, domainID int) error
+	LinkDomain(id int, domain string) error
 	LinkList(id int, listID int) error
 	LoadDeviceHashes(id int) ([]string, error)
-	LoadDomainIDs(id int) ([]int, error)
+	LoadDomains(id int) ([]string, error)
 	LoadListIDs(id int) ([]int, error)
 	LoadRelations(s *model.Schedule) error
 	FindByID(id int) (*model.Schedule, error)
 	FindByUser(userHash string) ([]*model.Schedule, error)
 	FindByDevice(deviceHash string) ([]*model.Schedule, error)
-	FindByDomain(domainID int) ([]*model.Schedule, error)
+	FindByDomain(domain string) ([]*model.Schedule, error)
 	FindByList(listID int) ([]*model.Schedule, error)
 	DomainBlocked(domain string, deviceHash string) (bool, error)
 }
@@ -133,10 +133,10 @@ func (repo *ScheduleRepoImpl) LinkDevice(id int, deviceHash string) error {
 	return err
 }
 
-// LinkDomain links a domain with given ID to a schedule with given ID
-func (repo *ScheduleRepoImpl) LinkDomain(id int, domainID int) error {
-	sql := "INSERT INTO domain_schedule (domain_id, schedule_id) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, sql, domainID, id)
+// LinkDomain links a domain with given string to a schedule with given ID
+func (repo *ScheduleRepoImpl) LinkDomain(id int, domain string) error {
+	sql := "INSERT INTO schedule_domain (schedule_id, domain) VALUES (?, ?)"
+	_, err := repo.db.ExecContext(repo.ctx, sql, id, domain)
 	return err
 }
 
@@ -153,22 +153,32 @@ func (repo *ScheduleRepoImpl) LoadDeviceHashes(id int) ([]string, error) {
 	var deviceHashes []string
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &deviceHashes, sql, id); err != nil {
-		return nil, err
+		return []string{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if deviceHashes == nil {
+		return []string{}, nil
 	}
 
 	return deviceHashes, nil
 }
 
-// LoadDomainIDs returns ids of all domains linked to schedule with given id
-func (repo *ScheduleRepoImpl) LoadDomainIDs(id int) ([]int, error) {
-	sql := "SELECT DISTINCT ds.domain_id FROM domain_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE s.id = ?"
-	var domainIds []int
+// LoadDomains returns domain strings linked to schedule with given id
+func (repo *ScheduleRepoImpl) LoadDomains(id int) ([]string, error) {
+	sql := "SELECT DISTINCT sd.domain FROM schedule_domain sd WHERE sd.schedule_id = ?"
+	var domains []string
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &domainIds, sql, id); err != nil {
-		return nil, err
+	if err := sqlscan.Select(repo.ctx, repo.db, &domains, sql, id); err != nil {
+		return []string{}, nil
 	}
 
-	return domainIds, nil
+	// Ensure we return empty slice instead of nil
+	if domains == nil {
+		return []string{}, nil
+	}
+
+	return domains, nil
 }
 
 // LoadListIDs returns ids of all lists linked to schedule with given id
@@ -177,13 +187,18 @@ func (repo *ScheduleRepoImpl) LoadListIDs(id int) ([]int, error) {
 	var listIds []int
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &listIds, sql, id); err != nil {
-		return nil, err
+		return []int{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if listIds == nil {
+		return []int{}, nil
 	}
 
 	return listIds, nil
 }
 
-// LoadRelations loads all relations (hashes, ids) for scheduke with given id
+// LoadRelations loads all relations (hashes, domains, ids) for schedule with given id
 func (repo *ScheduleRepoImpl) LoadRelations(s *model.Schedule) error {
 	var err error
 
@@ -191,7 +206,7 @@ func (repo *ScheduleRepoImpl) LoadRelations(s *model.Schedule) error {
 		return err
 	}
 
-	if s.DomainIds, err = repo.LoadDomainIDs(s.ID); err != nil {
+	if s.Domains, err = repo.LoadDomains(s.ID); err != nil {
 		return err
 	}
 
@@ -228,7 +243,12 @@ func (repo *ScheduleRepoImpl) FindByUser(userHash string) ([]*model.Schedule, er
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, userHash); err != nil {
-		return nil, err
+		return []*model.Schedule{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if dbRows == nil {
+		return []*model.Schedule{}, nil
 	}
 
 	var schedules []*model.Schedule
@@ -250,7 +270,12 @@ func (repo *ScheduleRepoImpl) FindByDevice(deviceHash string) ([]*model.Schedule
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, deviceHash); err != nil {
-		return nil, err
+		return []*model.Schedule{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if dbRows == nil {
+		return []*model.Schedule{}, nil
 	}
 
 	var schedules []*model.Schedule
@@ -265,14 +290,19 @@ func (repo *ScheduleRepoImpl) FindByDevice(deviceHash string) ([]*model.Schedule
 	return schedules, nil
 }
 
-// FindByDomain returns all existing schedules that are linked with domain with given id
-func (repo *ScheduleRepoImpl) FindByDomain(domainID int) ([]*model.Schedule, error) {
+// FindByDomain returns all existing schedules that are linked with domain with given string
+func (repo *ScheduleRepoImpl) FindByDomain(domain string) ([]*model.Schedule, error) {
 	sql := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_hash
-          FROM domain_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE ds.domain_id = ?`
+          FROM schedule_domain sd JOIN schedule s ON sd.schedule_id = s.id WHERE sd.domain = ?`
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, domainID); err != nil {
-		return nil, err
+	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, domain); err != nil {
+		return []*model.Schedule{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if dbRows == nil {
+		return []*model.Schedule{}, nil
 	}
 
 	var schedules []*model.Schedule
@@ -294,7 +324,12 @@ func (repo *ScheduleRepoImpl) FindByList(listID int) ([]*model.Schedule, error) 
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, listID); err != nil {
-		return nil, err
+		return []*model.Schedule{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if dbRows == nil {
+		return []*model.Schedule{}, nil
 	}
 
 	var schedules []*model.Schedule
@@ -315,14 +350,13 @@ func (repo *ScheduleRepoImpl) DomainBlocked(domain string, deviceHash string) (b
                 time('now', 'localtime') AS current_time_only,  -- Current local time in HH:MM
                 strftime('%w', 'now', 'localtime') AS current_day  -- Current day of the week (0 = Sunday, 1 = Monday, ...)
             )
-            SELECT DISTINCT d.name AS domain_name
+            SELECT DISTINCT r.domain AS domain_name
             FROM (
-              -- Domains directly blocked via schedule linked with the device
-              SELECT d.name
-              FROM domain d
-              JOIN schedule s ON s.id = s.id  -- Replace with actual join condition for schedule
+              -- Domains directly linked to schedule via schedule_domain table
+              SELECT sd.domain
+              FROM schedule_domain sd
+              JOIN schedule s ON sd.schedule_id = s.id
               JOIN device_schedule ds ON s.id = ds.schedule_id
-              JOIN device dv ON ds.device_hash = dv.hash
               CROSS JOIN CurrentDateTime
               WHERE 
                 CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
@@ -335,18 +369,19 @@ func (repo *ScheduleRepoImpl) DomainBlocked(domain string, deviceHash string) (b
                 (s.saturday = 1 AND CurrentDateTime.current_day = '6') OR
                 (s.sunday = 1 AND CurrentDateTime.current_day = '0')
               )
-              AND dv.hash = ?  -- Bind the device hash here
+              AND ds.device_hash = ?
               UNION
-              -- Domains indirectly blocked via lists in schedule linked with the device
-              SELECT d.name
-              FROM domain d
-              JOIN domain_list dl ON d.id = dl.domain_id
-              JOIN schedule s ON s.id = s.id  -- Replace with actual join condition for schedule
+              -- Domains blocked via rules in lists linked to schedule
+              SELECT r.domain
+              FROM rule r
+              JOIN list l ON r.list_id = l.id
+              JOIN list_schedule ls ON l.id = ls.list_id
+              JOIN schedule s ON ls.schedule_id = s.id
               JOIN device_schedule ds ON s.id = ds.schedule_id
-              JOIN device dv ON ds.device_hash = dv.hash
               CROSS JOIN CurrentDateTime
               WHERE 
-                CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
+                r.allowed = 0  -- Only blocked rules (not whitelisted)
+              AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
               AND (
                 (s.monday = 1 AND CurrentDateTime.current_day = '1') OR
                 (s.tuesday = 1 AND CurrentDateTime.current_day = '2') OR
@@ -356,9 +391,9 @@ func (repo *ScheduleRepoImpl) DomainBlocked(domain string, deviceHash string) (b
                 (s.saturday = 1 AND CurrentDateTime.current_day = '6') OR
                 (s.sunday = 1 AND CurrentDateTime.current_day = '0')
               )
-              AND dv.hash = ?  -- Bind the device hash here
-            ) AS blocked_domains
-            WHERE domain_name = ?;  -- Bind the domain name here`
+              AND ds.device_hash = ?
+            ) AS r
+            WHERE r.domain = ?;  -- Check if the specific domain is blocked`
 
 	var result string
 	err := repo.db.QueryRowContext(repo.ctx, query, deviceHash, deviceHash, domain).Scan(&result)
@@ -368,7 +403,7 @@ func (repo *ScheduleRepoImpl) DomainBlocked(domain string, deviceHash string) (b
 		return false, nil
 	}
 
-	// An actual error occured
+	// An actual error occurred
 	if err != nil {
 		return false, err
 	}

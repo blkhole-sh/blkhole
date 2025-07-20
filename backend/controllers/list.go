@@ -79,6 +79,11 @@ func (lc *ListControllerImpl) FindByUser(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Unable to find blocklists in db", http.StatusNotFound)
 	}
 
+	// Ensure we return an empty array instead of null for empty results
+	if l == nil {
+		l = []*model.List{}
+	}
+
 	// Respond with json encoded lists
 	json.NewEncoder(w).Encode(l)
 }

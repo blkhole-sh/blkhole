@@ -11,17 +11,16 @@ import (
 
 // ListRepo defines the interface for list repository operations
 type ListRepo interface {
-	Create(c *model.List) (int, error)
-	Update(id int, c *model.List) error
+	Create(l *model.List) (int, error)
+	Update(id int, l *model.List) error
 	Delete(id int) error
-	LinkDomain(id int, domainID int) error
 	LinkSchedule(id int, scheduleID int) error
-	LoadDomainIDs(id int) ([]int, error)
+	LoadRules(id int) ([]model.Rule, error)
 	LoadScheduleIDs(id int) ([]int, error)
 	LoadRelations(l *model.List) error
 	FindByID(id int) (*model.List, error)
+	FindAll() ([]*model.List, error)
 	FindByUser(userHash string) ([]*model.List, error)
-	FindByDomain(domainID int) ([]*model.List, error)
 	FindBySchedule(scheduleID int) ([]*model.List, error)
 }
 
@@ -57,13 +56,6 @@ func (repo *ListRepoImpl) Delete(id int) error {
 	return err
 }
 
-// LinkDomain links a domain with given ID to a list with given ID
-func (repo *ListRepoImpl) LinkDomain(id int, domainID int) error {
-	sql := "INSERT INTO domain_list (domain_id, list_id) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, sql, domainID, id)
-	return err
-}
-
 // LinkSchedule links a schedule with given ID to a list with given ID
 func (repo *ListRepoImpl) LinkSchedule(id int, scheduleID int) error {
 	sql := "INSERT INTO list_schedule (list_id, schedule_id) VALUES (?, ?)"
@@ -71,35 +63,45 @@ func (repo *ListRepoImpl) LinkSchedule(id int, scheduleID int) error {
 	return err
 }
 
-// LoadDomainIDs returns ids of all domains linked to list with given id
-func (repo *ListRepoImpl) LoadDomainIDs(id int) ([]int, error) {
-	sql := "SELECT DISTINCT dl.domain_id from domain_list dl JOIN list l ON dl.id = l.id WHERE l.id = ?"
-	var domainIds []int
+// LoadRules returns all rules for a list with given id
+func (repo *ListRepoImpl) LoadRules(id int) ([]model.Rule, error) {
+	sql := "SELECT id, domain, list_id, allowed FROM rule WHERE list_id = ?"
+	var rules []model.Rule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &domainIds, sql, id); err != nil {
-		return nil, err
+	if err := sqlscan.Select(repo.ctx, repo.db, &rules, sql, id); err != nil {
+		return []model.Rule{}, nil
 	}
 
-	return domainIds, nil
+	// Ensure we return empty slice instead of nil
+	if rules == nil {
+		return []model.Rule{}, nil
+	}
+
+	return rules, nil
 }
 
 // LoadScheduleIDs returns ids of all schedules linked to list with given id
 func (repo *ListRepoImpl) LoadScheduleIDs(id int) ([]int, error) {
-	sql := "SELECT DISTINCT ls.schedule_od from list l JOIN list_schedule ls ON l.id = ls.list_id WHERE l.id = ?"
+	sql := "SELECT DISTINCT ls.schedule_id from list l JOIN list_schedule ls ON l.id = ls.list_id WHERE l.id = ?"
 	var scheduleIds []int
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &scheduleIds, sql, id); err != nil {
-		return nil, err
+		return []int{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if scheduleIds == nil {
+		return []int{}, nil
 	}
 
 	return scheduleIds, nil
 }
 
-// LoadRelations loads all relations (hashes, ids) for list with given id
+// LoadRelations loads all relations (rules, schedule ids) for list with given id
 func (repo *ListRepoImpl) LoadRelations(l *model.List) error {
 	var err error
 
-	if l.DomainIds, err = repo.LoadDomainIDs(l.ID); err != nil {
+	if l.Rules, err = repo.LoadRules(l.ID); err != nil {
 		return err
 	}
 
@@ -126,13 +128,18 @@ func (repo *ListRepoImpl) FindByID(id int) (*model.List, error) {
 	return &l, nil
 }
 
-// FindByUser returns all existing lists with given user hash from the database
-func (repo *ListRepoImpl) FindByUser(userHash string) ([]*model.List, error) {
-	sql := "SELECT id, name, description, source, user_hash FROM list WHERE user_hash=?"
+// FindAll returns all existing lists from the database
+func (repo *ListRepoImpl) FindAll() ([]*model.List, error) {
+	sql := "SELECT id, name, description, source, user_hash FROM list"
 	var lists []*model.List
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &lists, sql, userHash); err != nil {
-		return nil, err
+	if err := sqlscan.Select(repo.ctx, repo.db, &lists, sql); err != nil {
+		return []*model.List{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if lists == nil {
+		return []*model.List{}, nil
 	}
 
 	for _, l := range lists {
@@ -144,13 +151,18 @@ func (repo *ListRepoImpl) FindByUser(userHash string) ([]*model.List, error) {
 	return lists, nil
 }
 
-// FindByDomain returns all existing lists linked with domain with given id
-func (repo *ListRepoImpl) FindByDomain(domainID int) ([]*model.List, error) {
-	sql := "SELECT l.id, l.name, l.description, l.source, l.user_hash FROM domain_list dl JOIN list l on dl.list_id = l.id WHERE dl.domain_id = ?"
+// FindByUser returns all existing lists with given user hash from the database
+func (repo *ListRepoImpl) FindByUser(userHash string) ([]*model.List, error) {
+	sql := "SELECT id, name, description, source, user_hash FROM list WHERE user_hash=?"
 	var lists []*model.List
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &lists, sql, domainID); err != nil {
-		return nil, err
+	if err := sqlscan.Select(repo.ctx, repo.db, &lists, sql, userHash); err != nil {
+		return []*model.List{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if lists == nil {
+		return []*model.List{}, nil
 	}
 
 	for _, l := range lists {
@@ -168,7 +180,12 @@ func (repo *ListRepoImpl) FindBySchedule(scheduleID int) ([]*model.List, error) 
 	var lists []*model.List
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &lists, sql, scheduleID); err != nil {
-		return nil, err
+		return []*model.List{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if lists == nil {
+		return []*model.List{}, nil
 	}
 
 	for _, l := range lists {

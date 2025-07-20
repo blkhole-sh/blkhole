@@ -61,7 +61,12 @@ func (repo *UserRepoImpl) LoadDeviceHashes(hash string) ([]string, error) {
 	var deviceHashes []string
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &deviceHashes, sql, hash); err != nil {
-		return nil, err
+		return []string{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if deviceHashes == nil {
+		return []string{}, nil
 	}
 
 	return deviceHashes, nil
@@ -73,7 +78,12 @@ func (repo *UserRepoImpl) LoadListsIDs(hash string) ([]int, error) {
 	var listIds []int
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &listIds, sql, hash); err != nil {
-		return nil, err
+		return []int{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if listIds == nil {
+		return []int{}, nil
 	}
 
 	return listIds, nil
@@ -85,7 +95,12 @@ func (repo *UserRepoImpl) LoadScheduleIDs(hash string) ([]int, error) {
 	var scheduleIds []int
 
 	if err := sqlscan.Select(repo.ctx, repo.db, &scheduleIds, sql, hash); err != nil {
-		return nil, err
+		return []int{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if scheduleIds == nil {
+		return []int{}, nil
 	}
 
 	return scheduleIds, nil

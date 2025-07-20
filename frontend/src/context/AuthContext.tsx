@@ -13,7 +13,7 @@ export function useAuth(): string {
 }
 
 export default function AuthContextProvider(props: ParentProps) {
-	const userHash = "XZ7J2U3R2MUJWPBYV36XYDCTQ47LBFKE7GHNFIXKWAU2GETX2HIA====";
+	const userHash = "CAJIV6QHSXUTNMG4GS2STKIOLLX64O5SS3Q6YLWN6UEC45ZVFXKA====";
 
 	return (
 		<AuthContext.Provider value={userHash}>

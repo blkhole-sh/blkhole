@@ -5,7 +5,7 @@ interface Props {
 }
 
 export default function Trash(props: Props) {
-	const merged = mergeProps({ class: "size-4 text-gray-500" }, props);
+	const merged = mergeProps({ class: "size-5 text-gray-500" }, props);
 
 	return (
 		<svg

@@ -8,35 +8,37 @@ import (
 )
 
 type Test interface {
-	AddUser(name string, email string, password string) (string, error)
-	AddDevice(name string, os model.OS, userHash string) (string, error)
-	AddDomains(domains []string) ([]int, error)
-	AddList(name string, domainIds []int, userHash string) (int, error)
-	AddSchedule(name string, startTime string, endTime string, monday bool, tuesday bool, wednesday bool, thursday bool, friday bool, saturday bool, sunday bool, deviceHashes []string, domainIds []int, listIds []int, userHash string) (int, error)
+	AddUser(user model.User, password string) (string, error)
+	AddDevice(device model.Device) (string, error)
+	AddRule(rule model.Rule) (int, error)
+	AddList(list model.List, domains []string) (int, error)
+	AddSchedule(schedule model.Schedule) (int, error)
 	Test() error
 }
 
 type TestImpl struct {
 	userRepo      repos.UserRepo
 	deviceRepo    repos.DeviceRepo
-	domainRepo    repos.DomainRepo
+	ruleRepo      repos.RuleRepo
 	listRepo      repos.ListRepo
+	listService   services.ListsService
 	scheduleRepo  repos.ScheduleRepo
 	cryptoService services.CryptoService
 }
 
-func NewTest(userRepo repos.UserRepo, deviceRepo repos.DeviceRepo, domainRepo repos.DomainRepo, listRepo repos.ListRepo, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService) Test {
+func NewTest(userRepo repos.UserRepo, deviceRepo repos.DeviceRepo, ruleRepo repos.RuleRepo, listRepo repos.ListRepo, listService services.ListsService, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService) Test {
 	return &TestImpl{
 		userRepo:      userRepo,
 		deviceRepo:    deviceRepo,
-		domainRepo:    domainRepo,
+		ruleRepo:      ruleRepo,
 		listRepo:      listRepo,
+		listService:   listService,
 		scheduleRepo:  scheduleRepo,
 		cryptoService: cryptoService,
 	}
 }
 
-func (t TestImpl) AddUser(name string, email string, password string) (string, error) {
+func (t TestImpl) AddUser(user model.User, password string) (string, error) {
 	hash, err := t.cryptoService.RandomHash()
 	if err != nil {
 		return "", err
@@ -47,114 +49,86 @@ func (t TestImpl) AddUser(name string, email string, password string) (string, e
 		return "", err
 	}
 
-	u := model.User{
-		Hash:         hash,
-		Name:         name,
-		Email:        email,
-		PasswordHash: passwordHash,
-	}
+	user.Hash = hash
+	user.PasswordHash = passwordHash
 
-	err = t.userRepo.Create(&u)
+	err = t.userRepo.Create(&user)
 	if err != nil {
 		return "", err
 	}
 
-	return u.Hash, nil
+	return user.Hash, nil
 }
 
-func (t TestImpl) AddDevice(name string, os model.OS, userHash string) (string, error) {
+func (t TestImpl) AddDevice(device model.Device) (string, error) {
 	hash, err := t.cryptoService.RandomHash()
 	if err != nil {
 		return "", err
 	}
 
-	d := model.Device{
-		Hash:     hash,
-		Name:     name,
-		OS:       os,
-		UserHash: userHash,
-	}
+	device.Hash = hash
 
-	err = t.deviceRepo.Create(&d)
+	err = t.deviceRepo.Create(&device)
 	if err != nil {
 		return "", err
 	}
 
-	return d.Hash, nil
+	return device.Hash, nil
 }
 
-func (t TestImpl) AddDomains(domains []string) ([]int, error) {
-	ids := []int{}
-	for _, name := range domains {
-		d := model.Domain{Name: name}
-		id, err := t.domainRepo.Create(&d)
-		if err != nil {
-			return ids, err
-		}
-
-		ids = append(ids, id)
-	}
-
-	return ids, nil
-}
-
-func (t TestImpl) AddList(name string, domainIds []int, userHash string) (int, error) {
-	l := model.List{
-		Name:     name,
-		UserHash: userHash,
-	}
-
-	id, err := t.listRepo.Create(&l)
+func (t TestImpl) AddRule(rule model.Rule) (int, error) {
+	id, err := t.ruleRepo.Create(&rule)
 	if err != nil {
 		return -1, err
-	}
-
-	for _, di := range domainIds {
-		err := t.listRepo.LinkDomain(id, di)
-		if err != nil {
-			return id, err
-		}
 	}
 
 	return id, nil
 }
 
-func (t TestImpl) AddSchedule(name string, startTime string, endTime string, monday bool, tuesday bool, wednesday bool, thursday bool, friday bool, saturday bool, sunday bool, deviceHashes []string, domainIds []int, listIds []int, userHash string) (int, error) {
-	s := model.Schedule{
-		Name:      name,
-		StartTime: startTime,
-		EndTime:   endTime,
-		Monday:    monday,
-		Tuesday:   tuesday,
-		Wednesday: wednesday,
-		Thursday:  thursday,
-		Friday:    friday,
-		Saturday:  saturday,
-		Sunday:    sunday,
-		UserHash:  userHash,
-	}
-
-	id, err := t.scheduleRepo.Create(&s)
+func (t TestImpl) AddList(list model.List, domains []string) (int, error) {
+	id, err := t.listRepo.Create(&list)
 	if err != nil {
 		return -1, err
 	}
 
-	for _, dh := range deviceHashes {
+	// Create rules for each domain (default to blocked)
+	for _, domain := range domains {
+		_, err := t.AddRule(model.Rule{
+			Domain:  domain,
+			ListID:  id,
+			Allowed: false,
+		})
+		if err != nil {
+			return id, err
+		}
+	}
+
+	t.listService.LoadList(&list)
+
+	return id, nil
+}
+
+func (t TestImpl) AddSchedule(schedule model.Schedule) (int, error) {
+	id, err := t.scheduleRepo.Create(&schedule)
+	if err != nil {
+		return -1, err
+	}
+
+	for _, dh := range schedule.DeviceHashes {
 		err = t.scheduleRepo.LinkDevice(id, dh)
 		if err != nil {
 			return id, err
 		}
 	}
 
-	for _, di := range domainIds {
-		err = t.scheduleRepo.LinkDomain(id, di)
+	for _, domain := range schedule.Domains {
+		err = t.scheduleRepo.LinkDomain(id, domain)
 		if err != nil {
 			return id, err
 		}
-
 	}
 
-	for _, li := range listIds {
+	for _, li := range schedule.ListIds {
 		err = t.scheduleRepo.LinkList(id, li)
 		if err != nil {
 			return id, err
@@ -165,42 +139,78 @@ func (t TestImpl) AddSchedule(name string, startTime string, endTime string, mon
 }
 
 func (t TestImpl) Test() error {
-	uh, err := t.AddUser("Arian Gohari", "arian@gohari.de", "SomePassword")
+	uh, err := t.AddUser(model.User{
+		Name:  "Arian Gohari",
+		Email: "arian@gohari.de",
+	}, "SomePassword")
 	if err != nil {
 		return err
 	}
 
-	d1h, err := t.AddDevice("IPhone von Arian", model.IOS, uh)
+	d1h, err := t.AddDevice(model.Device{
+		Name:     "IPhone von Arian",
+		OS:       model.IOS,
+		UserHash: uh,
+	})
 	if err != nil {
 		return err
 	}
 
-	d2h, err := t.AddDevice("MacBook Pro von Arian", model.MacOS, uh)
+	d2h, err := t.AddDevice(model.Device{
+		Name:     "MacBook Pro von Arian",
+		OS:       model.MacOS,
+		UserHash: uh,
+	})
 	if err != nil {
 		return err
 	}
 
-	dis, err := t.AddDomains([]string{"reddit.com", "youtube.com", "linkedin.com", "instagram.com", "startmunich.de"})
+	l1i, err := t.AddList(model.List{
+		Name:        "Hagezi Multi ULTIMATE",
+		Description: "Ultimate Sweeper - Strictly cleans the Internet and protects your privacy! Blocks Ads, Affiliate, Tracking, Metrics, Telemetry, Phishing, Malware, Scam, Free Hoster, Fake, Cryptojacking and other Crap.",
+		Source:      "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.plus.mini.txt",
+		UserHash:    uh,
+	}, []string{})
 	if err != nil {
 		return err
 	}
 
-	l1i, err := t.AddList("Social Media", []int{dis[0], dis[2], dis[3]}, uh)
+	l2i, err := t.AddList(model.List{
+		Name:        "OISD Big",
+		Description: "Blocks Ads, (Mobile) App Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Telemetry/Analytics/Tracking (where not needed for proper functionality).",
+		Source:      "https://big.oisd.nl",
+		UserHash:    uh,
+	}, []string{})
 	if err != nil {
 		return err
 	}
 
-	l2i, err := t.AddList("Addictive", []int{dis[1]}, uh)
+	l3i, err := t.AddList(model.List{
+		Name:        "Anti Axel Springer",
+		Description: "This list blocks all connections to sites which are from Axel Springer Verlag or have a connection with them.",
+		Source:      "https://raw.githubusercontent.com/autinerd/anti-axelspringer-hosts/master/axelspringer-hosts",
+		UserHash:    uh,
+	}, []string{})
 	if err != nil {
 		return err
 	}
 
-	l3i, err := t.AddList("Cringe", []int{dis[2], dis[4]}, uh)
-	if err != nil {
-		return err
-	}
-
-	_, err = t.AddSchedule("My Blocklist", "09:00", "17:00", true, true, true, false, true, true, true, []string{d1h, d2h}, dis, []int{l1i, l2i, l3i}, uh)
+	_, err = t.AddSchedule(model.Schedule{
+		Name:         "Base Protection",
+		StartTime:    "09:00",
+		EndTime:      "17:00",
+		Monday:       true,
+		Tuesday:      true,
+		Wednesday:    true,
+		Thursday:     false,
+		Friday:       true,
+		Saturday:     true,
+		Sunday:       true,
+		DeviceHashes: []string{d1h, d2h},
+		Domains:      []string{"example.com", "test.com"},
+		ListIds:      []int{l1i, l2i, l3i},
+		UserHash:     uh,
+	})
 	if err != nil {
 		return err
 	}

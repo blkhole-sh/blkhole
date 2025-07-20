@@ -28,6 +28,6 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
-	fmt.Println("Database schema initialized successfully.")
+	fmt.Println("database schema initialized successfully.")
 	return nil
 }

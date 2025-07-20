@@ -32,21 +32,21 @@ type Device struct {
 	ScheduleIds []int  `json:"scheduleIds"`
 }
 
-// Domain represents a domain entry
-type Domain struct {
-	Name        string `json:"name"`
-	ListIds     []int  `json:"listIds"`
-	ScheduleIds []int  `json:"scheduleIds"`
-	ID          int    `json:"id"`
+// Rule represents a domain rule with allow/block behavior
+type Rule struct {
+	Domain  string `json:"domain"`
+	ListID  int    `json:"listId"`
+	Allowed bool   `json:"allowed"`
+	ID      int    `json:"id"`
 }
 
-// List represents a list of domains
+// List represents a list of domain rules
 type List struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Source      string `json:"source"`
 	UserHash    string `json:"userHash"`
-	DomainIds   []int  `json:"domainIds"`
+	Rules       []Rule `json:"rules"`
 	ScheduleIds []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
 }
@@ -58,7 +58,7 @@ type Schedule struct {
 	Name         string   `json:"name"`
 	UserHash     string   `json:"userHash"`
 	DeviceHashes []string `json:"deviceHashes"`
-	DomainIds    []int    `json:"domainIds"`
+	Domains      []string `json:"domains"`
 	ListIds      []int    `json:"listIds"`
 	Monday       bool     `json:"monday"`
 	Tuesday      bool     `json:"tuesday"`
