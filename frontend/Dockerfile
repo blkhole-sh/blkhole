@@ -11,6 +11,7 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE ${APP_PORT:-3000}
 CMD ["bun", "start"]

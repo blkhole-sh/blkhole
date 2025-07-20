@@ -8,7 +8,7 @@ COPY . .
 RUN CGO_ENABLED=1 go build -o main .
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates curl sqlite
+RUN apk --no-cache add ca-certificates curl sqlite gcc musl-dev
 WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/templates ./templates
