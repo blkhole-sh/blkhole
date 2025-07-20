@@ -8,7 +8,7 @@ COPY . .
 RUN CGO_ENABLED=1 go build -o main .
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates curl sqlite3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential ca-certificates curl sqlite3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/templates ./templates
