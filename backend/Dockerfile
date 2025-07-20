@@ -5,10 +5,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o main .
+RUN CGO_ENABLED=1 go build -o main .
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates curl
+RUN apk --no-cache add ca-certificates curl sqlite
 WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/templates ./templates
