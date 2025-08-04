@@ -1,1 +1,8 @@
 .env
+
+# Binaries
+leo
+tmp/
+
+# Build artifacts
+assets/
