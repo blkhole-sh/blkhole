@@ -1,4 +1,4 @@
-import { createResource, For, Show } from "solid-js";
+import { createResource, For } from "solid-js";
 import ListTile from "~/components/list/ListTile";
 import { getLists } from "~/lib/api";
 

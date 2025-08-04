@@ -7,15 +7,19 @@ import (
 	"strings"
 )
 
-type FrontendController struct {
+type FrontendController interface {
+	Serve(w http.ResponseWriter, r *http.Request)
+}
+
+type frontendController struct {
 	webFS fs.FS
 }
 
-func NewFrontendController(webFS fs.FS) *FrontendController {
-	return &FrontendController{webFS: webFS}
+func NewFrontendController(webFS fs.FS) FrontendController {
+	return &frontendController{webFS: webFS}
 }
 
-func (fc *FrontendController) Serve(w http.ResponseWriter, r *http.Request) {
+func (fc *frontendController) Serve(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if path == "" {
 		path = "index.html"

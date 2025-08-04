@@ -17,18 +17,18 @@ type DNSController interface {
 	DNSQuery(http.ResponseWriter, *http.Request)
 }
 
-// DNSControllerImpl implements the DnsController interface
-type DNSControllerImpl struct {
+// dnsController implements the DnsController interface
+type dnsController struct {
 	ContentBlocker services.ContentBlocker
 }
 
 // NewDNSController creates a new DnsController instance
 func NewDNSController(contentBlocker services.ContentBlocker) DNSController {
-	return &DNSControllerImpl{ContentBlocker: contentBlocker}
+	return &dnsController{ContentBlocker: contentBlocker}
 }
 
 // DNSQuery handles GET and POST requests to process DNS queries
-func (dc *DNSControllerImpl) DNSQuery(w http.ResponseWriter, r *http.Request) {
+func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	var dnsMsg []byte
 	var err error
 

@@ -20,19 +20,19 @@ type ListController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// ListControllerImpl implements the ListController interface
-type ListControllerImpl struct {
+// listController implements the ListController interface
+type listController struct {
 	listRepo repos.ListRepo
 }
 
 // NewListController creates a new ListController instance
 func NewListController(listRepo repos.ListRepo) ListController {
-	return &ListControllerImpl{
+	return &listController{
 		listRepo: listRepo,
 	}
 }
 
-func (lc *ListControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
+func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	// Initialize list
 	var l model.List
 
@@ -49,7 +49,7 @@ func (lc *ListControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(l)
 }
 
-func (lc *ListControllerImpl) FindByID(w http.ResponseWriter, r *http.Request) {
+func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -68,7 +68,7 @@ func (lc *ListControllerImpl) FindByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(l)
 }
 
-func (lc *ListControllerImpl) FindByUser(w http.ResponseWriter, r *http.Request) {
+func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	// Get user hash from url params
 	userHash := chi.URLParam(r, "userHash")
 
@@ -88,7 +88,7 @@ func (lc *ListControllerImpl) FindByUser(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(l)
 }
 
-func (lc *ListControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
+func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize list
 	var l model.List
 
@@ -112,7 +112,7 @@ func (lc *ListControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(l)
 }
 
-func (lc *ListControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
+func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {

@@ -1,4 +1,6 @@
 import { render } from "solid-js/web";
+import "virtual:uno.css";
+import "./app.css";
 import App from "./app";
 
 const root = document.getElementById("root");

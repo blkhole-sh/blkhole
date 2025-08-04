@@ -18,9 +18,9 @@ type OS string
 const (
 	MacOS   OS = "macOS"
 	IOS     OS = "iOS"
-	Android    = "Android"
-	Linux      = "Linux"
-	Windows    = "Windows"
+	Android OS = "Android"
+	Linux   OS = "Linux"
+	Windows OS = "Windows"
 )
 
 // Device represents a device in the system

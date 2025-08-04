@@ -3,11 +3,14 @@ package db
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
-	"os"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
+
+//go:embed schema.sql
+var schemaSQL string
 
 func Init(db *sql.DB) error {
 	// Enable foreign keys
@@ -16,14 +19,8 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
-	// Read the init.sql file
-	initSQL, err := os.ReadFile("./internal/db/sql/schema.sql")
-	if err != nil {
-		return err
-	}
-
-	// Execute the SQL script
-	_, err = db.Exec(string(initSQL))
+	// Execute the embedded SQL script
+	_, err = db.Exec(schemaSQL)
 	if err != nil {
 		return err
 	}

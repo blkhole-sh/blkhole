@@ -22,22 +22,22 @@ type ScheduleController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// ScheduleControllerImpl implements the ScheduleController interface
-type ScheduleControllerImpl struct {
+// scheduleController implements the ScheduleController interface
+type scheduleController struct {
 	scheduleRepo   repos.ScheduleRepo
 	contentBlocker services.ContentBlocker
 }
 
 // NewScheduleController creates a new ScheduleController instance
 func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker services.ContentBlocker) ScheduleController {
-	return &ScheduleControllerImpl{
+	return &scheduleController{
 		contentBlocker: contentBlocker,
 		scheduleRepo:   scheduleRepo,
 	}
 }
 
 // IsBlocked handles GET requests to check if a domain is blocked
-func (sc *ScheduleControllerImpl) IsBlocked(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) {
 	// Parse domain from request param
 	domain := r.URL.Query().Get("domain")
 	deviceHash := r.URL.Query().Get("deviceHash")
@@ -56,7 +56,7 @@ func (sc *ScheduleControllerImpl) IsBlocked(w http.ResponseWriter, r *http.Reque
 	w.Write([]byte(strconv.FormatBool(blocked)))
 }
 
-func (sc *ScheduleControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	// Initialize schedule
 	var s model.Schedule
 
@@ -73,7 +73,7 @@ func (sc *ScheduleControllerImpl) Create(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(s)
 }
 
-func (sc *ScheduleControllerImpl) FindByID(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -92,7 +92,7 @@ func (sc *ScheduleControllerImpl) FindByID(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(s)
 }
 
-func (sc *ScheduleControllerImpl) FindByUser(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	// Get user hash from url params
 	userHash := chi.URLParam(r, "userHash")
 
@@ -112,7 +112,7 @@ func (sc *ScheduleControllerImpl) FindByUser(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(s)
 }
 
-func (sc *ScheduleControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize schedule
 	var s model.Schedule
 
@@ -136,7 +136,7 @@ func (sc *ScheduleControllerImpl) Update(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(s)
 }
 
-func (sc *ScheduleControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
+func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {

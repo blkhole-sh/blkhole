@@ -17,15 +17,15 @@ type MobileConfigController interface {
 	GenerateConfig(http.ResponseWriter, *http.Request)
 }
 
-// MobileConfigControllerImpl implements the MobileConfigController interface
-type MobileConfigControllerImpl struct{}
+// mobileConfigController implements the MobileConfigController interface
+type mobileConfigController struct{}
 
 // NewMobileConfigController creates a new MobileConfigController instance
 func NewMobileConfigController() MobileConfigController {
-	return &MobileConfigControllerImpl{}
+	return &mobileConfigController{}
 }
 
-func (mc *MobileConfigControllerImpl) GenerateConfig(w http.ResponseWriter, r *http.Request) {
+func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	// Get SERVER_hashes from url params
 	userHash := chi.URLParam(r, "userHash")
 	deviceHash := chi.URLParam(r, "deviceHash")

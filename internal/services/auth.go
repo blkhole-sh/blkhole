@@ -1,54 +1,86 @@
 package services
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"server/internal/model"
 	"server/internal/repos"
+	"time"
+
+	"github.com/go-chi/jwtauth/v5"
 )
 
-// TokenClaims represents the claims in a JWT token
-type TokenClaims struct {
-	UserHash  string `json"userHash"`
-	Email     string `json:"email"`
-	IssuedAt  int64  `json:"iat"`
-	ExpiresAt int64  `json:"exp"`
+const TokenExpiry = 24 * time.Hour
+
+// LoginResult contains successful login response data
+type LoginResult struct {
+	User  *model.User `json:"user"`
+	Token string      `json:"token"`
 }
 
 // AuthService defines the interface for authentication operations
 type AuthService interface {
-	SignIn(email, password string) (*model.User, error)
+	Login(email, password string) (*LoginResult, error)
+	UserFromContext(ctx context.Context) (*model.User, error)
 }
 
-// AuthServiceImpl implements the AuthService interface
-type AuthServiceImpl struct {
+// authService implements the AuthService interface
+type authService struct {
 	userRepo      repos.UserRepo
 	cryptoService CryptoService
+	tokenAuth     *jwtauth.JWTAuth
 }
 
-// NewAuthService creates a new AuthService instance
-func NewAuthService(userRepo repos.UserRepo, cryptoService CryptoService) AuthService {
-	return &AuthServiceImpl{
+// NewAuthService creates a new authentication service
+func NewAuthService(userRepo repos.UserRepo, cryptoService CryptoService, tokenAuth *jwtauth.JWTAuth) AuthService {
+	return &authService{
 		userRepo:      userRepo,
 		cryptoService: cryptoService,
+		tokenAuth:     tokenAuth,
 	}
 }
 
-// SignIn authenticates a user with email and password
-func (as *AuthServiceImpl) SignIn(email, password string) (*model.User, error) {
-	// Find user by email
+// Login authenticates user credentials and returns a token
+func (as *authService) Login(email, password string) (*LoginResult, error) {
 	user, err := as.userRepo.FindByEmail(email)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return nil, fmt.Errorf("invalid credentials")
 	}
 
-	// Verify the password
-	isValid, err := as.cryptoService.VerifyPassword(password, user.PasswordHash)
+	valid, err := as.cryptoService.VerifyPassword(password, user.PasswordHash)
+	if err != nil || !valid {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	claims := map[string]any{
+		"sub":   user.Hash,
+		"email": user.Email,
+		"exp":   time.Now().Add(TokenExpiry).Unix(),
+	}
+
+	_, token, err := as.tokenAuth.Encode(claims)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create token: %w", err)
 	}
 
-	if !isValid {
-		return nil, errors.New("invalid email or password")
+	return &LoginResult{User: user, Token: token}, nil
+}
+
+// UserFromContext extracts user from JWT context
+func (as *authService) UserFromContext(ctx context.Context) (*model.User, error) {
+	_, claims, err := jwtauth.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("no token in context")
+	}
+
+	userHash, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid token subject")
+	}
+
+	user, err := as.userRepo.FindByHash(userHash)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
 	return user, nil

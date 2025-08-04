@@ -14,50 +14,21 @@ type ContentBlocker interface {
 	IsBlocked(domain string, deviceHash string) (bool, error)
 }
 
-// ContentBlockerImpl implements the ContentBlocker interface
-type ContentBlockerImpl struct {
+// contentBlocker implements the ContentBlocker interface
+type contentBlocker struct {
 	scheduleRepo repos.ScheduleRepo
 }
 
 // NewContentBlocker creates a new ContentBlocker instance
 func NewContentBlocker(scheduleRepo repos.ScheduleRepo) ContentBlocker {
-	return &ContentBlockerImpl{scheduleRepo: scheduleRepo}
+	return &contentBlocker{scheduleRepo: scheduleRepo}
 }
 
 // domainRegex is used to check for valid domain format
 var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
-// dohBlocklist contains blocked DoH providers to force Chromium to use Leo DoH
-var dohBlocklist = []string{
-	"dns.google",
-	"dns.google.com",
-	"cloudflare-dns.com",
-	"one.one.one.one",
-	"dns.quad9.net",
-	"doh.opendns.com",
-	"dns.opendns.com",
-	"doh.cleanbrowsing.org",
-	"dns.nextdns.io",
-	"dns.adguard.com",
-	"doh.neustar.biz",
-	"doh.xfinity.com",
-	"doh.cira.ca",
-	"doh.yandex.net",
-	"doh.powerdns.org",
-	"dns.alidns.com",
-	"doh.dnssec.works",
-}
-
-// blockedDomains contains hardcoded blocked domains (temporary)
-var blockedDomains = []string{
-	"reddit.com",
-	"startmunich.de",
-	"youtube.com",
-	"dns.google",
-}
-
 // IsBlocked checks if a given domain is blocked
-func (cb *ContentBlockerImpl) IsBlocked(domain string, deviceHash string) (bool, error) {
+func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, error) {
 	log.Printf("ContentBlocker | IsBlocked | %s", domain)
 
 	// Check if domain is valid

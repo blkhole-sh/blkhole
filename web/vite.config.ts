@@ -1,17 +1,17 @@
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
+import UnoCSS from "unocss/vite";
 import { resolve } from "path";
-import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-	plugins: [solid(), tailwindcss()],
+	plugins: [solid(), UnoCSS()],
 	resolve: {
 		alias: {
 			"~": resolve(__dirname, "./src"),
 		},
 	},
 	build: {
-		outDir: "../assets",
+		outDir: "../static",
 		emptyOutDir: true,
 		minify: "terser",
 		cssMinify: true,
@@ -20,17 +20,18 @@ export default defineConfig({
 			compress: {
 				drop_console: true,
 				drop_debugger: true,
-				pure_funcs: ['console.log', 'console.info', 'console.debug'],
-				passes: 2,
+				pure_funcs: ["console.log", "console.info", "console.debug"],
+				passes: 3,
+				unsafe: true,
+				toplevel: true,
 			},
 		},
 		rollupOptions: {
 			output: {
 				manualChunks: {
-					vendor: ['solid-js', '@solidjs/router'],
+					vendor: ["solid-js", "@solidjs/router"],
 				},
 			},
 		},
 	},
 });
-

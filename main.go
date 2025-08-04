@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"server/internal/controllers"
 	schema "server/internal/db"
 	"server/internal/repos"
@@ -20,12 +21,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/jwtauth/v5"
 )
 
-//go:embed assets
-var webFS embed.FS
-
 var (
+	// Static file server
+	//go:embed static
+	webFS embed.FS
+
 	// Repos
 	userRepo     repos.UserRepo
 	deviceRepo   repos.DeviceRepo
@@ -37,6 +40,8 @@ var (
 	contentBlocker services.ContentBlocker
 	cryptoService  services.CryptoService
 	listService    services.ListsService
+	authService    services.AuthService
+	tokenAuth      *jwtauth.JWTAuth
 
 	// Controllers
 	deviceController       controllers.DeviceController
@@ -46,7 +51,8 @@ var (
 	mobileConfigController controllers.MobileConfigController
 	scheduleController     controllers.ScheduleController
 	quoteController        controllers.QuoteController
-	frontendController     *controllers.FrontendController
+	authController         controllers.AuthController
+	frontendController     controllers.FrontendController
 
 	// Test
 	t              test.Test
@@ -54,8 +60,13 @@ var (
 )
 
 func initDependencies() {
+	// Get database path
+	configDir, _ := os.UserConfigDir()
+	dbPath := filepath.Join(configDir, "leo", "leo.db")
+	os.MkdirAll(filepath.Dir(dbPath), 0755)
+
 	// Initialize repos
-	db, err := sql.Open("sqlite3", "./internal/db/leo.db")
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,7 +83,7 @@ func initDependencies() {
 		log.Fatal(err)
 	}
 
-	// Initialize Repos
+	// Initialize repos
 	deviceRepo = repos.NewDeviceRepo(db)
 	ruleRepo = repos.NewRuleRepo(db)
 	listRepo = repos.NewListRepo(db)
@@ -84,7 +95,11 @@ func initDependencies() {
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListsService(listRepo, ruleRepo)
 
-	// Inizialize controllers
+	// Initialize auth service with token auth
+	tokenAuth = jwtauth.New("HS256", secret, nil)
+	authService = services.NewAuthService(userRepo, cryptoService, tokenAuth)
+
+	// Initialize controllers
 	deviceController = controllers.NewDeviceController(deviceRepo, cryptoService)
 	userController = controllers.NewUserController(userRepo, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker)
@@ -92,10 +107,11 @@ func initDependencies() {
 	mobileConfigController = controllers.NewMobileConfigController()
 	scheduleController = controllers.NewScheduleController(scheduleRepo, contentBlocker)
 	quoteController = controllers.NewQuoteController()
+	authController = controllers.NewAuthController(authService)
 	testController = controllers.NewTestController(t)
 
 	// Initialize frontend controller with embedded assets
-	webSubFS, err := fs.Sub(webFS, "assets")
+	webSubFS, err := fs.Sub(webFS, "static")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -138,38 +154,51 @@ func main() {
 
 	// API routes group
 	r.Route("/api", func(r chi.Router) {
-		// User API routes
-		r.Get("/users/{hash}", userController.FindByHash)
-		r.Put("/users", userController.Create)
-		r.Post("/users/{hash}", userController.Update)
-		r.Delete("/users/{hash}", userController.Delete)
+		// Public auth routes
+		r.Post("/auth/login", authController.Login)
 
-		// Device API routes
-		r.Get("/devices/{hash}", deviceController.FindByHash)
-		r.Get("/users/{userHash}/devices", deviceController.FindByUser)
-		r.Put("/devices", deviceController.Create)
-		r.Post("/devices/{hash}", deviceController.Update)
-		r.Delete("/devices/{hash}", deviceController.Delete)
+		// Protected routes
+		r.Group(func(r chi.Router) {
+			// JWT authentication middleware
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
 
-		// List API routes
-		r.Get("/lists/{id}", listController.FindByID)
-		r.Get("/users/{userHash}/lists", listController.FindByUser)
-		r.Put("/lists", listController.Create)
-		r.Post("/lists/{id}", listController.Update)
-		r.Delete("/lists/{id}", listController.Delete)
+			// Auth routes
+			r.Get("/auth/me", authController.GetCurrentUser)
 
-		// Schedule API routes
-		r.Get("/schedules/{id}", scheduleController.FindByID)
-		r.Get("/users/{userHash}/schedules", scheduleController.FindByUser)
-		r.Put("/schedules", scheduleController.Create)
-		r.Post("/schedules/{id}", scheduleController.Update)
-		r.Get("/is-blocked", scheduleController.IsBlocked)
+			// User API routes
+			r.Get("/users/{hash}", userController.FindByHash)
+			r.Put("/users", userController.Create)
+			r.Post("/users/{hash}", userController.Update)
+			r.Delete("/users/{hash}", userController.Delete)
 
-		// Quote API route
-		r.Get("/quote", quoteController.Random)
+			// Device API routes
+			r.Get("/devices/{hash}", deviceController.FindByHash)
+			r.Get("/users/{userHash}/devices", deviceController.FindByUser)
+			r.Put("/devices", deviceController.Create)
+			r.Post("/devices/{hash}", deviceController.Update)
+			r.Delete("/devices/{hash}", deviceController.Delete)
 
-		// Test route
-		r.Get("/test", testController.RunTest)
+			// List API routes
+			r.Get("/lists/{id}", listController.FindByID)
+			r.Get("/users/{userHash}/lists", listController.FindByUser)
+			r.Put("/lists", listController.Create)
+			r.Post("/lists/{id}", listController.Update)
+			r.Delete("/lists/{id}", listController.Delete)
+
+			// Schedule API routes
+			r.Get("/schedules/{id}", scheduleController.FindByID)
+			r.Get("/users/{userHash}/schedules", scheduleController.FindByUser)
+			r.Put("/schedules", scheduleController.Create)
+			r.Post("/schedules/{id}", scheduleController.Update)
+			r.Get("/is-blocked", scheduleController.IsBlocked)
+
+			// Quote API route
+			r.Get("/quote", quoteController.Random)
+
+			// Test route
+			r.Get("/test", testController.RunTest)
+		})
 	})
 
 	// Serve static files (legacy)

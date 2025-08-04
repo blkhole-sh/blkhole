@@ -16,27 +16,30 @@ import ScheduleDetail from "./pages/schedules/ScheduleDetail";
 import NewSchedule from "./pages/schedules/NewSchedule";
 import Blocked from "./pages/blocked/Blocked";
 import AuthLayout from "./components/layouts/AuthLayout";
+import AuthProvider from "./context/AuthContext";
 
 export default function App() {
 	return (
-		<Router>
-			<Suspense>
-				<Route path="/login" component={Login} />
-				<Route path="/blocked" component={Blocked} />
-				<Route path="/" component={AuthLayout}>
-					<Route path="/" component={Dashboard} />
-					<Route path="/devices" component={Devices} />
-					<Route path="/devices/:id" component={DeviceDetail} />
-					<Route path="/devices/new" component={NewDevice} />
-					<Route path="/lists" component={Lists} />
-					<Route path="/lists/:id" component={ListDetail} />
-					<Route path="/lists/new" component={NewList} />
-					<Route path="/schedules" component={Schedules} />
-					<Route path="/schedules/:id" component={ScheduleDetail} />
-					<Route path="/schedules/new" component={NewSchedule} />
-				</Route>
-			</Suspense>
-		</Router>
+		<AuthProvider>
+			<Router>
+				<Suspense>
+					<Route path="/login" component={Login} />
+					<Route path="/blocked" component={Blocked} />
+					<Route path="/" component={AuthLayout}>
+						<Route path="/" component={Dashboard} />
+						<Route path="/devices" component={Devices} />
+						<Route path="/devices/:id" component={DeviceDetail} />
+						<Route path="/devices/new" component={NewDevice} />
+						<Route path="/lists" component={Lists} />
+						<Route path="/lists/:id" component={ListDetail} />
+						<Route path="/lists/new" component={NewList} />
+						<Route path="/schedules" component={Schedules} />
+						<Route path="/schedules/:id" component={ScheduleDetail} />
+						<Route path="/schedules/new" component={NewSchedule} />
+					</Route>
+				</Suspense>
+			</Router>
+		</AuthProvider>
 	);
 }
 

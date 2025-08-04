@@ -12,12 +12,12 @@ type QuoteController interface {
 	Random(w http.ResponseWriter, r *http.Request)
 }
 
-// QuoteControllerImpl implements the QuoteController interface
-type QuoteControllerImpl struct{}
+// quoteController implements the QuoteController interface
+type quoteController struct{}
 
 // NewQuoteController creates a new QuoteController instance
 func NewQuoteController() QuoteController {
-	return &QuoteControllerImpl{}
+	return &quoteController{}
 }
 
 // quotes contains a collection of stoic quotes
@@ -60,7 +60,7 @@ var quotes = []model.Quote{
 	},
 }
 
-func (qc *QuoteControllerImpl) Random(w http.ResponseWriter, r *http.Request) {
+func (qc *quoteController) Random(w http.ResponseWriter, r *http.Request) {
 	// Pick a random stoic quote
 	quote := quotes[rand.Intn(len(quotes))]
 

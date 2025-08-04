@@ -11,20 +11,20 @@ type TestController interface {
 	RunTest(w http.ResponseWriter, r *http.Request)
 }
 
-// TestControllerImpl implements the TestController interface
-type TestControllerImpl struct {
+// testController implements the TestController interface
+type testController struct {
 	test test.Test
 }
 
 // NewTestController creates a new TestController instance
 func NewTestController(test test.Test) TestController {
-	return &TestControllerImpl{
+	return &testController{
 		test: test,
 	}
 }
 
 // RunTest executes the test suite
-func (tc *TestControllerImpl) RunTest(w http.ResponseWriter, r *http.Request) {
+func (tc *testController) RunTest(w http.ResponseWriter, r *http.Request) {
 	uh, err := tc.test.Test()
 	if err != nil {
 		http.Error(w, "Test failed: "+err.Error(), http.StatusInternalServerError)

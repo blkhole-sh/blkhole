@@ -20,21 +20,21 @@ type UserController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// UserControllerImpl implements the UserController interface
-type UserControllerImpl struct {
+// userController implements the UserController interface
+type userController struct {
 	userRepo      repos.UserRepo
 	cryptoService services.CryptoService
 }
 
 // NewUserController creates a new UserController instance
 func NewUserController(userRepo repos.UserRepo, cryptoService services.CryptoService) UserController {
-	return &UserControllerImpl{
+	return &userController{
 		userRepo:      userRepo,
 		cryptoService: cryptoService,
 	}
 }
 
-func (uc *UserControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 	// Initialize user
 	var u model.User
 
@@ -59,7 +59,7 @@ func (uc *UserControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(u)
 }
 
-func (uc *UserControllerImpl) FindByHash(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 
@@ -73,7 +73,7 @@ func (uc *UserControllerImpl) FindByHash(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(u)
 }
 
-func (uc *UserControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize user
 	var u model.User
 
@@ -93,7 +93,7 @@ func (uc *UserControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(u)
 }
 
-func (uc *UserControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
+func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 

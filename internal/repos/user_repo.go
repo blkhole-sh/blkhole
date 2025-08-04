@@ -15,26 +15,26 @@ type UserRepo interface {
 	Update(hash string, u *model.User) error
 	Delete(hash string) error
 	LoadDeviceHashes(hash string) ([]string, error)
-	LoadListsIDs(hash string) ([]int, error)
+	LoadListIDs(hash string) ([]int, error)
 	LoadScheduleIDs(hash string) ([]int, error)
 	LoadRelations(u *model.User) error
 	FindByEmail(email string) (*model.User, error)
 	FindByHash(hash string) (*model.User, error)
 }
 
-// UserRepoImpl implements the UserRepo interface
-type UserRepoImpl struct {
+// userRepo implements the UserRepo interface
+type userRepo struct {
 	db  *sql.DB
 	ctx context.Context
 }
 
 // NewUserRepo creates a new UserRepo instance
 func NewUserRepo(db *sql.DB) UserRepo {
-	return &UserRepoImpl{db: db, ctx: context.Background()}
+	return &userRepo{db: db, ctx: context.Background()}
 }
 
 // Create stores a new user into the database
-func (repo *UserRepoImpl) Create(u *model.User) error {
+func (repo *userRepo) Create(u *model.User) error {
 	sql := "INSERT INTO user (hash, name, email, password_hash) VALUES (?, ?, ?, ?)"
 
 	_, err := repo.db.ExecContext(repo.ctx, sql, u.Hash, u.Name, u.Email, u.PasswordHash)
@@ -42,21 +42,21 @@ func (repo *UserRepoImpl) Create(u *model.User) error {
 }
 
 // Update modifies an existing user with given hash in the database
-func (repo *UserRepoImpl) Update(hash string, u *model.User) error {
+func (repo *userRepo) Update(hash string, u *model.User) error {
 	sql := "UPDATE user SET name=?, email=?, password_hash=? WHERE hash=?"
 	_, err := repo.db.ExecContext(repo.ctx, sql, u.Name, u.Email, u.PasswordHash, hash)
 	return err
 }
 
 // Delete removes an existing user with given hash from the database
-func (repo *UserRepoImpl) Delete(hash string) error {
+func (repo *userRepo) Delete(hash string) error {
 	sql := "DELETE FROM user WHERE hash=?"
 	_, err := repo.db.ExecContext(repo.ctx, sql, hash)
 	return err
 }
 
 // LoadDeviceHashes returns hashes of all devices linked to user with given hash
-func (repo *UserRepoImpl) LoadDeviceHashes(hash string) ([]string, error) {
+func (repo *userRepo) LoadDeviceHashes(hash string) ([]string, error) {
 	sql := "SELECT hash FROM device WHERE user_hash = ?"
 	var deviceHashes []string
 
@@ -72,8 +72,8 @@ func (repo *UserRepoImpl) LoadDeviceHashes(hash string) ([]string, error) {
 	return deviceHashes, nil
 }
 
-// LoadListsIDs returns ids of all lists linked to user with given hash
-func (repo *UserRepoImpl) LoadListsIDs(hash string) ([]int, error) {
+// LoadListIDs returns ids of all lists linked to user with given hash
+func (repo *userRepo) LoadListIDs(hash string) ([]int, error) {
 	sql := "SELECT id FROM list WHERE user_hash = ?"
 	var listIds []int
 
@@ -90,7 +90,7 @@ func (repo *UserRepoImpl) LoadListsIDs(hash string) ([]int, error) {
 }
 
 // LoadScheduleIDs returns ids of all schedules linked to user with given hash
-func (repo *UserRepoImpl) LoadScheduleIDs(hash string) ([]int, error) {
+func (repo *userRepo) LoadScheduleIDs(hash string) ([]int, error) {
 	sql := "SELECT id FROM schedule WHERE user_hash = ?"
 	var scheduleIds []int
 
@@ -107,14 +107,14 @@ func (repo *UserRepoImpl) LoadScheduleIDs(hash string) ([]int, error) {
 }
 
 // LoadRelations loads all relations (hashes, ids) for user with given hash
-func (repo *UserRepoImpl) LoadRelations(u *model.User) error {
+func (repo *userRepo) LoadRelations(u *model.User) error {
 	var err error
 
 	if u.DeviceHashes, err = repo.LoadDeviceHashes(u.Hash); err != nil {
 		return err
 	}
 
-	if u.ListIds, err = repo.LoadListsIDs(u.Hash); err != nil {
+	if u.ListIds, err = repo.LoadListIDs(u.Hash); err != nil {
 		return err
 	}
 
@@ -126,8 +126,8 @@ func (repo *UserRepoImpl) LoadRelations(u *model.User) error {
 }
 
 // FindByEmail returns an existing user with given email from the database
-func (repo *UserRepoImpl) FindByEmail(email string) (*model.User, error) {
-	sql := "SELECT hash, name, email, password_hash FROM user WHERE emmail=?"
+func (repo *userRepo) FindByEmail(email string) (*model.User, error) {
+	sql := "SELECT hash, name, email, password_hash FROM user WHERE email=?"
 	var u model.User
 
 	if err := sqlscan.Get(repo.ctx, repo.db, &u, sql, email); err != nil {
@@ -142,7 +142,7 @@ func (repo *UserRepoImpl) FindByEmail(email string) (*model.User, error) {
 }
 
 // FindByHash returns an existing user with given hash from the database
-func (repo *UserRepoImpl) FindByHash(hash string) (*model.User, error) {
+func (repo *userRepo) FindByHash(hash string) (*model.User, error) {
 	sql := "SELECT hash, name, email, password_hash FROM user WHERE hash=?"
 	var u model.User
 

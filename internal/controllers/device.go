@@ -20,21 +20,21 @@ type DeviceController interface {
 	Delete(http.ResponseWriter, *http.Request)
 }
 
-// DeviceControllerImpl implements the DeviceController interface
-type DeviceControllerImpl struct {
+// deviceController implements the DeviceController interface
+type deviceController struct {
 	deviceRepo    repos.DeviceRepo
 	cryptoService services.CryptoService
 }
 
 // NewDeviceController creates a new DeviceController instance
 func NewDeviceController(deviceRepo repos.DeviceRepo, cryptoService services.CryptoService) DeviceController {
-	return &DeviceControllerImpl{
+	return &deviceController{
 		deviceRepo:    deviceRepo,
 		cryptoService: cryptoService,
 	}
 }
 
-func (dc *DeviceControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
+func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	// Initialize device
 	var d model.Device
 
@@ -59,7 +59,7 @@ func (dc *DeviceControllerImpl) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(d)
 }
 
-func (dc *DeviceControllerImpl) FindByHash(w http.ResponseWriter, r *http.Request) {
+func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 
@@ -72,7 +72,7 @@ func (dc *DeviceControllerImpl) FindByHash(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(d)
 }
 
-func (dc *DeviceControllerImpl) FindByUser(w http.ResponseWriter, r *http.Request) {
+func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	// Get user hash from url params
 	userHash := chi.URLParam(r, "userHash")
 
@@ -92,7 +92,7 @@ func (dc *DeviceControllerImpl) FindByUser(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(d)
 }
 
-func (dc *DeviceControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
+func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize device
 	var d model.Device
 
@@ -112,7 +112,7 @@ func (dc *DeviceControllerImpl) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(d)
 }
 
-func (dc *DeviceControllerImpl) Delete(w http.ResponseWriter, r *http.Request) {
+func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 

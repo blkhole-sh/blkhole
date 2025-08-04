@@ -18,17 +18,17 @@ type CryptoService interface {
 	VerifyPassword(password, hashedPassword string) (bool, error)
 }
 
-// CryptoServiceImpl implements the CryptoService interface
-type CryptoServiceImpl struct {
+// cryptoService implements the CryptoService interface
+type cryptoService struct {
 	secret []byte
 }
 
 // NewCryptoService creates a new CryptoService instance
 func NewCryptoService(secret []byte) CryptoService {
-	return &CryptoServiceImpl{secret: secret}
+	return &cryptoService{secret: secret}
 }
 
-func (cs *CryptoServiceImpl) RandomHash() (string, error) {
+func (cs *cryptoService) RandomHash() (string, error) {
 	// Create a random value
 	r := make([]byte, 16) // 16 bytes of randomness
 	_, err := rand.Read(r)
@@ -58,7 +58,7 @@ func (cs *CryptoServiceImpl) RandomHash() (string, error) {
 }
 
 // HashPassword hashes the given password using Argon2 and returns the hash encoded as a string with salt
-func (cs *CryptoServiceImpl) HashPassword(password string) (string, error) {
+func (cs *cryptoService) HashPassword(password string) (string, error) {
 	// Generate a random salt
 	salt := make([]byte, 16) // Recommended size is 16 bytes
 	_, err := rand.Read(salt)
@@ -85,7 +85,7 @@ func (cs *CryptoServiceImpl) HashPassword(password string) (string, error) {
 }
 
 // VerifyPassword verifies a password against a hashed password created by HashPassword
-func (cs *CryptoServiceImpl) VerifyPassword(password, hashedPassword string) (bool, error) {
+func (cs *cryptoService) VerifyPassword(password, hashedPassword string) (bool, error) {
 	// Split the stored hash into salt and hash parts
 	parts := strings.Split(hashedPassword, "$")
 	if len(parts) != 2 {

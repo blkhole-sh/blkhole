@@ -5,4 +5,4 @@ leo
 tmp/
 
 # Build artifacts
-assets/
+static/
