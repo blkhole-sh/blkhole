@@ -6,7 +6,7 @@
     <key>PayloadDisplayName</key>
     <string>Leo ({{ .DeviceHash }})</string>
     <key>PayloadDescription</key>
-    <string>DNS over HTTPS for your device</string>
+    <string>Adds encrypted DNS configuration to iOS 14 (or newer) based systems</string>
     <key>PayloadIdentifier</key>
     <string>studio.lemon3.dns.{{ .DeviceHash }}</string>
     <key>PayloadType</key>
@@ -32,14 +32,36 @@
             <dict>
                 <key>DNSProtocol</key>
                 <string>HTTPS</string>
+                <key>ServerAddresses</key>
+                <array/>
                 <key>ServerURL</key>
                 <string>{{ .ServerURL }}</string>
-                <key>ServerAddresses</key>
-                <array>
-                    <string>1.1.1.1</string>
-                    <string>1.0.0.1</string>
-                </array>
             </dict>
+            <key>OnDemandRules</key>
+            <array>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>WiFi</string>
+                </dict>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>Cellular</string>
+                </dict>
+                <dict>
+                    <key>Action</key>
+                    <string>Disconnect</string>
+                </dict>
+            </array>
+            <key>PayloadDescription</key>
+            <string>Configures device to use Leo Encrypted DNS over HTTPS</string>
+            <key>PayloadDisplayName</key>
+            <string>Leo DNS over HTTPS</string>
+            <key>ProhibitDisablement</key>
+            <false/>
         </dict>
     </array>
 </dict>
