@@ -4,11 +4,11 @@
 <plist version="1.0">
 <dict>
     <key>PayloadDisplayName</key>
-    <string>Leo ({{ .UserHash }})</string>
+    <string>Leo ({{ .DeviceHash }})</string>
     <key>PayloadDescription</key>
     <string>DNS over HTTPS for your device</string>
     <key>PayloadIdentifier</key>
-    <string>studio.lemon3.dns.{{ .UserHash }}</string>
+    <string>studio.lemon3.dns.{{ .DeviceHash }}</string>
     <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadUUID</key>
@@ -21,7 +21,7 @@
             <key>PayloadType</key>
             <string>com.apple.dnsSettings.managed</string>
             <key>PayloadIdentifier</key>
-            <string>studio.lemon3.dns.{{ .UserHash }}.settings</string>
+            <string>studio.lemon3.dns.{{ .DeviceHash }}.settings</string>
             <key>PayloadUUID</key>
             <string>{{ .DNSUUID }}</string>
             <key>PayloadVersion</key>

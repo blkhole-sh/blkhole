@@ -179,13 +179,10 @@ func initRouter() *chi.Mux {
 	}))
 
 	// Route specifically for /dns-query, handling both GET and POST requests
-	r.Route("/{userHash}/{deviceHash}/dns-query", func(r chi.Router) {
+	r.Route("/{deviceHash}/dns-query", func(r chi.Router) {
 		r.Get("/", dnsController.DNSQuery)
 		r.Post("/", dnsController.DNSQuery)
 	})
-
-	// Serve mobile config controller (needs to be at root level)
-	r.Get("/config/{userHash}/{deviceHash}", mobileConfigController.GenerateConfig)
 
 	// API routes group
 	r.Route("/api", func(r chi.Router) {
@@ -209,6 +206,7 @@ func initRouter() *chi.Mux {
 
 			// Device API routes
 			r.Get("/devices/{hash}", deviceController.FindByHash)
+			r.Get("/devices/{hash}/config", mobileConfigController.GenerateConfig)
 			r.Get("/users/{userHash}/devices", deviceController.FindByUser)
 			r.Put("/devices", deviceController.Create)
 			r.Post("/devices/{hash}", deviceController.Update)

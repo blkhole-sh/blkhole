@@ -12,7 +12,12 @@ export default function DeviceTile(props: Props) {
 	return (
 		<li class="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2 sm:flex-nowrap">
 			<div class="flex-1">
-				<p class="text-sm/6 font-semibold text-gray-900">{props.device.name}</p>
+				<a
+					href={`/devices/${props.device.hash}/config`}
+					class="text-sm/6 font-semibold text-gray-900"
+				>
+					{props.device.name}
+				</a>
 				<div class="mt-1 flex items-center gap-x-2 text-xs/5 text-gray-500">
 					<p>{props.device.os}</p>
 					<Dot />

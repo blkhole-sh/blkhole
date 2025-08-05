@@ -31,16 +31,15 @@ func NewMobileConfigController(domain string) MobileConfigController {
 }
 
 func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.Request) {
-	// Get SERVER_hashes from url params
-	userHash := chi.URLParam(r, "userHash")
-	deviceHash := chi.URLParam(r, "deviceHash")
+	// Get device hash from url params
+	deviceHash := chi.URLParam(r, "hash")
 
 	// Generate UUIDs for mobile config
 	uuid1 := uuid.New().String()
 	uuid2 := uuid.New().String()
 
 	// Build server URL
-	serverURL := "https://" + mc.domain + "/" + userHash + "/" + deviceHash + "/dns-query"
+	serverURL := "https://" + mc.domain + "/" + deviceHash + "/dns-query"
 
 	// Prepare template data
 	data := struct {
@@ -49,7 +48,6 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 		DNSUUID   string
 		ServerURL string
 	}{
-		UserHash:  userHash,
 		UUID:      uuid1,
 		DNSUUID:   uuid2,
 		ServerURL: serverURL,
