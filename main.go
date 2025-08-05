@@ -191,7 +191,6 @@ func initRouter() *chi.Mux {
 	r.Route("/api", func(r chi.Router) {
 		// Public auth routes
 		r.Post("/auth/login", authController.Login)
-		r.Get("/api/test", testController.RunTest)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
@@ -233,6 +232,9 @@ func initRouter() *chi.Mux {
 			r.Get("/quote", quoteController.Random)
 		})
 	})
+
+	// Serve test route
+	r.Get("/test", testController.RunTest)
 
 	// Serve static files (legacy)
 	r.Get("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))).ServeHTTP)
