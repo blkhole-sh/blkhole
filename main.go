@@ -234,6 +234,9 @@ func initRouter() *chi.Mux {
 	// Serve test route
 	r.Get("/test", testController.RunTest)
 
+	// Public mobileconfig route
+	r.Get("/devices/{hash}/config", mobileConfigController.GenerateConfig)
+
 	// Serve static files (legacy)
 	r.Get("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))).ServeHTTP)
 
