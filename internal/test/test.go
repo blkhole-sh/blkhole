@@ -2,9 +2,9 @@
 package test
 
 import (
-	"server/internal/model"
-	"server/internal/repos"
-	"server/internal/services"
+	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/leo/internal/services"
 )
 
 type Test interface {

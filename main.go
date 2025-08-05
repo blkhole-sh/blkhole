@@ -10,11 +10,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"server/internal/controllers"
-	schema "server/internal/db"
-	"server/internal/repos"
-	"server/internal/services"
-	"server/internal/test"
+
+	"github.com/lemon3studio/leo/internal/controllers"
+	schema "github.com/lemon3studio/leo/internal/db"
+	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/leo/internal/test"
 
 	_ "github.com/mattn/go-sqlite3"
 

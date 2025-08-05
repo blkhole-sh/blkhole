@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"server/internal/repos"
+	"github.com/lemon3studio/leo/internal/repos"
 	"strings"
 )
 

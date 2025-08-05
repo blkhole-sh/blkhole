@@ -3,7 +3,7 @@ package repos
 import (
 	"context"
 	"database/sql"
-	"server/internal/model"
+	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
 	_ "github.com/mattn/go-sqlite3"

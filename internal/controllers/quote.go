@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
-	"server/internal/model"
+	"github.com/lemon3studio/leo/internal/model"
 )
 
 // QuoteController defines the interface for quote operations

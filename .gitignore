@@ -1,3 +1,7 @@
+# Air configuration
+.air.toml
+
+# Environment variables
 .env
 
 # Binaries
@@ -6,3 +10,4 @@ tmp/
 
 # Build artifacts
 static/
+

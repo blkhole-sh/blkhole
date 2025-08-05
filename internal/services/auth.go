@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
-	"server/internal/model"
-	"server/internal/repos"
+	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/leo/internal/repos"
 	"time"
 
 	"github.com/go-chi/jwtauth/v5"

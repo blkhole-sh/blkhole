@@ -1,4 +1,4 @@
-module server
+module github.com/lemon3studio/leo
 
 go 1.23.0
 

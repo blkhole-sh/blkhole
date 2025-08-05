@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"server/internal/model"
-	"server/internal/repos"
+	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/leo/internal/repos"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"

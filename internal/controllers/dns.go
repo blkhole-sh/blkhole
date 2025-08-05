@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"server/internal/services"
+	"github.com/lemon3studio/leo/internal/services"
 	"strings"
 
 	"github.com/go-chi/chi/v5"

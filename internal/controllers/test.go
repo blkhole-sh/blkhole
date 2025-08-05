@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"server/internal/test"
+	"github.com/lemon3studio/leo/internal/test"
 )
 
 // TestController defines the interface for test operations

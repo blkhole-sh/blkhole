@@ -3,8 +3,9 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
-	"server/internal/services"
 	"strings"
+
+	"github.com/lemon3studio/leo/internal/services"
 )
 
 // AuthController defines the interface for authentication operations
@@ -61,4 +62,3 @@ func (c *authController) GetCurrentUser(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
-

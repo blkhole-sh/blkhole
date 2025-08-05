@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"server/internal/model"
-	"server/internal/repos"
+	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/leo/internal/repos"
 	"strings"
 )
 
