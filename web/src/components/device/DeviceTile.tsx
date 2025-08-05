@@ -15,6 +15,8 @@ export default function DeviceTile(props: Props) {
 				<a
 					href={`/devices/${props.device.hash}/config`}
 					class="text-sm/6 font-semibold text-gray-900"
+					rel="external"
+					download="leo.mobileconfig"
 				>
 					{props.device.name}
 				</a>
