@@ -360,15 +360,7 @@ func (repo *scheduleRepo) DomainBlocked(domain string, deviceHash string) (bool,
               CROSS JOIN CurrentDateTime
               WHERE 
                 CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-              AND (
-                (s.monday = 1 AND CurrentDateTime.current_day = '1') OR
-                (s.tuesday = 1 AND CurrentDateTime.current_day = '2') OR
-                (s.wednesday = 1 AND CurrentDateTime.current_day = '3') OR
-                (s.thursday = 1 AND CurrentDateTime.current_day = '4') OR
-                (s.friday = 1 AND CurrentDateTime.current_day = '5') OR
-                (s.saturday = 1 AND CurrentDateTime.current_day = '6') OR
-                (s.sunday = 1 AND CurrentDateTime.current_day = '0')
-              )
+              AND (s.days & (1 << CurrentDateTime.current_day)) != 0
               AND ds.device_hash = ?
               UNION
               -- Domains blocked via rules in lists linked to schedule
@@ -382,15 +374,7 @@ func (repo *scheduleRepo) DomainBlocked(domain string, deviceHash string) (bool,
               WHERE 
                 r.allowed = 0  -- Only blocked rules (not whitelisted)
               AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-              AND (
-                (s.monday = 1 AND CurrentDateTime.current_day = '1') OR
-                (s.tuesday = 1 AND CurrentDateTime.current_day = '2') OR
-                (s.wednesday = 1 AND CurrentDateTime.current_day = '3') OR
-                (s.thursday = 1 AND CurrentDateTime.current_day = '4') OR
-                (s.friday = 1 AND CurrentDateTime.current_day = '5') OR
-                (s.saturday = 1 AND CurrentDateTime.current_day = '6') OR
-                (s.sunday = 1 AND CurrentDateTime.current_day = '0')
-              )
+              AND (s.days & (1 << CurrentDateTime.current_day)) != 0
               AND ds.device_hash = ?
             ) AS r
             WHERE r.domain = ?;  -- Check if the specific domain is blocked`

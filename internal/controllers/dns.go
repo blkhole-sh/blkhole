@@ -81,11 +81,15 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		domain := strings.TrimSuffix(question.Name, ".")
 		log.Printf("requested domain: %s", domain)
 
-		// Check if domain blocked or invalid
+		// Check if domain blocked
 		blocked, err := dc.ContentBlocker.IsBlocked(domain, deviceHash)
+		if err != nil {
+			log.Printf("error checking if domain %s is blocked: %v", domain, err)
+			// Continue processing - don't block on errors
+		}
 
-		// If domain blocked or invalid return NXDOMAIN
-		if blocked || err != nil {
+		// If domain is blocked return NXDOMAIN
+		if blocked {
 			log.Printf("domain %s is blocked, returning nxdomain", domain)
 
 			// Set the NXDOMAIN response code
