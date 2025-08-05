@@ -43,14 +43,15 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 
 	// Prepare template data
 	data := struct {
-		UserHash  string
-		UUID      string
-		DNSUUID   string
-		ServerURL string
+		DeviceHash string
+		UUID       string
+		DNSUUID    string
+		ServerURL  string
 	}{
-		UUID:      uuid1,
-		DNSUUID:   uuid2,
-		ServerURL: serverURL,
+		DeviceHash: deviceHash,
+		UUID:       uuid1,
+		DNSUUID:    uuid2,
+		ServerURL:  serverURL,
 	}
 
 	// Set response headers
