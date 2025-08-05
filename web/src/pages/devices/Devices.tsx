@@ -1,18 +1,9 @@
 import { createResource, For } from "solid-js";
 import DeviceTile from "~/components/device/DeviceTile";
 import { getDevices } from "~/lib/api";
-import { Device } from "~/lib/model";
 
 export default function Index() {
 	const [devices] = createResource(getDevices);
-
-	const schedules = (device: Device) => {
-		if (device.scheduleIds.length === 0) {
-			return "None";
-		}
-
-		return device.scheduleIds.length;
-	};
 
 	return (
 		<div class="mt-2 flow-root">
