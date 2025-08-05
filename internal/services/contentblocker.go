@@ -31,16 +31,16 @@ var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-
 func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, error) {
 	log.Printf("contentblocker: checking if blocked: %s", domain)
 
-	// Check if domain is valid
-	if !domainRegex.MatchString(domain) {
-		return false, fmt.Errorf("%s is not a valid domain", domain)
-	}
-
 	// Normalize the domain to lowercase and remove trailing dot if present
 	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
 
 	// Strip off .localdomain suffix if present
 	domain = strings.TrimSuffix(domain, ".localdomain")
+
+	// Check if normalized domain is valid
+	if !domainRegex.MatchString(domain) {
+		return false, fmt.Errorf("%s is not a valid domain", domain)
+	}
 
 	// Check if domain is blocked
 	blocked, err := cb.scheduleRepo.DomainBlocked(domain, deviceHash)

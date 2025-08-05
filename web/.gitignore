@@ -27,3 +27,10 @@ gitignore
 # System Files
 .DS_Store
 Thumbs.db
+
+  .bun/
+  bun.lockb.*
+  *.bun
+
+  # Test coverage (if you add testing)
+  coverage/

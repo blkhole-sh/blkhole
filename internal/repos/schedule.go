@@ -3,6 +3,7 @@ package repos
 import (
 	"context"
 	"database/sql"
+	"log"
 	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
