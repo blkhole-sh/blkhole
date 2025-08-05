@@ -30,11 +30,11 @@ var (
 	webFS embed.FS
 
 	// Repos
-	userRepo     repos.UserRepo
-	deviceRepo   repos.DeviceRepo
-	ruleRepo     repos.RuleRepo
-	listRepo     repos.ListRepo
-	scheduleRepo repos.ScheduleRepo
+	users     repos.UserRepo
+	devices   repos.DeviceRepo
+	rules     repos.RuleRepo
+	lists     repos.ListRepo
+	schedules repos.ScheduleRepo
 
 	// Services
 	contentBlocker services.ContentBlocker
@@ -52,7 +52,7 @@ var (
 	scheduleController     controllers.ScheduleController
 	quoteController        controllers.QuoteController
 	authController         controllers.AuthController
-	frontendController     controllers.FrontendController
+	webController          controllers.WebController
 
 	// Test
 	t              test.Test
@@ -84,28 +84,28 @@ func initDependencies() {
 	}
 
 	// Initialize repos
-	deviceRepo = repos.NewDeviceRepo(db)
-	ruleRepo = repos.NewRuleRepo(db)
-	listRepo = repos.NewListRepo(db)
-	scheduleRepo = repos.NewScheduleRepo(db)
-	userRepo = repos.NewUserRepo(db)
+	devices = repos.NewDeviceRepo(db)
+	rules = repos.NewRuleRepo(db)
+	lists = repos.NewListRepo(db)
+	schedules = repos.NewScheduleRepo(db)
+	users = repos.NewUserRepo(db)
 
 	// Initialize services
-	contentBlocker = services.NewContentBlocker(scheduleRepo)
+	contentBlocker = services.NewContentBlocker(schedules)
 	cryptoService = services.NewCryptoService(secret)
-	listService = services.NewListsService(listRepo, ruleRepo)
+	listService = services.NewListsService(lists, rules)
 
 	// Initialize auth service with token auth
 	tokenAuth = jwtauth.New("HS256", secret, nil)
-	authService = services.NewAuthService(userRepo, cryptoService, tokenAuth)
+	authService = services.NewAuthService(users, cryptoService, tokenAuth)
 
 	// Initialize controllers
-	deviceController = controllers.NewDeviceController(deviceRepo, cryptoService)
-	userController = controllers.NewUserController(userRepo, cryptoService)
+	deviceController = controllers.NewDeviceController(devices, cryptoService)
+	userController = controllers.NewUserController(users, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker)
-	listController = controllers.NewListController(listRepo)
+	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController()
-	scheduleController = controllers.NewScheduleController(scheduleRepo, contentBlocker)
+	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
 	testController = controllers.NewTestController(t)
@@ -115,10 +115,10 @@ func initDependencies() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	frontendController = controllers.NewFrontendController(webSubFS)
+	webController = controllers.NewWebController(webSubFS)
 
 	// Initialize test
-	t := test.NewTest(userRepo, deviceRepo, ruleRepo, listRepo, listService, scheduleRepo, cryptoService)
+	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService)
 	testController = controllers.NewTestController(t)
 }
 
@@ -205,7 +205,7 @@ func main() {
 	r.Get("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))).ServeHTTP)
 
 	// Serve frontend - MUST BE LAST to avoid catching API routes
-	r.Get("/*", frontendController.Serve)
+	r.Get("/*", webController.Serve)
 
 	// Read port from .env
 	port := os.Getenv("LEO_PORT")

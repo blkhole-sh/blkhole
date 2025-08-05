@@ -22,14 +22,14 @@ type DeviceController interface {
 
 // deviceController implements the DeviceController interface
 type deviceController struct {
-	deviceRepo    repos.DeviceRepo
+	devices       repos.DeviceRepo
 	cryptoService services.CryptoService
 }
 
 // NewDeviceController creates a new DeviceController instance
 func NewDeviceController(deviceRepo repos.DeviceRepo, cryptoService services.CryptoService) DeviceController {
 	return &deviceController{
-		deviceRepo:    deviceRepo,
+		devices:       deviceRepo,
 		cryptoService: cryptoService,
 	}
 }
@@ -53,7 +53,7 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	d.Hash = hash
 
 	// Store device into db
-	dc.deviceRepo.Create(&d)
+	dc.devices.Create(&d)
 
 	// Respond with json encoded device
 	json.NewEncoder(w).Encode(d)
@@ -63,7 +63,7 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 
-	d, err := dc.deviceRepo.FindByHash(hash)
+	d, err := dc.devices.FindByHash(hash)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find device in db", http.StatusNotFound)
@@ -77,7 +77,7 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	userHash := chi.URLParam(r, "userHash")
 
 	// Find devices in db
-	d, err := dc.deviceRepo.FindByUser(userHash)
+	d, err := dc.devices.FindByUser(userHash)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find devices in db", http.StatusNotFound)
@@ -106,7 +106,7 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update device in db
-	dc.deviceRepo.Update(hash, &d)
+	dc.devices.Update(hash, &d)
 
 	// Respond with json encoded device
 	json.NewEncoder(w).Encode(d)
@@ -117,7 +117,7 @@ func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 	hash := chi.URLParam(r, "hash")
 
 	// Delete device from db
-	dc.deviceRepo.Delete(hash)
+	dc.devices.Delete(hash)
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

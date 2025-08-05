@@ -22,7 +22,7 @@ export default function TextAreaInput(props: Props & ParentProps) {
 				name={props.id}
 				id={props.title}
 				rows={props.rows}
-				class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline  focus:-outline-offset-2 focus:outline-black sm:text-sm/6"
+				class="block w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-base text-gray-900 placeholder:text-gray-400 sm:text-sm/6"
 				placeholder={props.placeholder}
 				value={props.value()}
 				onChange={props.onChange}

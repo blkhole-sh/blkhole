@@ -42,7 +42,7 @@ export default function CheckboxInput(props: Props & ParentProps) {
 									id={element.id.toString()}
 									name={element.id.toString()}
 									type="checkbox"
-									class="col-start-1 row-start-1 appearance-none rounded border border-gray-300 bg-white checked:border-black checked:bg-black indeterminate:border-black indeterminate:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
+									class="col-start-1 row-start-1 appearance-none rounded border border-gray-300 bg-white checked:border-black checked:bg-black indeterminate:border-black indeterminate:bg-black disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
 									value={props.elements().includes(element).toString()}
 									onChange={(e) => props.onChange(e, element.id.toString())}
 								/>

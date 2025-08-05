@@ -2,18 +2,34 @@
  * API client for authenticated requests to the Leo DNS blocker backend
  */
 import { Device, List, Quote, Schedule } from "./model";
+import { getCookie, clearAuthCookies, setCookie } from "./cookies";
 
 const API_BASE = "http://127.0.0.1:8080/api";
 
 /**
- * Get a cookie value by name
- * @param name - Cookie name to retrieve
- * @returns Cookie value or null if not found
+ * Login user with email and password
+ * @param email - User email
+ * @param password - User password
+ * @returns Promise containing user data and token
+ * @throws Error on login failure
  */
-const getCookie = (name: string): string | null => {
-	if (typeof document === "undefined") return null;
-	const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-	return match?.[2] || null;
+export const login = async (email: string, password: string) => {
+	const response = await fetch(`${API_BASE}/auth/login`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, password }),
+	});
+
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
+
+	const { user: userData, token: userToken } = await response.json();
+
+	setCookie("token", userToken);
+	setCookie("user", encodeURIComponent(JSON.stringify(userData)));
+
+	return { user: userData, token: userToken };
 };
 
 /**
@@ -35,9 +51,8 @@ const api = async (endpoint: string, options?: RequestInit) => {
 	});
 
 	if (response.status === 401) {
-		// Clear expired/invalid tokens by setting them to expire in the past
-		document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
-		document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+		// Clear expired/invalid tokens
+		clearAuthCookies();
 		window.location.href = "/login";
 		throw new Error("Unauthorized");
 	}

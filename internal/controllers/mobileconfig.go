@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	_ "embed"
 	"log"
 	"net/http"
 	"os"
@@ -10,7 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-var mobileConfigTemplate = template.Must(template.ParseFiles("internal/templates/leo.mobileconfig.tmpl"))
+//go:embed mobileconfig.tmpl
+var mobileConfigTemplateContent string
+
+var mobileConfigTemplate = template.Must(template.New("mobileconfig").Parse(mobileConfigTemplateContent))
 
 // MobileConfigController defines the interface for mobile config operations
 type MobileConfigController interface {

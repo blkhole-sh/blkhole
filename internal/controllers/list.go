@@ -22,13 +22,13 @@ type ListController interface {
 
 // listController implements the ListController interface
 type listController struct {
-	listRepo repos.ListRepo
+	lists repos.ListRepo
 }
 
 // NewListController creates a new ListController instance
 func NewListController(listRepo repos.ListRepo) ListController {
 	return &listController{
-		listRepo: listRepo,
+		lists: listRepo,
 	}
 }
 
@@ -43,7 +43,7 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store list into db
-	lc.listRepo.Create(&l)
+	lc.lists.Create(&l)
 
 	// Respond with json encoded list
 	json.NewEncoder(w).Encode(l)
@@ -58,7 +58,7 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find list in db
-	l, err := lc.listRepo.FindByID(id)
+	l, err := lc.lists.FindByID(id)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find blocklist in db", http.StatusNotFound)
@@ -73,7 +73,7 @@ func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	userHash := chi.URLParam(r, "userHash")
 
 	// Find lists in db
-	l, err := lc.listRepo.FindByUser(userHash)
+	l, err := lc.lists.FindByUser(userHash)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find blocklists in db", http.StatusNotFound)
@@ -106,7 +106,7 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update list in db
-	lc.listRepo.Update(id, &l)
+	lc.lists.Update(id, &l)
 
 	// Respond with json encoded list
 	json.NewEncoder(w).Encode(l)
@@ -121,7 +121,7 @@ func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete blocklist from db
-	lc.listRepo.Delete(id)
+	lc.lists.Delete(id)
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

@@ -24,7 +24,7 @@ type ScheduleController interface {
 
 // scheduleController implements the ScheduleController interface
 type scheduleController struct {
-	scheduleRepo   repos.ScheduleRepo
+	schedules      repos.ScheduleRepo
 	contentBlocker services.ContentBlocker
 }
 
@@ -32,7 +32,7 @@ type scheduleController struct {
 func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker services.ContentBlocker) ScheduleController {
 	return &scheduleController{
 		contentBlocker: contentBlocker,
-		scheduleRepo:   scheduleRepo,
+		schedules:      scheduleRepo,
 	}
 }
 
@@ -67,7 +67,7 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store schedule into db
-	sc.scheduleRepo.Create(&s)
+	sc.schedules.Create(&s)
 
 	// Respond with json encoded schedule
 	json.NewEncoder(w).Encode(s)
@@ -82,7 +82,7 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find schedule in db
-	s, err := sc.scheduleRepo.FindByID(id)
+	s, err := sc.schedules.FindByID(id)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find schedule in db", http.StatusNotFound)
@@ -97,7 +97,7 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 	userHash := chi.URLParam(r, "userHash")
 
 	// Find schedules in db
-	s, err := sc.scheduleRepo.FindByUser(userHash)
+	s, err := sc.schedules.FindByUser(userHash)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find schedules in db", http.StatusNotFound)
@@ -130,7 +130,7 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update schedule in db
-	sc.scheduleRepo.Update(id, &s)
+	sc.schedules.Update(id, &s)
 
 	// Respond with json encoded schedule
 	json.NewEncoder(w).Encode(s)
@@ -145,7 +145,7 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete schedule from db
-	sc.scheduleRepo.Delete(id)
+	sc.schedules.Delete(id)
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

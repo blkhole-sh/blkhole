@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createResource, For, Show } from "solid-js";
+import { createResource, For } from "solid-js";
 import ScheduleTile from "~/components/schedule/ScheduleTile";
 import { getSchedules } from "~/lib/api";
 

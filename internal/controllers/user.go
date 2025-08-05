@@ -22,14 +22,14 @@ type UserController interface {
 
 // userController implements the UserController interface
 type userController struct {
-	userRepo      repos.UserRepo
+	users         repos.UserRepo
 	cryptoService services.CryptoService
 }
 
 // NewUserController creates a new UserController instance
 func NewUserController(userRepo repos.UserRepo, cryptoService services.CryptoService) UserController {
 	return &userController{
-		userRepo:      userRepo,
+		users:         userRepo,
 		cryptoService: cryptoService,
 	}
 }
@@ -53,7 +53,7 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 	u.Hash = hash
 
 	// Store user into db
-	uc.userRepo.Create(&u)
+	uc.users.Create(&u)
 
 	// Respond with json encoded user
 	json.NewEncoder(w).Encode(u)
@@ -63,7 +63,7 @@ func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
 	// Get hash from url params
 	hash := chi.URLParam(r, "hash")
 
-	u, err := uc.userRepo.FindByHash(hash)
+	u, err := uc.users.FindByHash(hash)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, "Unable to find user in db", http.StatusNotFound)
@@ -87,7 +87,7 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user in db
-	uc.userRepo.Update(hash, &u)
+	uc.users.Update(hash, &u)
 
 	// Respond with json encoded user
 	json.NewEncoder(w).Encode(u)
@@ -98,7 +98,7 @@ func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {
 	hash := chi.URLParam(r, "hash")
 
 	// Delete user from db
-	uc.userRepo.Delete(hash)
+	uc.users.Delete(hash)
 	w.WriteHeader(http.StatusNoContent)
 
 	// Respond with status no content

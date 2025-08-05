@@ -7,27 +7,30 @@ import (
 	"strings"
 )
 
-type FrontendController interface {
+// WebController defines the interface for web frontend operations
+type WebController interface {
 	Serve(w http.ResponseWriter, r *http.Request)
 }
 
-type frontendController struct {
+// webController implements the WebController interface
+type webController struct {
 	webFS fs.FS
 }
 
-func NewFrontendController(webFS fs.FS) FrontendController {
-	return &frontendController{webFS: webFS}
+// NewWebController creates a new WebController instance
+func NewWebController(webFS fs.FS) WebController {
+	return &webController{webFS: webFS}
 }
 
-func (fc *frontendController) Serve(w http.ResponseWriter, r *http.Request) {
+func (wc *webController) Serve(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if path == "" {
 		path = "index.html"
 	}
 
-	content, err := fs.ReadFile(fc.webFS, path)
+	content, err := fs.ReadFile(wc.webFS, path)
 	if err != nil {
-		content, err = fs.ReadFile(fc.webFS, "index.html")
+		content, err = fs.ReadFile(wc.webFS, "index.html")
 		if err != nil {
 			http.Error(w, "File not found", http.StatusNotFound)
 			return
