@@ -43,5 +43,7 @@ func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, err
 	domain = strings.TrimSuffix(domain, ".localdomain")
 
 	// Check if domain is blocked
-	return cb.scheduleRepo.DomainBlocked(domain, deviceHash)
+	blocked, err := cb.scheduleRepo.DomainBlocked(domain, deviceHash)
+	log.Printf("contentblocker: domain %s blocked=%v err=%v for device %s", domain, blocked, err, deviceHash)
+	return blocked, err
 }
