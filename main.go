@@ -194,6 +194,9 @@ func initRouter() *chi.Mux {
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
+			// Test route
+			r.Get("/test", testController.RunTest)
+
 			// JWT authentication middleware
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
@@ -230,9 +233,6 @@ func initRouter() *chi.Mux {
 
 			// Quote API route
 			r.Get("/quote", quoteController.Random)
-
-			// Test route
-			r.Get("/test", testController.RunTest)
 		})
 	})
 
