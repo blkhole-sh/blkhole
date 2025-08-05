@@ -6,7 +6,7 @@ import (
 	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // RuleRepo defines the interface for rule rrsitory operations

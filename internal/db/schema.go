@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	_ "modernc.org/sqlite" // SQLite driver
 )
 
 //go:embed schema.sql
