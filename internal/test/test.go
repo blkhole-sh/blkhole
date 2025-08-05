@@ -198,7 +198,7 @@ func (t TestImpl) Test() (string, error) {
 	_, err = t.AddSchedule(model.Schedule{
 		Name:         "Base Protection",
 		StartTime:    "09:00",
-		EndTime:      "17:00",
+		EndTime:      "22:00",
 		Monday:       true,
 		Tuesday:      true,
 		Wednesday:    true,
