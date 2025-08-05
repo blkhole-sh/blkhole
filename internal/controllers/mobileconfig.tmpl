@@ -15,6 +15,8 @@
     <string>{{ .UUID }}</string>
     <key>PayloadVersion</key>
     <integer>1</integer>
+    <key>PayloadScope</key>
+    <string>User</string>
     <key>PayloadContent</key>
     <array>
         <dict>
@@ -32,9 +34,10 @@
                 <string>HTTPS</string>
                 <key>ServerURL</key>
                 <string>{{ .ServerURL }}</string>
-                <key>SupplementalMatchDomains</key>
+                <key>ServerAddresses</key>
                 <array>
-                    <string></string>
+                    <string>1.1.1.1</string>
+                    <string>1.0.0.1</string>
                 </array>
             </dict>
         </dict>
