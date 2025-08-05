@@ -29,7 +29,7 @@ var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-
 
 // IsBlocked checks if a given domain is blocked
 func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, error) {
-	log.Printf("ContentBlocker | IsBlocked | %s", domain)
+	log.Printf("contentblocker: checking if blocked: %s", domain)
 
 	// Check if domain is valid
 	if !domainRegex.MatchString(domain) {

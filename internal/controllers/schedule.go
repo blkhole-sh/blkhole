@@ -45,7 +45,7 @@ func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) 
 	// Check if domain is blocked, throw error if domain is invalid
 	blocked, err := sc.contentBlocker.IsBlocked(domain, deviceHash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("invalid domain: %v", err)
 
 		// Return HTTP Bad Gateway if domain is invalid
 		http.Error(w, "Invalid domain", http.StatusBadGateway)
@@ -62,8 +62,9 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Encode schedule from request body
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode schedule from request body: %v", err)
 		http.Error(w, "Unable to decode schedule from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Store schedule into db
@@ -77,15 +78,17 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Find schedule in db
 	s, err := sc.schedules.FindByID(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to find schedule in db: %v", err)
 		http.Error(w, "Unable to find schedule in db", http.StatusNotFound)
+		return
 	}
 
 	// Respond with json encoded schedule
@@ -99,8 +102,9 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 	// Find schedules in db
 	s, err := sc.schedules.FindByUser(userHash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to find schedules in db: %v", err)
 		http.Error(w, "Unable to find schedules in db", http.StatusNotFound)
+		return
 	}
 
 	// Ensure we return an empty array instead of null for empty results
@@ -119,14 +123,16 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Encode schedule from request body
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode schedule from request body: %v", err)
 		http.Error(w, "Unable to decode schedule from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Update schedule in db
@@ -140,8 +146,9 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Delete schedule from db

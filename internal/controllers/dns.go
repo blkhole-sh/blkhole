@@ -40,7 +40,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		dnsMsgB64 := queryParams.Get("dns")
 		dnsMsg, err = base64.RawURLEncoding.DecodeString(dnsMsgB64)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to decode base64 dns query: %v", err)
 			http.Error(w, "Failed to decode base64 DNS query", http.StatusBadRequest)
 			return
 		}
@@ -49,13 +49,13 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		// POST request: read the DNS message directly from the body
 		dnsMsg, err = io.ReadAll(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to read dns query from body: %v", err)
 			http.Error(w, "Failed to read DNS query from body", http.StatusBadRequest)
 			return
 		}
 
 	default:
-		log.Fatal(err)
+		log.Printf("only get and post methods are supported")
 		http.Error(w, "Only GET and POST methods are supported", http.StatusMethodNotAllowed)
 		return
 	}
@@ -67,7 +67,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	msg := new(dns.Msg)
 	err = msg.Unpack(dnsMsg)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to unpack dns query: %v", err)
 		http.Error(w, "Failed to unpack DNS query", http.StatusBadRequest)
 		return
 	}
@@ -79,14 +79,14 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	// Process each question in the DNS query
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
-		log.Println("Requested domain:", domain)
+		log.Printf("requested domain: %s", domain)
 
 		// Check if domain blocked or invalid
 		blocked, err := dc.ContentBlocker.IsBlocked(domain, deviceHash)
 
 		// If domain blocked or invalid return NXDOMAIN
 		if blocked || err != nil {
-			log.Printf("Domain %s is blocked. Returning NXDOMAIN for this domain.\n", domain)
+			log.Printf("domain %s is blocked, returning nxdomain", domain)
 
 			// Set the NXDOMAIN response code
 			response.Rcode = dns.RcodeNameError
@@ -99,7 +99,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		client := new(dns.Client)
 		res, _, err := client.Exchange(msg, "127.0.0.1:53")
 		if err != nil {
-			log.Printf("Failed to forward DNS query to upstream server: %v", err)
+			log.Printf("failed to forward dns query to upstream server: %v", err)
 
 			// Set SERVFAIL in case of an upstream failure
 			response.SetRcode(msg, dns.RcodeServerFailure)
@@ -112,7 +112,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	// Pack and send the DNS response
 	responseBytes, err := response.Pack()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to pack dns response: %v", err)
 		http.Error(w, "Failed to pack DNS response", http.StatusInternalServerError)
 		return
 	}

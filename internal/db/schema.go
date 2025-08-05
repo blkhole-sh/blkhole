@@ -4,7 +4,6 @@ package db
 import (
 	"database/sql"
 	_ "embed"
-	"fmt"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
@@ -25,6 +24,5 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
-	fmt.Println("database schema initialized successfully.")
 	return nil
 }

@@ -40,14 +40,16 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Encode user from request body
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
+		return
 	}
 
 	hash, err := uc.cryptoService.RandomHash()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to create hash for user: %v", err)
 		http.Error(w, "Unable to create hash for user", http.StatusInternalServerError)
+		return
 	}
 
 	u.Hash = hash
@@ -65,8 +67,9 @@ func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
 
 	u, err := uc.users.FindByHash(hash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to find user in db: %v", err)
 		http.Error(w, "Unable to find user in db", http.StatusNotFound)
+		return
 	}
 
 	// Respond with json encoded user
@@ -82,8 +85,9 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Encode user from request body
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Update user in db

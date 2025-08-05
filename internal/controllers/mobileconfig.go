@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"log"
 	"net/http"
-	"os"
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
@@ -22,11 +21,13 @@ type MobileConfigController interface {
 }
 
 // mobileConfigController implements the MobileConfigController interface
-type mobileConfigController struct{}
+type mobileConfigController struct {
+	domain string
+}
 
 // NewMobileConfigController creates a new MobileConfigController instance
-func NewMobileConfigController() MobileConfigController {
-	return &mobileConfigController{}
+func NewMobileConfigController(domain string) MobileConfigController {
+	return &mobileConfigController{domain: domain}
 }
 
 func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.Request) {
@@ -38,11 +39,8 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 	uuid1 := uuid.New().String()
 	uuid2 := uuid.New().String()
 
-	// Load domain from env
-	domain := os.Getenv("SERVER_PORT")
-
 	// Build server URL
-	serverURL := "https://" + domain + "/" + userHash + "/" + deviceHash + "/dns-query"
+	serverURL := "https://" + mc.domain + "/" + userHash + "/" + deviceHash + "/dns-query"
 
 	// Prepare template data
 	data := struct {
@@ -63,7 +61,7 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 
 	// Execute template
 	if err := mobileConfigTemplate.Execute(w, data); err != nil {
-		log.Fatal(err)
+		log.Printf("failed to execute mobile config template: %v", err)
 		http.Error(w, "Unable to generate mobile config", http.StatusInternalServerError)
 	}
 }

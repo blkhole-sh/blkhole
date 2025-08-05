@@ -1,10 +1,10 @@
 /**
- * API client for authenticated requests to the Leo DNS blocker backend
+ * API client for authenticated requests to the Leo server backend
  */
 import { Device, List, Quote, Schedule } from "./model";
 import { getCookie, clearAuthCookies, setCookie } from "./cookies";
 
-const API_BASE = "http://127.0.0.1:8080/api";
+const API_BASE = "/api";
 
 /**
  * Login user with email and password

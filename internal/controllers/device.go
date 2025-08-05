@@ -41,14 +41,16 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Encode device from request body
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
-		log.Fatal(err)
+		log.Printf("failed to decode device from request body: %v", err)
 		http.Error(w, "Unable to decode device from request body", http.StatusBadRequest)
+		return
 	}
 
 	hash, err := dc.cryptoService.RandomHash()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to create hash for device: %v", err)
 		http.Error(w, "Unable to create hash for user", http.StatusInternalServerError)
+		return
 	}
 
 	d.Hash = hash
@@ -66,8 +68,9 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 
 	d, err := dc.devices.FindByHash(hash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to find device by hash %s: %v", hash, err)
 		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		return
 	}
 
 	json.NewEncoder(w).Encode(d)
@@ -80,8 +83,9 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	// Find devices in db
 	d, err := dc.devices.FindByUser(userHash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed to find devices for user %s: %v", userHash, err)
 		http.Error(w, "Unable to find devices in db", http.StatusNotFound)
+		return
 	}
 
 	// Ensure we return an empty array instead of null for empty results
@@ -102,8 +106,9 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Encode device from request body
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
-		log.Fatal(err)
+		log.Printf("failed to decode device from request body: %v", err)
 		http.Error(w, "Unable to decode device from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Update device in db

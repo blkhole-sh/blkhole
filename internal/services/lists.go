@@ -71,13 +71,13 @@ func readAdblockFile(r io.Reader) ([]model.Rule, error) {
 			allowed = false
 		} else {
 			// Log warning for unrecognized format
-			log.Printf("Warning: Unrecognized adblock format in line: %s", line)
+			log.Printf("warning: unrecognized adblock format in line: %s", line)
 			continue
 		}
 
 		// Validate domain format
 		if !validDomainPattern.MatchString(domain) {
-			log.Printf("Warning: Invalid domain format in adblock file: %s", domain)
+			log.Printf("warning: invalid domain format in adblock file: %s", domain)
 			continue
 		}
 
@@ -122,7 +122,7 @@ func readHostFile(r io.Reader) ([]model.Rule, error) {
 
 			// Validate domain format
 			if !validDomainPattern.MatchString(domain) {
-				log.Printf("Warning: Invalid domain format in hosts file: %s", domain)
+				log.Printf("warning: invalid domain format in hosts file: %s", domain)
 				continue
 			}
 
@@ -135,7 +135,7 @@ func readHostFile(r io.Reader) ([]model.Rule, error) {
 			rules = append(rules, rule)
 		} else {
 			// Log warning for unrecognized format
-			log.Printf("Warning: Unrecognized hosts format in line: %s", line)
+			log.Printf("warning: unrecognized hosts format in line: %s", line)
 		}
 	}
 
@@ -162,7 +162,7 @@ func readDomainsFile(r io.Reader) ([]model.Rule, error) {
 
 		// Validate domain format (line should be just a domain)
 		if !validDomainPattern.MatchString(line) {
-			log.Printf("Warning: Invalid domain format in domains file: %s", line)
+			log.Printf("warning: invalid domain format in domains file: %s", line)
 			continue
 		}
 
@@ -193,7 +193,7 @@ func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
 	contentStr := string(content)
 
 	if len(contentStr) == 0 {
-		log.Printf("Warning: File appears to be empty")
+		log.Printf("warning: file appears to be empty")
 		return []model.Rule{}, nil
 	}
 
@@ -232,7 +232,7 @@ func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
 		log.Printf("detected domains format file")
 		return readDomainsFile(strings.NewReader(contentStr))
 	} else {
-		log.Printf("warning: Unable to detect file format - no recognizable patterns found in first %d lines", sampleSize)
+		log.Printf("warning: unable to detect file format - no recognizable patterns found in first %d lines", sampleSize)
 		return []model.Rule{}, nil
 	}
 }
@@ -301,6 +301,6 @@ func (ls *listsService) LoadList(l *model.List) error {
 		return fmt.Errorf("failed to load rules for list %d: %w", l.ID, err)
 	}
 
-	log.Printf("Successfully loaded %d rules for list %s from %s", len(l.Rules), l.Name, l.Source)
+	log.Printf("successfully loaded %d rules for list %s from %s", len(l.Rules), l.Name, l.Source)
 	return nil
 }

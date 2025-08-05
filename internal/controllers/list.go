@@ -38,8 +38,9 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Encode list from request body
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode list from request body: %v", err)
 		http.Error(w, "Unable to decode list from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Store list into db
@@ -53,15 +54,17 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Find list in db
 	l, err := lc.lists.FindByID(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to find blocklist in db: %v", err)
 		http.Error(w, "Unable to find blocklist in db", http.StatusNotFound)
+		return
 	}
 
 	// Respond with json encoded list
@@ -75,8 +78,9 @@ func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	// Find lists in db
 	l, err := lc.lists.FindByUser(userHash)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to find blocklists in db: %v", err)
 		http.Error(w, "Unable to find blocklists in db", http.StatusNotFound)
+		return
 	}
 
 	// Ensure we return an empty array instead of null for empty results
@@ -95,14 +99,16 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Encode list from request body
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
-		log.Fatal(err)
+		log.Printf("unable to decode list from request body: %v", err)
 		http.Error(w, "Unable to decode list from request body", http.StatusBadRequest)
+		return
 	}
 
 	// Update list in db
@@ -116,8 +122,9 @@ func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Delete blocklist from db

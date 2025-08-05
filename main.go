@@ -1,10 +1,12 @@
-// Package main provides the Leo DNS content blocker server application.
+// Package main provides the Leo  server application.
 package main
 
 import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -24,6 +26,13 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
 )
+
+// Config defines the Leo configuration
+type Config struct {
+	Domain string
+	Port   string
+	Secret string
+}
 
 var (
 	// Static file server
@@ -60,7 +69,35 @@ var (
 	testController controllers.TestController
 )
 
-func initDependencies() {
+func initConfig() (*Config, error) {
+	var cfg Config
+
+	flag.StringVar(&cfg.Port, "p", "", "Server port")
+	flag.StringVar(&cfg.Domain, "d", "", "Server domain")
+	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
+
+	flag.Parse()
+
+	// Validate required flags
+	var missing []string
+	if cfg.Port == "" {
+		missing = append(missing, "-p (port)")
+	}
+	if cfg.Domain == "" {
+		missing = append(missing, "-d (domain)")
+	}
+	if cfg.Secret == "" {
+		missing = append(missing, "-s (secret)")
+	}
+
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing required flags: %v", missing)
+	}
+
+	return &cfg, nil
+}
+
+func initDependencies(cfg *Config) {
 	// Get database path
 	configDir, _ := os.UserConfigDir()
 	dbPath := filepath.Join(configDir, "leo", "leo.db")
@@ -79,7 +116,7 @@ func initDependencies() {
 	}
 
 	// Initialize secret
-	secret, err := hex.DecodeString(os.Getenv("LEO_SECRET"))
+	secret, err := hex.DecodeString(cfg.Secret)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,7 +142,7 @@ func initDependencies() {
 	userController = controllers.NewUserController(users, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker)
 	listController = controllers.NewListController(lists)
-	mobileConfigController = controllers.NewMobileConfigController()
+	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain)
 	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
@@ -123,10 +160,7 @@ func initDependencies() {
 	testController = controllers.NewTestController(t)
 }
 
-func main() {
-	// Initialize dependencies
-	initDependencies()
-
+func initRouter() *chi.Mux {
 	// Create a new router using chi
 	r := chi.NewRouter()
 
@@ -208,12 +242,25 @@ func main() {
 	// Serve frontend - MUST BE LAST to avoid catching API routes
 	r.Get("/*", webController.Serve)
 
-	// Read port from .env
-	port := os.Getenv("LEO_PORT")
+	return r
+}
+
+func main() {
+	// Initialize config
+	cfg, err := initConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize dependencies
+	initDependencies(cfg)
+
+	// Initialize router
+	r := initRouter()
 
 	// Start server on given port
-	log.Printf("Starting Leo on :%s\n", port)
-	err := http.ListenAndServe(":"+port, r)
+	log.Printf("starting leo on :%s", cfg.Port)
+	err = http.ListenAndServe(":"+cfg.Port, r)
 	if err != nil {
 		log.Fatal(err)
 	}
