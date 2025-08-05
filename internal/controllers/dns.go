@@ -5,8 +5,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"github.com/lemon3studio/leo/internal/services"
 	"strings"
+
+	"github.com/lemon3studio/leo/internal/services"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/miekg/dns"
@@ -101,7 +102,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	// If no domain was blocked, forward the DNS query to the upstream server
 	if response.Rcode == dns.RcodeSuccess {
 		client := new(dns.Client)
-		res, _, err := client.Exchange(msg, "127.0.0.1:53")
+		res, _, err := client.Exchange(msg, "1.1.1.1:53")
 		if err != nil {
 			log.Printf("failed to forward dns query to upstream server: %v", err)
 
