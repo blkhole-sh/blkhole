@@ -41,7 +41,9 @@ func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker servi
 // IsBlocked handles GET requests to check if a domain is blocked
 func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) {
 	// Handle CORS headers if Origin header is present
-	if origin := r.Header.Get("Origin"); origin != "" {
+	origin := r.Header.Get("Origin")
+	log.Printf("Origin header: %q\n", origin)
+	if origin != "" {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
