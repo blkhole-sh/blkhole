@@ -20,7 +20,7 @@ import (
 	"github.com/lemon3studio/leo/internal/services"
 	"github.com/lemon3studio/leo/internal/test"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -107,7 +107,7 @@ func initDependencies(cfg *Config) {
 	os.MkdirAll(filepath.Dir(dbPath), 0755)
 
 	// Initialize repos
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}

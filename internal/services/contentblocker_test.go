@@ -11,7 +11,7 @@ import (
 	"github.com/lemon3studio/leo/internal/repos"
 	schema "github.com/lemon3studio/leo/internal/db"
 
-	_ "modernc.org/sqlite" // SQLite driver for in-memory test database
+	_ "github.com/mattn/go-sqlite3" // SQLite driver for in-memory test database
 )
 
 // setupTestDB creates an in-memory SQLite database for testing.
@@ -24,7 +24,7 @@ import (
 func setupTestDB(t *testing.T) *sql.DB {
 	// Create in-memory SQLite database for testing
 	// ":memory:" creates a temporary database that exists only in RAM
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}

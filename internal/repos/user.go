@@ -4,10 +4,11 @@ package repos
 import (
 	"context"
 	"database/sql"
+
 	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type UserRepo interface {
