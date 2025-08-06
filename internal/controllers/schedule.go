@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+
 	"github.com/lemon3studio/leo/internal/model"
 	"github.com/lemon3studio/leo/internal/repos"
 	"github.com/lemon3studio/leo/internal/services"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vmihailenco/msgpack/v5"
@@ -47,13 +49,15 @@ func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Printf("invalid domain: %v", err)
 
-		// Return HTTP Bad Gateway if domain is invalid
-		http.Error(w, "Invalid domain", http.StatusBadGateway)
+		// Return HTTP Bad Request if domain is invalid
+		http.Error(w, "Invalid domain", http.StatusBadRequest)
 		return
 	}
 
 	// Return HTTP 200 and true if domain is blocked or false if else
-	w.Write([]byte(strconv.FormatBool(blocked)))
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
 }
 
 func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
