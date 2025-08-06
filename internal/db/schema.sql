@@ -61,3 +61,12 @@ CREATE TABLE IF NOT EXISTS schedule_domain (
     domain TEXT NOT NULL,
     PRIMARY KEY (schedule_id, domain)
 );
+
+-- Create indexes for performance optimization:
+CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+CREATE INDEX IF NOT EXISTS idx_device_user_hash ON device(user_hash);
+CREATE INDEX IF NOT EXISTS idx_rule_list_id ON rule(list_id);
+CREATE INDEX IF NOT EXISTS idx_rule_domain ON rule(domain);
+CREATE INDEX IF NOT EXISTS idx_schedule_user_hash ON schedule(user_hash);
+CREATE INDEX IF NOT EXISTS idx_device_schedule_device_hash ON device_schedule(device_hash);
+CREATE INDEX IF NOT EXISTS idx_list_schedule_schedule_id ON list_schedule(schedule_id);
