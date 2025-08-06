@@ -58,8 +58,8 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store device into db
 	dc.devices.Create(&d)
 
-	// Respond with msgpack encoded device
-	json.NewEncoder(w).Encode(d)
+	// Respond with JSON encoded device DTO
+	json.NewEncoder(w).Encode(d.ToDTO())
 }
 
 func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(d)
+	json.NewEncoder(w).Encode(d.ToDTO())
 }
 
 func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -88,13 +88,19 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure we return an empty array instead of null for empty results
+	// Convert to DTOs with counts instead of arrays
+	var deviceDTOs []model.DeviceDTO
 	if d == nil {
-		d = []*model.Device{}
+		deviceDTOs = []model.DeviceDTO{}
+	} else {
+		deviceDTOs = make([]model.DeviceDTO, len(d))
+		for i, device := range d {
+			deviceDTOs[i] = device.ToDTO()
+		}
 	}
 
-	// Respond with msgpack encoded devices
-	json.NewEncoder(w).Encode(d)
+	// Respond with JSON encoded device DTOs
+	json.NewEncoder(w).Encode(deviceDTOs)
 }
 
 func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
@@ -114,8 +120,8 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update device in db
 	dc.devices.Update(hash, &d)
 
-	// Respond with msgpack encoded device
-	json.NewEncoder(w).Encode(d)
+	// Respond with JSON encoded device DTO
+	json.NewEncoder(w).Encode(d.ToDTO())
 }
 
 func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {

@@ -1,20 +1,20 @@
-// Define User interface
+// Define User interface - now uses DTO format with counts
 export interface User {
 	hash: string;
 	name: string;
 	email: string;
-	deviceHashes: string[];
-	listIds: number[];
-	scheduleIds: number[];
+	devices: number;
+	lists: number;
+	schedules: number;
 }
 
-// Define Device interface
+// Define Device interface - now uses DTO format with counts
 export interface Device {
 	hash: string;
 	name: string;
 	os: string;
 	userHash: string;
-	scheduleIds: number[];
+	schedules: number;
 }
 
 // Define Rule interface
@@ -25,27 +25,27 @@ export interface Rule {
 	allowed: boolean;
 }
 
-// Define List interface
+// Define List interface - now uses DTO format with counts
 export interface List {
 	id: number;
 	name: string;
 	description: string;
 	source: string;
 	userHash: string;
-	rules: Rule[];
-	scheduleIds: number[];
+	rules: number;    // Count of rules in this list
+	schedules: number; // Count of schedules using this list
 }
 
-// Define Schedule interface
+// Define Schedule interface - now uses DTO format with counts
 export interface Schedule {
 	id: number;
 	name: string;
-	startTime: Date;
-	endTime: Date;
+	startTime: string; // Backend sends as string, not Date
+	endTime: string; // Backend sends as string, not Date
 	userHash: string;
-	deviceHashes: string[];
-	domains: string[];
-	listIds: number[];
+	devices: number;
+	domains: number;
+	lists: number;
 	monday: boolean;
 	tuesday: boolean;
 	wednesday: boolean;

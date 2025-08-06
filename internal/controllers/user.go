@@ -58,7 +58,7 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 	uc.users.Create(&u)
 
 	// Respond with JSON encoded user
-	json.NewEncoder(w).Encode(u)
+	json.NewEncoder(w).Encode(u.ToDTO())
 }
 
 func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with JSON encoded user
-	json.NewEncoder(w).Encode(u)
+	json.NewEncoder(w).Encode(u.ToDTO())
 }
 
 func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	uc.users.Update(hash, &u)
 
 	// Respond with JSON encoded user
-	json.NewEncoder(w).Encode(u)
+	json.NewEncoder(w).Encode(u.ToDTO())
 }
 
 func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {

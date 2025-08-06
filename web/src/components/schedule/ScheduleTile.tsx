@@ -30,8 +30,8 @@ export default function ScheduleTile(props: Props) {
 	};
 
 	const listsAndDomains = () => {
-		const lists = props.schedule.listIds.length;
-		const domains = props.schedule.domains.length;
+		const lists = props.schedule.lists;
+		const domains = props.schedule.domains;
 
 		if (lists === 0 && domains === 0) {
 			return "None"; // Optional: handle case when both are empty

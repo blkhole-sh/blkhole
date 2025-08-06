@@ -55,7 +55,7 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
 
 	// Return only user data (tokens are in cookies)
-	json.NewEncoder(w).Encode(map[string]any{"user": result.User})
+	json.NewEncoder(w).Encode(map[string]any{"user": result.User.ToDTO()})
 }
 
 // RefreshToken handles token refresh
@@ -79,7 +79,7 @@ func (c *authController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
 
 	// Return only user data
-	json.NewEncoder(w).Encode(map[string]any{"user": result.User})
+	json.NewEncoder(w).Encode(map[string]any{"user": result.User.ToDTO()})
 }
 
 // Logout handles user logout
@@ -97,7 +97,7 @@ func (c *authController) GetCurrentUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(user.ToDTO())
 }
 
 // setSecureCookie sets a secure HttpOnly cookie

@@ -11,11 +11,11 @@ interface Props {
 
 export default function ListTile(props: Props) {
 	const domains = () => {
-		if (props.list.rules.length === 0) {
+		if (props.list.rules === 0) {
 			return "Empty";
 		}
 
-		return `${props.list.rules.length} rules`;
+		return `${props.list.rules} rules`;
 	};
 
 	return (

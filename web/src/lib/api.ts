@@ -138,19 +138,19 @@ const getCurrentUser = () => {
 /** Get a random stoic quote */
 export const getQuote = (): Promise<Quote> => api("/quote");
 
-/** Get all devices for the current user */
+/** Get all devices for the current user - returns DeviceDTO with schedule counts */
 export const getDevices = (): Promise<Device[]> => {
 	const user = getCurrentUser();
 	return api(`/users/${user.hash}/devices`);
 };
 
-/** Get all domain lists for the current user */
+/** Get all domain lists for the current user - returns ListDTO with rule and schedule counts */
 export const getLists = (): Promise<List[]> => {
 	const user = getCurrentUser();
 	return api(`/users/${user.hash}/lists`);
 };
 
-/** Get all schedules for the current user */
+/** Get all schedules for the current user - returns ScheduleDTO with device, domain, and list counts */
 export const getSchedules = (): Promise<Schedule[]> => {
 	const user = getCurrentUser();
 	return api(`/users/${user.hash}/schedules`);

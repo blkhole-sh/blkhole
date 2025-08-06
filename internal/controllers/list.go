@@ -47,8 +47,8 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store list into db
 	lc.lists.Create(&l)
 
-	// Respond with JSON encoded list
-	json.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list DTO
+	json.NewEncoder(w).Encode(l.ToDTO())
 }
 
 func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -68,8 +68,8 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with JSON encoded list
-	json.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list DTO
+	json.NewEncoder(w).Encode(l.ToDTO())
 }
 
 func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -84,13 +84,19 @@ func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure we return an empty array instead of null for empty results
+	// Convert to DTOs with counts instead of arrays
+	var listDTOs []model.ListDTO
 	if l == nil {
-		l = []*model.List{}
+		listDTOs = []model.ListDTO{}
+	} else {
+		listDTOs = make([]model.ListDTO, len(l))
+		for i, list := range l {
+			listDTOs[i] = list.ToDTO()
+		}
 	}
 
-	// Respond with JSON encoded lists
-	json.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list DTOs
+	json.NewEncoder(w).Encode(listDTOs)
 }
 
 func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +121,8 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update list in db
 	lc.lists.Update(id, &l)
 
-	// Respond with JSON encoded list
-	json.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list DTO
+	json.NewEncoder(w).Encode(l.ToDTO())
 }
 
 func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {

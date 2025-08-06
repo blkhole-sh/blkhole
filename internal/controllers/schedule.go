@@ -68,8 +68,8 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store schedule into db
 	sc.schedules.Create(&s)
 
-	// Respond with JSON encoded schedule
-	json.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule DTO
+	json.NewEncoder(w).Encode(s.ToDTO())
 }
 
 func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +89,8 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with JSON encoded schedule
-	json.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule DTO
+	json.NewEncoder(w).Encode(s.ToDTO())
 }
 
 func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -105,13 +105,19 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Ensure we return an empty array instead of null for empty results
+	// Convert to DTOs with counts instead of arrays
+	var scheduleDTOs []model.ScheduleDTO
 	if s == nil {
-		s = []*model.Schedule{}
+		scheduleDTOs = []model.ScheduleDTO{}
+	} else {
+		scheduleDTOs = make([]model.ScheduleDTO, len(s))
+		for i, schedule := range s {
+			scheduleDTOs[i] = schedule.ToDTO()
+		}
 	}
 
-	// Respond with JSON encoded schedules
-	json.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule DTOs
+	json.NewEncoder(w).Encode(scheduleDTOs)
 }
 
 func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
@@ -136,8 +142,8 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update schedule in db
 	sc.schedules.Update(id, &s)
 
-	// Respond with JSON encoded schedule
-	json.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule DTO
+	json.NewEncoder(w).Encode(s.ToDTO())
 }
 
 func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
