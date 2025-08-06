@@ -55,6 +55,7 @@ func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Return HTTP 200 and true if domain is blocked or false if else
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
