@@ -33,10 +33,10 @@ type Test interface {
 	Test() (string, error)
 }
 
-// TestImpl implements the Test interface and provides concrete methods for creating test data.
+// test implements the Test interface and provides concrete methods for creating test data.
 // It holds references to all the repositories and services needed to create a complete
 // test scenario with proper relationships between users, devices, lists, and schedules.
-type TestImpl struct {
+type test struct {
 	userRepo      repos.UserRepo         // Repository for user operations
 	deviceRepo    repos.DeviceRepo       // Repository for device operations
 	ruleRepo      repos.RuleRepo         // Repository for rule operations
@@ -46,7 +46,7 @@ type TestImpl struct {
 	cryptoService services.CryptoService // Service for generating hashes and passwords
 }
 
-// NewTest creates a new TestImpl instance with all required dependencies.
+// NewTest creates a new test instance with all required dependencies.
 // This constructor function initializes the test helper with access to all
 // repositories and services needed to create comprehensive test scenarios.
 //
@@ -56,7 +56,7 @@ type TestImpl struct {
 // Returns:
 //   - Test: Interface for creating test data fixtures
 func NewTest(userRepo repos.UserRepo, deviceRepo repos.DeviceRepo, ruleRepo repos.RuleRepo, listRepo repos.ListRepo, listService services.ListsService, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService) Test {
-	return &TestImpl{
+	return &test{
 		userRepo:      userRepo,
 		deviceRepo:    deviceRepo,
 		ruleRepo:      ruleRepo,
@@ -77,7 +77,7 @@ func NewTest(userRepo repos.UserRepo, deviceRepo repos.DeviceRepo, ruleRepo repo
 // Returns:
 //   - string: The generated user hash (used as the user's unique identifier)
 //   - error: Any error that occurred during user creation
-func (t TestImpl) AddUser(user model.User, password string) (string, error) {
+func (t test) AddUser(user model.User, password string) (string, error) {
 	// Generate a cryptographically secure random hash for the user
 	hash, err := t.cryptoService.RandomHash()
 	if err != nil {
@@ -113,7 +113,7 @@ func (t TestImpl) AddUser(user model.User, password string) (string, error) {
 // Returns:
 //   - string: The generated device hash (used in DNS queries and mobileconfig URLs)
 //   - error: Any error that occurred during device creation
-func (t TestImpl) AddDevice(device model.Device) (string, error) {
+func (t test) AddDevice(device model.Device) (string, error) {
 	// Generate a cryptographically secure random hash for the device
 	// This hash will be used in the mobileconfig URL: /devices/{hash}/config
 	hash, err := t.cryptoService.RandomHash()
@@ -143,7 +143,7 @@ func (t TestImpl) AddDevice(device model.Device) (string, error) {
 // Returns:
 //   - int: The ID of the created rule
 //   - error: Any error that occurred during rule creation
-func (t TestImpl) AddRule(rule model.Rule) (int, error) {
+func (t test) AddRule(rule model.Rule) (int, error) {
 	// Create the rule in the database
 	id, err := t.ruleRepo.Create(&rule)
 	if err != nil {
@@ -164,7 +164,7 @@ func (t TestImpl) AddRule(rule model.Rule) (int, error) {
 // Returns:
 //   - int: The ID of the created list
 //   - error: Any error that occurred during list or rule creation
-func (t TestImpl) AddList(list model.List, domains []string) (int, error) {
+func (t test) AddList(list model.List, domains []string) (int, error) {
 	// Create the list in the database
 	id, err := t.listRepo.Create(&list)
 	if err != nil {
@@ -203,7 +203,7 @@ func (t TestImpl) AddList(list model.List, domains []string) (int, error) {
 // Returns:
 //   - int: The ID of the created schedule
 //   - error: Any error that occurred during schedule creation or linking
-func (t TestImpl) AddSchedule(schedule model.Schedule) (int, error) {
+func (t test) AddSchedule(schedule model.Schedule) (int, error) {
 	// Create the schedule in the database
 	id, err := t.scheduleRepo.Create(&schedule)
 	if err != nil {
@@ -254,7 +254,7 @@ func (t TestImpl) AddSchedule(schedule model.Schedule) (int, error) {
 // Returns:
 //   - string: The user hash for the created test scenario
 //   - error: Any error that occurred during test setup
-func (t TestImpl) Test() (string, error) {
+func (t test) Test() (string, error) {
 	// Create a test user to own all the test data
 	uh, err := t.AddUser(model.User{
 		Name:  "Arian Gohari",    // Test user name

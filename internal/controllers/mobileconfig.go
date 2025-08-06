@@ -1,17 +1,31 @@
 package controllers
 
 import (
+	"crypto/rand"
 	_ "embed"
+	"fmt"
 	"log"
 	"net/http"
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 //go:embed mobileconfig.tmpl
 var mobileConfigTemplateContent string
+
+// generateUUID creates a UUID v4 using standard library
+func generateUUID() string {
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+	
+	// Set version (4) and variant bits
+	bytes[6] = (bytes[6] & 0x0f) | 0x40 // Version 4
+	bytes[8] = (bytes[8] & 0x3f) | 0x80 // Variant bits
+	
+	return fmt.Sprintf("%x-%x-%x-%x-%x",
+		bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16])
+}
 
 var mobileConfigTemplate = template.Must(template.New("mobileconfig").Parse(mobileConfigTemplateContent))
 
@@ -34,9 +48,9 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 	// Get device hash from url params
 	deviceHash := chi.URLParam(r, "hash")
 
-	// Generate UUIDs for mobile config
-	uuid1 := uuid.New().String()
-	uuid2 := uuid.New().String()
+	// Generate UUIDs for mobile config using standard library
+	uuid1 := generateUUID()
+	uuid2 := generateUUID()
 
 	// Build server URL
 	serverURL := "https://" + mc.domain + "/" + deviceHash + "/dns-query"
