@@ -3,7 +3,7 @@ package repos
 import (
 	"context"
 	"database/sql"
-	"log"
+
 	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
@@ -346,7 +346,6 @@ func (repo *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 }
 
 func (repo *scheduleRepo) DomainBlocked(domain string, deviceHash string) (bool, error) {
-	log.Printf("DomainBlocked: checking domain=%s device=%s", domain, deviceHash)
 	query := `WITH CurrentDateTime AS (
               SELECT 
                 time('now', 'localtime') AS current_time_only,  -- Current local time in HH:MM

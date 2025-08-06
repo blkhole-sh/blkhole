@@ -3,10 +3,10 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"regexp"
-	"github.com/lemon3studio/leo/internal/repos"
 	"strings"
+
+	"github.com/lemon3studio/leo/internal/repos"
 )
 
 // ContentBlocker defines the interface for content blocking operations
@@ -29,8 +29,6 @@ var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-
 
 // IsBlocked checks if a given domain is blocked
 func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, error) {
-	log.Printf("contentblocker: checking if blocked: %s", domain)
-
 	// Normalize the domain to lowercase and remove trailing dot if present
 	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
 
@@ -44,6 +42,5 @@ func (cb *contentBlocker) IsBlocked(domain string, deviceHash string) (bool, err
 
 	// Check if domain is blocked
 	blocked, err := cb.scheduleRepo.DomainBlocked(domain, deviceHash)
-	log.Printf("contentblocker: domain %s blocked=%v err=%v for device %s", domain, blocked, err, deviceHash)
 	return blocked, err
 }
