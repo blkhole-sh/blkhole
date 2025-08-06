@@ -40,23 +40,32 @@ func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker servi
 
 // IsBlocked handles GET requests to check if a domain is blocked
 func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) {
-	// Parse domain from request param
+	// Handle CORS headers if Origin header is present
+	if origin := r.Header.Get("Origin"); origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
+	}
+
+	// Handle preflight OPTIONS request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent) // Respond with 204 No Content
+		return
+	}
+
+	// Extract query parameters
 	domain := r.URL.Query().Get("domain")
 	deviceHash := r.URL.Query().Get("deviceHash")
 
-	// Check if domain is blocked, throw error if domain is invalid
+	// Check if the domain is blocked
 	blocked, err := sc.contentBlocker.IsBlocked(domain, deviceHash)
 	if err != nil {
-		log.Printf("invalid domain: %v", err)
-
-		// Return HTTP Bad Request if domain is invalid
 		http.Error(w, "Invalid domain", http.StatusBadRequest)
 		return
 	}
 
-	// Return HTTP 200 and true if domain is blocked or false if else
-	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	// Set response content type and return JSON result
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
 }
