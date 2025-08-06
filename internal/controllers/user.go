@@ -2,7 +2,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"github.com/lemon3studio/leo/internal/model"
@@ -10,6 +9,7 @@ import (
 	"github.com/lemon3studio/leo/internal/services"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // UserController defines the interface for user operations
@@ -39,7 +39,7 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 	var u model.User
 
 	// Encode user from request body
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+	if err := msgpack.NewDecoder(r.Body).Decode(&u); err != nil {
 		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
 		return
@@ -57,8 +57,8 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store user into db
 	uc.users.Create(&u)
 
-	// Respond with json encoded user
-	json.NewEncoder(w).Encode(u)
+	// Respond with msgpack encoded user
+	msgpack.NewEncoder(w).Encode(u)
 }
 
 func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +72,8 @@ func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with json encoded user
-	json.NewEncoder(w).Encode(u)
+	// Respond with msgpack encoded user
+	msgpack.NewEncoder(w).Encode(u)
 }
 
 func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	hash := chi.URLParam(r, "hash")
 
 	// Encode user from request body
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+	if err := msgpack.NewDecoder(r.Body).Decode(&u); err != nil {
 		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
 		return
@@ -93,8 +93,8 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update user in db
 	uc.users.Update(hash, &u)
 
-	// Respond with json encoded user
-	json.NewEncoder(w).Encode(u)
+	// Respond with msgpack encoded user
+	msgpack.NewEncoder(w).Encode(u)
 }
 
 func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {

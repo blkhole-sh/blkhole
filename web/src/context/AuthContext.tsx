@@ -6,15 +6,14 @@ import {
 	onMount,
 } from "solid-js";
 import { User } from "~/lib/model";
-import { getCookie, clearAuthCookies } from "~/lib/cookies";
-import { login as apiLogin } from "~/lib/api";
+import { login as apiLogin, logout as apiLogout, refreshAuth } from "~/lib/api";
 
 type AuthStore = {
 	user: () => User | null;
-	token: () => string | null;
 	login: (email: string, password: string) => Promise<void>;
-	logout: () => void;
+	logout: () => Promise<void>;
 	isAuthenticated: () => boolean;
+	checkAuth: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthStore>();
@@ -27,43 +26,49 @@ export const useAuth = (): AuthStore => {
 
 export default function AuthProvider(props: ParentProps) {
 	const [user, setUser] = createSignal<User | null>(null);
-	const [token, setToken] = createSignal<string | null>(null);
 
-	onMount(() => {
-		const savedToken = getCookie("token");
-		const savedUser = getCookie("user");
-
-		if (savedToken && savedUser) {
+	onMount(async () => {
+		// Try to load user from localStorage
+		const savedUser = localStorage.getItem("user");
+		if (savedUser) {
 			try {
-				setToken(savedToken);
-				setUser(JSON.parse(decodeURIComponent(savedUser)));
+				setUser(JSON.parse(savedUser));
 			} catch {
-				// Invalid stored data, clear cookies
-				clearAuthCookies();
+				// Invalid stored data, remove it
+				localStorage.removeItem("user");
 			}
 		}
 	});
 
 	const login = async (email: string, password: string) => {
-		const { user: userData, token: userToken } = await apiLogin(email, password);
-		setToken(userToken);
+		const { user: userData } = await apiLogin(email, password);
 		setUser(userData);
 	};
 
-	const logout = () => {
-		clearAuthCookies();
-		setToken(null);
+	const logout = async () => {
+		await apiLogout();
 		setUser(null);
 	};
 
-	const isAuthenticated = () => Boolean(token() && user());
+	const checkAuth = async () => {
+		try {
+			const { user: userData } = await refreshAuth();
+			setUser(userData);
+		} catch {
+			// Not authenticated or refresh failed
+			setUser(null);
+			localStorage.removeItem("user");
+		}
+	};
+
+	const isAuthenticated = () => Boolean(user());
 
 	const store: AuthStore = {
 		user,
-		token,
 		login,
 		logout,
 		isAuthenticated,
+		checkAuth,
 	};
 
 	return (

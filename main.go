@@ -15,6 +15,7 @@ import (
 
 	"github.com/lemon3studio/leo/internal/controllers"
 	schema "github.com/lemon3studio/leo/internal/db"
+	"github.com/lemon3studio/leo/internal/middleware"
 	"github.com/lemon3studio/leo/internal/repos"
 	"github.com/lemon3studio/leo/internal/services"
 	"github.com/lemon3studio/leo/internal/test"
@@ -22,10 +23,12 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
 )
+
+var devMode = "false" // Set via ldflags
 
 // Config defines the Leo configuration
 type Config struct {
@@ -165,12 +168,12 @@ func initRouter() *chi.Mux {
 	r := chi.NewRouter()
 
 	// Add some middleware for better logging and recovery
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
 
 	// Configure CORS
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"}, // Allow all origins for single binary
+		AllowedOrigins:   map[bool][]string{true: {"http://localhost:5173"}, false: {"*"}}[devMode == "true"],
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -186,14 +189,18 @@ func initRouter() *chi.Mux {
 
 	// API routes group
 	r.Route("/api", func(r chi.Router) {
+		// Apply msgpack middleware to all API routes
+		r.Use(middleware.MsgPackMiddleware)
+
 		// Public auth routes
 		r.Post("/auth/login", authController.Login)
+		r.Post("/auth/refresh", authController.RefreshToken)
+		r.Post("/auth/logout", authController.Logout)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
-			// JWT authentication middleware
-			r.Use(jwtauth.Verifier(tokenAuth))
-			r.Use(jwtauth.Authenticator(tokenAuth))
+			// Cookie-based JWT authentication middleware
+			r.Use(middleware.CookieAuthenticator(tokenAuth))
 
 			// Auth routes
 			r.Get("/auth/me", authController.GetCurrentUser)
@@ -240,8 +247,15 @@ func initRouter() *chi.Mux {
 	// Serve static files (legacy)
 	r.Get("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))).ServeHTTP)
 
-	// Serve frontend - MUST BE LAST to avoid catching API routes
-	r.Get("/*", webController.Serve)
+	if devMode == "true" {
+		log.Printf("dev mode enabled")
+	} else {
+		// Serve frontend - only in production mode
+		// Serve frontend with compression middleware
+		// Must be last to avoid catching API routes
+		webSubFS, _ := fs.Sub(webFS, "static")
+		r.With(middleware.CompressionMiddleware(webSubFS)).Get("/*", webController.Serve)
+	}
 
 	return r
 }
