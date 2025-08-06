@@ -264,7 +264,8 @@ func main() {
 	// Initialize config
 	cfg, err := initConfig()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 
 	// Initialize dependencies
