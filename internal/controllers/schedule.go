@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -40,22 +39,6 @@ func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker servi
 
 // IsBlocked handles GET requests to check if a domain is blocked
 func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) {
-	// Handle CORS headers if Origin header is present
-	origin := r.Header.Get("Origin")
-	log.Printf("Origin header: %q\n", origin)
-	if origin != "" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
-	}
-
-	// Handle preflight OPTIONS request
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent) // Respond with 204 No Content
-		return
-	}
-
 	// Extract query parameters
 	domain := r.URL.Query().Get("domain")
 	deviceHash := r.URL.Query().Get("deviceHash")
@@ -68,8 +51,7 @@ func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Set response content type and return JSON result
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
+	msgpack.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
 }
 
 func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
