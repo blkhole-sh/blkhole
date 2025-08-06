@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/lemon3studio/leo/internal/services"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // DeviceController defines the interface for device operations
@@ -40,7 +40,7 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	var d model.Device
 
 	// Encode device from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&d); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
 		log.Printf("failed to decode device from request body: %v", err)
 		http.Error(w, "Unable to decode device from request body", http.StatusBadRequest)
 		return
@@ -59,7 +59,7 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	dc.devices.Create(&d)
 
 	// Respond with msgpack encoded device
-	msgpack.NewEncoder(w).Encode(d)
+	json.NewEncoder(w).Encode(d)
 }
 
 func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msgpack.NewEncoder(w).Encode(d)
+	json.NewEncoder(w).Encode(d)
 }
 
 func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with msgpack encoded devices
-	msgpack.NewEncoder(w).Encode(d)
+	json.NewEncoder(w).Encode(d)
 }
 
 func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	hash := chi.URLParam(r, "hash")
 
 	// Encode device from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&d); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
 		log.Printf("failed to decode device from request body: %v", err)
 		http.Error(w, "Unable to decode device from request body", http.StatusBadRequest)
 		return
@@ -115,7 +115,7 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	dc.devices.Update(hash, &d)
 
 	// Respond with msgpack encoded device
-	msgpack.NewEncoder(w).Encode(d)
+	json.NewEncoder(w).Encode(d)
 }
 
 func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {

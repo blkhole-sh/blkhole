@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,7 +11,6 @@ import (
 	"github.com/lemon3studio/leo/internal/services"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // ScheduleController defines the interface for schedule operations
@@ -50,8 +50,8 @@ func (sc *scheduleController) IsBlocked(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Set response content type and return JSON result
-	msgpack.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
+	// Return JSON result
+	json.NewEncoder(w).Encode(map[string]bool{"blocked": blocked})
 }
 
 func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +59,7 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	var s model.Schedule
 
 	// Encode schedule from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&s); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		log.Printf("unable to decode schedule from request body: %v", err)
 		http.Error(w, "Unable to decode schedule from request body", http.StatusBadRequest)
 		return
@@ -68,8 +68,8 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store schedule into db
 	sc.schedules.Create(&s)
 
-	// Respond with msgpack encoded schedule
-	msgpack.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule
+	json.NewEncoder(w).Encode(s)
 }
 
 func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +89,8 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with msgpack encoded schedule
-	msgpack.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule
+	json.NewEncoder(w).Encode(s)
 }
 
 func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -110,8 +110,8 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 		s = []*model.Schedule{}
 	}
 
-	// Respond with msgpack encoded schedules
-	msgpack.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedules
+	json.NewEncoder(w).Encode(s)
 }
 
 func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +127,7 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Encode schedule from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&s); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		log.Printf("unable to decode schedule from request body: %v", err)
 		http.Error(w, "Unable to decode schedule from request body", http.StatusBadRequest)
 		return
@@ -136,8 +136,8 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update schedule in db
 	sc.schedules.Update(id, &s)
 
-	// Respond with msgpack encoded schedule
-	msgpack.NewEncoder(w).Encode(s)
+	// Respond with JSON encoded schedule
+	json.NewEncoder(w).Encode(s)
 }
 
 func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {

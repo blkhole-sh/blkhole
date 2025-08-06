@@ -189,8 +189,8 @@ func initRouter() *chi.Mux {
 
 	// API routes group
 	r.Route("/api", func(r chi.Router) {
-		// Apply msgpack middleware to all API routes
-		r.Use(middleware.MsgPackMiddleware)
+		// Apply JSON middleware to all API routes
+		r.Use(middleware.JSONMiddleware)
 
 		// Public auth routes
 		r.Post("/auth/login", authController.Login)

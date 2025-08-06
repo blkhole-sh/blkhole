@@ -9,7 +9,6 @@ require (
 	github.com/go-chi/jwtauth/v5 v5.3.3
 	github.com/google/uuid v1.6.0 //
 	github.com/miekg/dns v1.1.62
-	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/crypto v0.31.0
 	modernc.org/sqlite v1.29.10
 )
@@ -29,7 +28,6 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect

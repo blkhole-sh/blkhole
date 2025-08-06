@@ -3,13 +3,13 @@ package model
 
 // User represents a user in the system
 type User struct {
-	Hash         string   `json:"hash" msgpack:"hash"`
-	Name         string   `json:"name" msgpack:"name"`
-	Email        string   `json:"email" msgpack:"email"`
-	PasswordHash string   `json:"-" msgpack:"-"`
-	DeviceHashes []string `json:"deviceHashes" msgpack:"deviceHashes"`
-	ListIds      []int    `json:"listIds" msgpack:"listIds"`
-	ScheduleIds  []int    `json:"scheduleIds" msgpack:"scheduleIds"`
+	Hash         string   `json:"hash"`
+	Name         string   `json:"name"`
+	Email        string   `json:"email"`
+	PasswordHash string   `json:"-"`
+	DeviceHashes []string `json:"deviceHashes"`
+	ListIds      []int    `json:"listIds"`
+	ScheduleIds  []int    `json:"scheduleIds"`
 }
 
 type OS string
@@ -25,53 +25,53 @@ const (
 
 // Device represents a device in the system
 type Device struct {
-	Hash        string `json:"hash" msgpack:"hash"`
-	Name        string `json:"name" msgpack:"name"`
-	OS          OS     `json:"os" msgpack:"os"`
-	UserHash    string `json:"userHash" msgpack:"userHash"`
-	ScheduleIds []int  `json:"scheduleIds" msgpack:"scheduleIds"`
+	Hash        string `json:"hash"`
+	Name        string `json:"name"`
+	OS          OS     `json:"os"`
+	UserHash    string `json:"userHash"`
+	ScheduleIds []int  `json:"scheduleIds"`
 }
 
 // Rule represents a domain rule with allow/block behavior
 type Rule struct {
-	Domain  string `json:"domain" msgpack:"domain"`
-	ListID  int    `json:"listId" msgpack:"listId"`
-	Allowed bool   `json:"allowed" msgpack:"allowed"`
-	ID      int    `json:"id" msgpack:"id"`
+	Domain  string `json:"domain"`
+	ListID  int    `json:"listId"`
+	Allowed bool   `json:"allowed"`
+	ID      int    `json:"id"`
 }
 
 // List represents a list of domain rules
 type List struct {
-	Name        string `json:"name" msgpack:"name"`
-	Description string `json:"description" msgpack:"description"`
-	Source      string `json:"source" msgpack:"source"`
-	UserHash    string `json:"userHash" msgpack:"userHash"`
-	Rules       []Rule `json:"rules" msgpack:"rules"`
-	ScheduleIds []int  `json:"scheduleIds" msgpack:"scheduleIds"`
-	ID          int    `json:"id" msgpack:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"`
+	UserHash    string `json:"userHash"`
+	Rules       []Rule `json:"rules"`
+	ScheduleIds []int  `json:"scheduleIds"`
+	ID          int    `json:"id"`
 }
 
 // Schedule represents a time-based schedule
 type Schedule struct {
-	StartTime    string   `json:"startTime" msgpack:"startTime"`
-	EndTime      string   `json:"endTime" msgpack:"endTime"`
-	Name         string   `json:"name" msgpack:"name"`
-	UserHash     string   `json:"userHash" msgpack:"userHash"`
-	DeviceHashes []string `json:"deviceHashes" msgpack:"deviceHashes"`
-	Domains      []string `json:"domains" msgpack:"domains"`
-	ListIds      []int    `json:"listIds" msgpack:"listIds"`
-	Monday       bool     `json:"monday" msgpack:"monday"`
-	Tuesday      bool     `json:"tuesday" msgpack:"tuesday"`
-	Wednesday    bool     `json:"wednesday" msgpack:"wednesday"`
-	Thursday     bool     `json:"thursday" msgpack:"thursday"`
-	Friday       bool     `json:"friday" msgpack:"friday"`
-	Saturday     bool     `json:"saturday" msgpack:"saturday"`
-	Sunday       bool     `json:"sunday" msgpack:"sunday"`
-	ID           int      `json:"id" msgpack:"id"`
+	StartTime    string   `json:"startTime"`
+	EndTime      string   `json:"endTime"`
+	Name         string   `json:"name"`
+	UserHash     string   `json:"userHash"`
+	DeviceHashes []string `json:"deviceHashes"`
+	Domains      []string `json:"domains"`
+	ListIds      []int    `json:"listIds"`
+	Monday       bool     `json:"monday"`
+	Tuesday      bool     `json:"tuesday"`
+	Wednesday    bool     `json:"wednesday"`
+	Thursday     bool     `json:"thursday"`
+	Friday       bool     `json:"friday"`
+	Saturday     bool     `json:"saturday"`
+	Sunday       bool     `json:"sunday"`
+	ID           int      `json:"id"`
 }
 
 // Quote represents a quote with author
 type Quote struct {
-	Quote  string `json:"quote" msgpack:"quote"`
-	Author string `json:"author" msgpack:"author"`
+	Quote  string `json:"quote"`
+	Author string `json:"author"`
 }

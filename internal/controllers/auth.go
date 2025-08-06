@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/lemon3studio/leo/internal/services"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // AuthController defines the interface for authentication operations
@@ -30,12 +30,12 @@ func NewAuthController(authService services.AuthService) AuthController {
 // Login handles user authentication
 func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Email    string `json:"email" msgpack:"email"`
-		Password string `json:"password" msgpack:"password"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
-	if err := msgpack.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid msgpack", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
 
 	// Return only user data (tokens are in cookies)
-	msgpack.NewEncoder(w).Encode(map[string]any{"user": result.User})
+	json.NewEncoder(w).Encode(map[string]any{"user": result.User})
 }
 
 // RefreshToken handles token refresh
@@ -79,14 +79,14 @@ func (c *authController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
 
 	// Return only user data
-	msgpack.NewEncoder(w).Encode(map[string]any{"user": result.User})
+	json.NewEncoder(w).Encode(map[string]any{"user": result.User})
 }
 
 // Logout handles user logout
 func (c *authController) Logout(w http.ResponseWriter, r *http.Request) {
 	c.clearAuthCookies(w)
 	w.WriteHeader(http.StatusOK)
-	msgpack.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
 }
 
 // GetCurrentUser returns the current authenticated user
@@ -97,7 +97,7 @@ func (c *authController) GetCurrentUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	msgpack.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(user)
 }
 
 // setSecureCookie sets a secure HttpOnly cookie

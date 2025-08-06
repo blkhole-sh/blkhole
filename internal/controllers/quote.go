@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"encoding/json"
 	"math/rand"
 	"net/http"
 	"github.com/lemon3studio/leo/internal/model"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // QuoteController defines the interface for quote operations
@@ -64,5 +64,5 @@ func (qc *quoteController) Random(w http.ResponseWriter, r *http.Request) {
 	// Pick a random stoic quote
 	quote := quotes[rand.Intn(len(quotes))]
 
-	msgpack.NewEncoder(w).Encode(quote)
+	json.NewEncoder(w).Encode(quote)
 }

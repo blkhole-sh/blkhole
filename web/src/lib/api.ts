@@ -2,7 +2,6 @@
  * API client for authenticated requests to the Leo server backend
  */
 import { Device, List, Quote, Schedule } from "./model";
-import { encode, decode } from "@msgpack/msgpack";
 
 const API_BASE = import.meta.env.DEV ? "http://localhost:8080/api" : "/api";
 
@@ -15,12 +14,10 @@ const API_BASE = import.meta.env.DEV ? "http://localhost:8080/api" : "/api";
  * @throws Error on login failure
  */
 export const login = async (email: string, password: string) => {
-	const encoded: Uint8Array = encode({ email, password });
-
 	const response = await fetch(`${API_BASE}/auth/login`, {
 		method: "POST",
-		headers: { "Content-Type": "application/msgpack" },
-		body: encoded as BodyInit,
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, password }),
 		credentials: "include", // Include cookies in request
 	});
 
@@ -28,7 +25,7 @@ export const login = async (email: string, password: string) => {
 		throw new Error(await response.text());
 	}
 
-	const responseData = decode(await response.bytes()) as any;
+	const responseData = await response.json();
 	console.log("Login response:", responseData);
 	const { user: userData } = responseData;
 	console.log("User data:", userData);
@@ -73,7 +70,7 @@ export const refreshAuth = async () => {
 		throw new Error("Token refresh failed");
 	}
 
-	const responseData = decode(await response.bytes()) as any;
+	const responseData = await response.json();
 	const { user: userData } = responseData;
 	localStorage.setItem("user", JSON.stringify(userData));
 	return { user: userData };
@@ -91,7 +88,7 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 	const makeRequest = async (includeRefresh = true) => {
 		const response = await fetch(`${API_BASE}${endpoint}`, {
 			headers: {
-				"Content-Type": "application/msgpack",
+				"Content-Type": "application/json",
 			},
 			credentials: "include", // Include HttpOnly cookies
 			...options,
@@ -115,7 +112,7 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 			throw new Error(`API Error: ${response.status}`);
 		}
 
-		return decode(await response.bytes());
+		return response.json();
 	};
 
 	return makeRequest();

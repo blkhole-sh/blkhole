@@ -1,14 +1,15 @@
 package controllers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
 	"strconv"
 
+	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/leo/internal/repos"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // ListController defines the interface for list operations
@@ -37,7 +38,7 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	var l model.List
 
 	// Encode list from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&l); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		log.Printf("unable to decode list from request body: %v", err)
 		http.Error(w, "Unable to decode list from request body", http.StatusBadRequest)
 		return
@@ -46,8 +47,8 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store list into db
 	lc.lists.Create(&l)
 
-	// Respond with msgpack encoded list
-	msgpack.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list
+	json.NewEncoder(w).Encode(l)
 }
 
 func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -67,8 +68,8 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with msgpack encoded list
-	msgpack.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list
+	json.NewEncoder(w).Encode(l)
 }
 
 func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -88,8 +89,8 @@ func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 		l = []*model.List{}
 	}
 
-	// Respond with msgpack encoded lists
-	msgpack.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded lists
+	json.NewEncoder(w).Encode(l)
 }
 
 func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +106,7 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Encode list from request body
-	if err := msgpack.NewDecoder(r.Body).Decode(&l); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		log.Printf("unable to decode list from request body: %v", err)
 		http.Error(w, "Unable to decode list from request body", http.StatusBadRequest)
 		return
@@ -114,8 +115,8 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update list in db
 	lc.lists.Update(id, &l)
 
-	// Respond with msgpack encoded list
-	msgpack.NewEncoder(w).Encode(l)
+	// Respond with JSON encoded list
+	json.NewEncoder(w).Encode(l)
 }
 
 func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
