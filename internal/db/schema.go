@@ -18,6 +18,12 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
+	// Enable WAL mode for better concurrent performance
+	_, err = db.Exec("PRAGMA journal_mode = WAL;")
+	if err != nil {
+		return err
+	}
+
 	// Execute the embedded SQL script
 	_, err = db.Exec(schemaSQL)
 	if err != nil {
