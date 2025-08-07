@@ -42,43 +42,43 @@ func NewScheduleRepo(db *sql.DB) ScheduleRepo {
 }
 
 // encodeDaysToInt converts boolean weekday fields to integer encoding
-// Bit positions: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6
+// Bit positions: Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
 func encodeDaysToInt(schedule *model.Schedule) int {
 	days := 0
-	if schedule.Sunday {
+	if schedule.Monday {
 		days |= 1 << 0
 	}
-	if schedule.Monday {
+	if schedule.Tuesday {
 		days |= 1 << 1
 	}
-	if schedule.Tuesday {
+	if schedule.Wednesday {
 		days |= 1 << 2
 	}
-	if schedule.Wednesday {
+	if schedule.Thursday {
 		days |= 1 << 3
 	}
-	if schedule.Thursday {
+	if schedule.Friday {
 		days |= 1 << 4
 	}
-	if schedule.Friday {
+	if schedule.Saturday {
 		days |= 1 << 5
 	}
-	if schedule.Saturday {
+	if schedule.Sunday {
 		days |= 1 << 6
 	}
 	return days
 }
 
 // decodeDaysFromInt converts integer encoding to boolean weekday fields
-// Bit positions: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6
+// Bit positions: Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
 func decodeDaysFromInt(days int, schedule *model.Schedule) {
-	schedule.Sunday = (days & (1 << 0)) != 0
-	schedule.Monday = (days & (1 << 1)) != 0
-	schedule.Tuesday = (days & (1 << 2)) != 0
-	schedule.Wednesday = (days & (1 << 3)) != 0
-	schedule.Thursday = (days & (1 << 4)) != 0
-	schedule.Friday = (days & (1 << 5)) != 0
-	schedule.Saturday = (days & (1 << 6)) != 0
+	schedule.Monday = (days & (1 << 0)) != 0
+	schedule.Tuesday = (days & (1 << 1)) != 0
+	schedule.Wednesday = (days & (1 << 2)) != 0
+	schedule.Thursday = (days & (1 << 3)) != 0
+	schedule.Friday = (days & (1 << 4)) != 0
+	schedule.Saturday = (days & (1 << 5)) != 0
+	schedule.Sunday = (days & (1 << 6)) != 0
 }
 
 // scheduleDbRow represents a schedule row from the database with integer days encoding
