@@ -286,7 +286,7 @@ func (ls *listsService) LoadList(l *model.List) error {
 
 	// Save each rule to database and link to list
 	for _, rule := range rules {
-		ruleID, err := ls.ruleRepo.Create(&rule)
+		ruleID, err := ls.ruleRepo.CreateOrGet(&rule)
 		if err != nil {
 			return fmt.Errorf("failed to create rule for domain %s: %w", rule.Domain, err)
 		}

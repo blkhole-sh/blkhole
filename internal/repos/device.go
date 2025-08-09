@@ -34,38 +34,38 @@ func NewDeviceRepo(db *sql.DB) DeviceRepo {
 
 // Create stores a new device into the database
 func (dr *deviceRepo) Create(d *model.Device) error {
-	sql := "INSERT INTO device (hash, name, os, user_hash) VALUES (?, ?, ?, ?)"
-	_, err := dr.db.ExecContext(dr.ctx, sql, d.Hash, d.Name, d.OS, d.UserHash)
+	query := "INSERT INTO device (hash, name, os, user_hash) VALUES (?, ?, ?, ?)"
+	_, err := dr.db.ExecContext(dr.ctx, query, d.Hash, d.Name, d.OS, d.UserHash)
 	return err
 }
 
 // Update modifies an existing device given hash in the database
 func (dr *deviceRepo) Update(hash string, d *model.Device) error {
-	sql := "UPDATE device SET name=?, os=? WHERE hash=?"
-	_, err := dr.db.ExecContext(dr.ctx, sql, d.Hash, d.OS, hash)
+	query := "UPDATE device SET name=?, os=? WHERE hash=?"
+	_, err := dr.db.ExecContext(dr.ctx, query, d.Hash, d.OS, hash)
 	return err
 }
 
 // Delete removes an existing device given hash from the database
 func (dr *deviceRepo) Delete(hash string) error {
-	sql := "DELETE FROM device WHERE hash=?"
-	_, err := dr.db.ExecContext(dr.ctx, sql, hash)
+	query := "DELETE FROM device WHERE hash=?"
+	_, err := dr.db.ExecContext(dr.ctx, query, hash)
 	return err
 }
 
 // LinkSchedule links a schedule with given ID to a device with given hash
 func (dr *deviceRepo) LinkSchedule(hash string, scheduleID int) error {
-	sql := "INSERT INTO device_schedule (device_hash, schedule_id) VALUES (?, ?)"
-	_, err := dr.db.ExecContext(dr.ctx, sql, hash, scheduleID)
+	query := "INSERT INTO device_schedule (device_hash, schedule_id) VALUES (?, ?)"
+	_, err := dr.db.ExecContext(dr.ctx, query, hash, scheduleID)
 	return err
 }
 
 // LoadScheduleIDs returns ids of all schedules linked to device with given hash
 func (dr *deviceRepo) LoadScheduleIDs(hash string) ([]int, error) {
-	sql := "SELECT schedule_id FROM device_schedule WHERE device_hash = ?"
+	query := "SELECT schedule_id FROM device_schedule WHERE device_hash = ?"
 	var scheduleIDs []int
 
-	if err := sqlscan.Select(dr.ctx, dr.db, &scheduleIDs, sql, hash); err != nil {
+	if err := sqlscan.Select(dr.ctx, dr.db, &scheduleIDs, query, hash); err != nil {
 		return []int{}, nil
 	}
 
@@ -79,10 +79,10 @@ func (dr *deviceRepo) LoadScheduleIDs(hash string) ([]int, error) {
 
 // FindByHash returns an existing device with given hash from the database
 func (dr *deviceRepo) FindByHash(hash string) (*model.Device, error) {
-	sql := "SELECT hash, name, os, user_hash FROM device WHERE hash=?"
+	query := "SELECT hash, name, os, user_hash FROM device WHERE hash=?"
 	var d model.Device
 
-	err := sqlscan.Get(dr.ctx, dr.db, &d, sql, hash)
+	err := sqlscan.Get(dr.ctx, dr.db, &d, query, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +96,10 @@ func (dr *deviceRepo) FindByHash(hash string) (*model.Device, error) {
 
 // FindByUser returns all existing devices with given user hash from the database
 func (dr *deviceRepo) FindByUser(userHash string) ([]*model.Device, error) {
-	sql := "SELECT hash, name, os, user_hash FROM device WHERE user_hash=?"
+	query := "SELECT hash, name, os, user_hash FROM device WHERE user_hash=?"
 	var devices []*model.Device
 
-	err := sqlscan.Select(dr.ctx, dr.db, &devices, sql, userHash)
+	err := sqlscan.Select(dr.ctx, dr.db, &devices, query, userHash)
 	if err != nil {
 		return []*model.Device{}, nil
 	}
@@ -119,10 +119,10 @@ func (dr *deviceRepo) FindByUser(userHash string) ([]*model.Device, error) {
 }
 
 func (dr *deviceRepo) FindBySchedule(scheduleID int) ([]*model.Device, error) {
-	sql := "SELECT DISTINCT d.hash, d.name, d.os, d.user_hash FROM device d JOIN device_schedule ds ON d.hash = ds.device_hash WHERE ds.schedule_id = ?"
+	query := "SELECT DISTINCT d.hash, d.name, d.os, d.user_hash FROM device d JOIN device_schedule ds ON d.hash = ds.device_hash WHERE ds.schedule_id = ?"
 	var devices []*model.Device
 
-	err := sqlscan.Select(dr.ctx, dr.db, &devices, sql, scheduleID)
+	err := sqlscan.Select(dr.ctx, dr.db, &devices, query, scheduleID)
 	if err != nil {
 		return []*model.Device{}, nil
 	}

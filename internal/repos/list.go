@@ -38,38 +38,38 @@ func NewListRepo(db *sql.DB) ListRepo {
 
 // Create stores a new list into the database
 func (lr *listRepo) Create(l *model.List) (int, error) {
-	sql := "INSERT INTO list (name, description, source, user_hash) VALUES (?, ?, ?, ?) RETURNING id"
-	err := lr.db.QueryRowContext(lr.ctx, sql, l.Name, l.Description, l.Source, l.UserHash).Scan(&l.ID)
+	query := "INSERT INTO list (name, description, source, user_hash) VALUES (?, ?, ?, ?) RETURNING id"
+	err := lr.db.QueryRowContext(lr.ctx, query, l.Name, l.Description, l.Source, l.UserHash).Scan(&l.ID)
 	return l.ID, err
 }
 
 // Update modifies an existing list with given ID in the database
 func (lr *listRepo) Update(id int, l *model.List) error {
-	sql := "UPDATE list SET name=?, description=?, source=?, user_hash=? WHERE id=?"
-	_, err := lr.db.ExecContext(lr.ctx, sql, l.Name, l.Description, l.Source, l.UserHash, id)
+	query := "UPDATE list SET name=?, description=?, source=?, user_hash=? WHERE id=?"
+	_, err := lr.db.ExecContext(lr.ctx, query, l.Name, l.Description, l.Source, l.UserHash, id)
 	return err
 }
 
 // Delete removes an existing list with given ID from the database
 func (lr *listRepo) Delete(id int) error {
-	sql := "DELETE FROM list WHERE id=?"
-	_, err := lr.db.ExecContext(lr.ctx, sql, id)
+	query := "DELETE FROM list WHERE id=?"
+	_, err := lr.db.ExecContext(lr.ctx, query, id)
 	return err
 }
 
 // LinkSchedule links a schedule with given ID to a list with given ID
 func (lr *listRepo) LinkSchedule(id int, scheduleID int) error {
-	sql := "INSERT INTO list_schedule (list_id, schedule_id) VALUES (?, ?)"
-	_, err := lr.db.ExecContext(lr.ctx, sql, id, scheduleID)
+	query := "INSERT INTO list_schedule (list_id, schedule_id) VALUES (?, ?)"
+	_, err := lr.db.ExecContext(lr.ctx, query, id, scheduleID)
 	return err
 }
 
 // LoadRules returns all rules for a list with given id
 func (lr *listRepo) LoadRules(id int) ([]model.Rule, error) {
-	sql := "SELECT r.id, r.domain, r.allowed FROM rule r JOIN list_rule lr ON r.id = lr.rule_id WHERE lr.list_id = ?"
+	query := "SELECT r.id, r.domain, r.allowed FROM rule r JOIN list_rule lr ON r.id = lr.rule_id WHERE lr.list_id = ?"
 	var rules []model.Rule
 
-	if err := sqlscan.Select(lr.ctx, lr.db, &rules, sql, id); err != nil {
+	if err := sqlscan.Select(lr.ctx, lr.db, &rules, query, id); err != nil {
 		return []model.Rule{}, nil
 	}
 
@@ -83,10 +83,10 @@ func (lr *listRepo) LoadRules(id int) ([]model.Rule, error) {
 
 // LoadScheduleIDs returns ids of all schedules linked to list with given id
 func (lr *listRepo) LoadScheduleIDs(id int) ([]int, error) {
-	sql := "SELECT DISTINCT ls.schedule_id from list l JOIN list_schedule ls ON l.id = ls.list_id WHERE l.id = ?"
+	query := "SELECT DISTINCT ls.schedule_id from list l JOIN list_schedule ls ON l.id = ls.list_id WHERE l.id = ?"
 	var scheduleIds []int
 
-	if err := sqlscan.Select(lr.ctx, lr.db, &scheduleIds, sql, id); err != nil {
+	if err := sqlscan.Select(lr.ctx, lr.db, &scheduleIds, query, id); err != nil {
 		return []int{}, nil
 	}
 
@@ -115,10 +115,10 @@ func (lr *listRepo) LoadRelations(l *model.List) error {
 
 // FindByID returns an existing list with given id from the database
 func (lr *listRepo) FindByID(id int) (*model.List, error) {
-	sql := "SELECT id, name, description, source, user_hash FROM list WHERE id=?"
+	query := "SELECT id, name, description, source, user_hash FROM list WHERE id=?"
 	var l model.List
 
-	if err := sqlscan.Get(lr.ctx, lr.db, &l, sql, id); err != nil {
+	if err := sqlscan.Get(lr.ctx, lr.db, &l, query, id); err != nil {
 		return nil, err
 	}
 
@@ -131,10 +131,10 @@ func (lr *listRepo) FindByID(id int) (*model.List, error) {
 
 // FindAll returns all existing lists from the database
 func (lr *listRepo) FindAll() ([]*model.List, error) {
-	sql := "SELECT id, name, description, source, user_hash FROM list"
+	query := "SELECT id, name, description, source, user_hash FROM list"
 	var lists []*model.List
 
-	if err := sqlscan.Select(lr.ctx, lr.db, &lists, sql); err != nil {
+	if err := sqlscan.Select(lr.ctx, lr.db, &lists, query); err != nil {
 		return []*model.List{}, nil
 	}
 
@@ -154,10 +154,10 @@ func (lr *listRepo) FindAll() ([]*model.List, error) {
 
 // FindByUser returns all existing lists with given user hash from the database
 func (lr *listRepo) FindByUser(userHash string) ([]*model.List, error) {
-	sql := "SELECT id, name, description, source, user_hash FROM list WHERE user_hash=?"
+	query := "SELECT id, name, description, source, user_hash FROM list WHERE user_hash=?"
 	var lists []*model.List
 
-	if err := sqlscan.Select(lr.ctx, lr.db, &lists, sql, userHash); err != nil {
+	if err := sqlscan.Select(lr.ctx, lr.db, &lists, query, userHash); err != nil {
 		return []*model.List{}, nil
 	}
 
@@ -177,10 +177,10 @@ func (lr *listRepo) FindByUser(userHash string) ([]*model.List, error) {
 
 // FindBySchedule returns all existing lists linked to schedule with given id
 func (lr *listRepo) FindBySchedule(scheduleID int) ([]*model.List, error) {
-	sql := "SELECT l.id, l.name, l.description, l.source, l.user_hash FROM list l JOIN list_schedule ls ON l.id = ls.list_id WHERE ls.schedule_id = ?"
+	query := "SELECT l.id, l.name, l.description, l.source, l.user_hash FROM list l JOIN list_schedule ls ON l.id = ls.list_id WHERE ls.schedule_id = ?"
 	var lists []*model.List
 
-	if err := sqlscan.Select(lr.ctx, lr.db, &lists, sql, scheduleID); err != nil {
+	if err := sqlscan.Select(lr.ctx, lr.db, &lists, query, scheduleID); err != nil {
 		return []*model.List{}, nil
 	}
 

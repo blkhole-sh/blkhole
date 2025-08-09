@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS list (
 CREATE TABLE IF NOT EXISTS rule (
     id INTEGER PRIMARY KEY,
     domain TEXT NOT NULL,
-    allowed INTEGER NOT NULL
+    allowed INTEGER NOT NULL,
+    UNIQUE(domain, allowed)
 );
 
 -- Create schedule table:
@@ -58,14 +59,14 @@ CREATE TABLE IF NOT EXISTS list_schedule (
 -- Create list - rule reference table:
 CREATE TABLE IF NOT EXISTS list_rule (
     list_id INTEGER NOT NULL REFERENCES list (id) ON DELETE CASCADE,
-    rule_id INTEGER NOT NULL REFERENCES rule (id) ON DELETE CASCADE,
+    rule_id INTEGER NOT NULL REFERENCES rule (id),
     PRIMARY KEY (list_id, rule_id)
 );
 
--- Create schedule - domain reference table:
+-- Create schedule - rule reference table:
 CREATE TABLE IF NOT EXISTS schedule_rule (
     schedule_id INTEGER NOT NULL REFERENCES schedule (id) ON DELETE CASCADE,
-    rule_id INTEGER NOT NULL REFERENCES rule (id) ON DELETE CASCADE,
+    rule_id INTEGER NOT NULL REFERENCES rule (id),
     PRIMARY KEY (schedule_id, rule_id)
 );
 

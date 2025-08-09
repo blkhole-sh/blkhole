@@ -145,7 +145,7 @@ func (t test) AddDevice(device model.Device) (string, error) {
 //   - error: Any error that occurred during rule creation
 func (t test) AddRule(rule model.Rule) (int, error) {
 	// Create the rule in the database
-	id, err := t.ruleRepo.Create(&rule)
+	id, err := t.ruleRepo.CreateOrGet(&rule)
 	if err != nil {
 		return -1, err
 	}

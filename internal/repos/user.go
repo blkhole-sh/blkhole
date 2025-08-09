@@ -36,32 +36,32 @@ func NewUserRepo(db *sql.DB) UserRepo {
 
 // Create stores a new user into the database
 func (repo *userRepo) Create(u *model.User) error {
-	sql := "INSERT INTO user (hash, name, email, password_hash) VALUES (?, ?, ?, ?)"
+	query := "INSERT INTO user (hash, name, email, password_hash) VALUES (?, ?, ?, ?)"
 
-	_, err := repo.db.ExecContext(repo.ctx, sql, u.Hash, u.Name, u.Email, u.PasswordHash)
+	_, err := repo.db.ExecContext(repo.ctx, query, u.Hash, u.Name, u.Email, u.PasswordHash)
 	return err
 }
 
 // Update modifies an existing user with given hash in the database
 func (repo *userRepo) Update(hash string, u *model.User) error {
-	sql := "UPDATE user SET name=?, email=?, password_hash=? WHERE hash=?"
-	_, err := repo.db.ExecContext(repo.ctx, sql, u.Name, u.Email, u.PasswordHash, hash)
+	query := "UPDATE user SET name=?, email=?, password_hash=? WHERE hash=?"
+	_, err := repo.db.ExecContext(repo.ctx, query, u.Name, u.Email, u.PasswordHash, hash)
 	return err
 }
 
 // Delete removes an existing user with given hash from the database
 func (repo *userRepo) Delete(hash string) error {
-	sql := "DELETE FROM user WHERE hash=?"
-	_, err := repo.db.ExecContext(repo.ctx, sql, hash)
+	query := "DELETE FROM user WHERE hash=?"
+	_, err := repo.db.ExecContext(repo.ctx, query, hash)
 	return err
 }
 
 // LoadDeviceHashes returns hashes of all devices linked to user with given hash
 func (repo *userRepo) LoadDeviceHashes(hash string) ([]string, error) {
-	sql := "SELECT hash FROM device WHERE user_hash = ?"
+	query := "SELECT hash FROM device WHERE user_hash = ?"
 	var deviceHashes []string
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &deviceHashes, sql, hash); err != nil {
+	if err := sqlscan.Select(repo.ctx, repo.db, &deviceHashes, query, hash); err != nil {
 		return []string{}, nil
 	}
 
@@ -75,10 +75,10 @@ func (repo *userRepo) LoadDeviceHashes(hash string) ([]string, error) {
 
 // LoadListIDs returns ids of all lists linked to user with given hash
 func (repo *userRepo) LoadListIDs(hash string) ([]int, error) {
-	sql := "SELECT id FROM list WHERE user_hash = ?"
+	query := "SELECT id FROM list WHERE user_hash = ?"
 	var listIds []int
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &listIds, sql, hash); err != nil {
+	if err := sqlscan.Select(repo.ctx, repo.db, &listIds, query, hash); err != nil {
 		return []int{}, nil
 	}
 
@@ -92,10 +92,10 @@ func (repo *userRepo) LoadListIDs(hash string) ([]int, error) {
 
 // LoadScheduleIDs returns ids of all schedules linked to user with given hash
 func (repo *userRepo) LoadScheduleIDs(hash string) ([]int, error) {
-	sql := "SELECT id FROM schedule WHERE user_hash = ?"
+	query := "SELECT id FROM schedule WHERE user_hash = ?"
 	var scheduleIds []int
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &scheduleIds, sql, hash); err != nil {
+	if err := sqlscan.Select(repo.ctx, repo.db, &scheduleIds, query, hash); err != nil {
 		return []int{}, nil
 	}
 
@@ -128,10 +128,10 @@ func (repo *userRepo) LoadRelations(u *model.User) error {
 
 // FindByEmail returns an existing user with given email from the database
 func (repo *userRepo) FindByEmail(email string) (*model.User, error) {
-	sql := "SELECT hash, name, email, password_hash FROM user WHERE email=?"
+	query := "SELECT hash, name, email, password_hash FROM user WHERE email=?"
 	var u model.User
 
-	if err := sqlscan.Get(repo.ctx, repo.db, &u, sql, email); err != nil {
+	if err := sqlscan.Get(repo.ctx, repo.db, &u, query, email); err != nil {
 		return nil, err
 	}
 
@@ -144,10 +144,10 @@ func (repo *userRepo) FindByEmail(email string) (*model.User, error) {
 
 // FindByHash returns an existing user with given hash from the database
 func (repo *userRepo) FindByHash(hash string) (*model.User, error) {
-	sql := "SELECT hash, name, email, password_hash FROM user WHERE hash=?"
+	query := "SELECT hash, name, email, password_hash FROM user WHERE hash=?"
 	var u model.User
 
-	if err := sqlscan.Get(repo.ctx, repo.db, &u, sql, hash); err != nil {
+	if err := sqlscan.Get(repo.ctx, repo.db, &u, query, hash); err != nil {
 		return nil, err
 	}
 

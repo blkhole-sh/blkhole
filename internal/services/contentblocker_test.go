@@ -118,11 +118,11 @@ func createTestList(t *testing.T, listRepo repos.ListRepo, ruleRepo repos.RuleRe
 			Domain:  domain, // The domain this rule applies to
 			Allowed: false,  // false = block, true = allow (whitelist)
 		}
-		ruleID, err := ruleRepo.Create(rule)
+		ruleID, err := ruleRepo.CreateOrGet(rule)
 		if err != nil {
 			t.Fatalf("Failed to create blocking rule for domain %s: %v", domain, err)
 		}
-		
+
 		// Link the rule to the list
 		if err := ruleRepo.LinkToList(ruleID, listID); err != nil {
 			t.Fatalf("Failed to link rule %d to list %d: %v", ruleID, listID, err)
@@ -193,11 +193,11 @@ func createTestSchedule(t *testing.T, scheduleRepo repos.ScheduleRepo, ruleRepo 
 	for _, domain := range directDomains {
 		// Create a rule for this domain (blocked by default with allowed=false)
 		rule := &model.Rule{
-			Domain:  domain,
+			Domain: domain,
 			// ListID is 0/null - this rule doesn't belong to any list
 			Allowed: false, // Blocked rule
 		}
-		ruleID, err := ruleRepo.Create(rule)
+		ruleID, err := ruleRepo.CreateOrGet(rule)
 		if err != nil {
 			t.Fatalf("Failed to create rule for domain %s: %v", domain, err)
 		}
