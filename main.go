@@ -145,7 +145,7 @@ func initDependencies(cfg *Config) {
 	userController = controllers.NewUserController(users, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker)
 	listController = controllers.NewListController(lists)
-	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain)
+	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain, devices)
 	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)

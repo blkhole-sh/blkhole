@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/lemon3studio/leo/internal/repos"
 )
 
 //go:embed mobileconfig.tmpl
@@ -18,11 +19,11 @@ var mobileConfigTemplateContent string
 func generateUUID() string {
 	bytes := make([]byte, 16)
 	rand.Read(bytes)
-	
+
 	// Set version (4) and variant bits
 	bytes[6] = (bytes[6] & 0x0f) | 0x40 // Version 4
 	bytes[8] = (bytes[8] & 0x3f) | 0x80 // Variant bits
-	
+
 	return fmt.Sprintf("%x-%x-%x-%x-%x",
 		bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16])
 }
@@ -36,17 +37,27 @@ type MobileConfigController interface {
 
 // mobileConfigController implements the MobileConfigController interface
 type mobileConfigController struct {
-	domain string
+	domain  string
+	devices repos.DeviceRepo
 }
 
 // NewMobileConfigController creates a new MobileConfigController instance
-func NewMobileConfigController(domain string) MobileConfigController {
-	return &mobileConfigController{domain: domain}
+func NewMobileConfigController(domain string, devices repos.DeviceRepo) MobileConfigController {
+	return &mobileConfigController{
+		domain:  domain,
+		devices: devices,
+	}
 }
 
 func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	// Get device hash from url params
 	deviceHash := chi.URLParam(r, "hash")
+
+	device, err := mc.devices.FindByHash(deviceHash)
+	if err != nil {
+		log.Printf("failed to find device by hash %s: %v", deviceHash, err)
+		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+	}
 
 	// Generate UUIDs for mobile config using standard library
 	uuid1 := generateUUID()
@@ -58,11 +69,13 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 	// Prepare template data
 	data := struct {
 		DeviceHash string
+		DeviceName string
 		UUID       string
 		DNSUUID    string
 		ServerURL  string
 	}{
-		DeviceHash: deviceHash,
+		DeviceHash: device.Hash,
+		DeviceName: device.Name,
 		UUID:       uuid1,
 		DNSUUID:    uuid2,
 		ServerURL:  serverURL,

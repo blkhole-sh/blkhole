@@ -83,12 +83,9 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 
 		// Check if domain blocked
 		blocked, err := dc.ContentBlocker.IsBlocked(domain, deviceHash)
-		if err != nil {
-			// Continue processing - don't block on errors
-		}
 
-		// If domain is blocked return NXDOMAIN
-		if blocked {
+		// If domain is blocked or err return NXDOMAIN
+		if blocked || err != nil {
 
 			// Set the NXDOMAIN response code
 			response.Rcode = dns.RcodeNameError
