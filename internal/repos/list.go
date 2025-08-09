@@ -3,6 +3,7 @@ package repos
 import (
 	"context"
 	"database/sql"
+
 	"github.com/lemon3studio/leo/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
@@ -65,7 +66,7 @@ func (lr *listRepo) LinkSchedule(id int, scheduleID int) error {
 
 // LoadRules returns all rules for a list with given id
 func (lr *listRepo) LoadRules(id int) ([]model.Rule, error) {
-	sql := "SELECT id, domain, list_id, allowed FROM rule WHERE list_id = ?"
+	sql := "SELECT r.id, r.domain, r.allowed FROM rule r JOIN list_rule lr ON r.id = lr.rule_id WHERE lr.list_id = ?"
 	var rules []model.Rule
 
 	if err := sqlscan.Select(lr.ctx, lr.db, &rules, sql, id); err != nil {

@@ -39,7 +39,7 @@ type ScheduleDTO struct {
 	Name      string `json:"name"`
 	UserHash  string `json:"userHash"`
 	Devices   int    `json:"devices"`
-	Domains   int    `json:"domains"`
+	Rules     int    `json:"rules"`
 	Lists     int    `json:"lists"`
 	Monday    bool   `json:"monday"`
 	Tuesday   bool   `json:"tuesday"`
@@ -95,7 +95,7 @@ func (s *Schedule) ToDTO() ScheduleDTO {
 		Name:      s.Name,
 		UserHash:  s.UserHash,
 		Devices:   len(s.DeviceHashes),
-		Domains:   len(s.Domains),
+		Rules:     len(s.RuleIDs),
 		Lists:     len(s.ListIds),
 		Monday:    s.Monday,
 		Tuesday:   s.Tuesday,

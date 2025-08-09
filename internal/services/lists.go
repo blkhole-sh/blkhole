@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
+
 	"github.com/lemon3studio/leo/internal/model"
 	"github.com/lemon3studio/leo/internal/repos"
-	"strings"
 )
 
 // Regex patterns used across file parsing functions
@@ -54,7 +55,7 @@ func readAdblockFile(r io.Reader) ([]model.Rule, error) {
 		line = trimPattern.ReplaceAllString(line, "")        // trim
 
 		// Skip empty lines, comments, and adblock headers
-		if line == "" || line[0] == '#' || line[0] == '!' || line[0] == '[' {
+		if line == "" || (len(line) > 0 && (line[0] == '#' || line[0] == '!' || line[0] == '[')) {
 			continue
 		}
 
@@ -70,14 +71,14 @@ func readAdblockFile(r io.Reader) ([]model.Rule, error) {
 			domain = matches[1]
 			allowed = false
 		} else {
-			// Log warning for unrecognized format
-			log.Printf("warning: unrecognized adblock format in line: %s", line)
 			continue
 		}
 
 		// Validate domain format
 		if !validDomainPattern.MatchString(domain) {
-			log.Printf("warning: invalid domain format in adblock file: %s", domain)
+			if len(rules) < 5 {
+				log.Printf("warning: invalid domain format in adblock file: %s", domain)
+			}
 			continue
 		}
 
@@ -107,7 +108,7 @@ func readHostFile(r io.Reader) ([]model.Rule, error) {
 		line = trimPattern.ReplaceAllString(line, "")        // trim
 
 		// Skip empty lines and comments
-		if line == "" || line[0] == '#' {
+		if line == "" || (len(line) > 0 && line[0] == '#') {
 			continue
 		}
 
@@ -156,7 +157,7 @@ func readDomainsFile(r io.Reader) ([]model.Rule, error) {
 		line = trimPattern.ReplaceAllString(line, "")        // trim
 
 		// Skip empty lines and comments
-		if line == "" || line[0] == '#' {
+		if line == "" || (len(line) > 0 && line[0] == '#') {
 			continue
 		}
 
@@ -223,13 +224,10 @@ func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
 
 	// Determine file type based on pattern counts
 	if adblockCount > 0 {
-		log.Printf("detected adblock format file")
 		return readAdblockFile(strings.NewReader(contentStr))
 	} else if hostsCount > 0 {
-		log.Printf("detected hosts format file")
 		return readHostFile(strings.NewReader(contentStr))
 	} else if domainCount > 0 {
-		log.Printf("detected domains format file")
 		return readDomainsFile(strings.NewReader(contentStr))
 	} else {
 		log.Printf("warning: unable to detect file format - no recognizable patterns found in first %d lines", sampleSize)
@@ -286,12 +284,16 @@ func (ls *listsService) LoadList(l *model.List) error {
 		return fmt.Errorf("failed to read from source %s: %w", l.Source, err)
 	}
 
-	// Save each rule to database with correct ListID
+	// Save each rule to database and link to list
 	for _, rule := range rules {
-		rule.ListID = l.ID
-		_, err := ls.ruleRepo.Create(&rule)
+		ruleID, err := ls.ruleRepo.Create(&rule)
 		if err != nil {
 			return fmt.Errorf("failed to create rule for domain %s: %w", rule.Domain, err)
+		}
+
+		// Link the rule to the list
+		if err := ls.ruleRepo.LinkToList(ruleID, l.ID); err != nil {
+			return fmt.Errorf("failed to link rule %d to list %d: %w", ruleID, l.ID, err)
 		}
 	}
 
@@ -301,6 +303,5 @@ func (ls *listsService) LoadList(l *model.List) error {
 		return fmt.Errorf("failed to load rules for list %d: %w", l.ID, err)
 	}
 
-	log.Printf("successfully loaded %d rules for list %s from %s", len(l.Rules), l.Name, l.Source)
 	return nil
 }

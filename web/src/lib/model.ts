@@ -44,7 +44,7 @@ export interface Schedule {
 	endTime: string; // Backend sends as string, not Date
 	userHash: string;
 	devices: number;
-	domains: number;
+	rules: number;
 	lists: number;
 	monday: boolean;
 	tuesday: boolean;

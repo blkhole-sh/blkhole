@@ -29,23 +29,23 @@ export default function ScheduleTile(props: Props) {
 		return days.join(", ");
 	};
 
-	const listsAndDomains = () => {
+	const listsAndRules = () => {
 		const lists = props.schedule.lists;
-		const domains = props.schedule.domains;
+		const rules = props.schedule.rules;
 
-		if (lists === 0 && domains === 0) {
-			return "None"; // Optional: handle case when both are empty
+		if (lists === 0 && rules === 0) {
+			return "No blocking rules";
 		}
 
 		if (lists === 0) {
-			return `${domains} domains`;
+			return `${rules} rules`;
 		}
 
-		if (domains === 0) {
+		if (rules === 0) {
 			return `${lists} lists`;
 		}
 
-		return `${lists} lists, ${domains} domains`;
+		return `${lists} lists, ${rules} extra rules`;
 	};
 
 	return (
@@ -59,7 +59,7 @@ export default function ScheduleTile(props: Props) {
 					<Dot />
 					<p>{activeDays()}</p>
 					<Dot />
-					<p>{listsAndDomains()}</p>
+					<p>{listsAndRules()}</p>
 				</div>
 			</div>
 			<div class="flex gap-x-4">

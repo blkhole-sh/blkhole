@@ -16,16 +16,16 @@ type ScheduleRepo interface {
 	Update(id int, s *model.Schedule) error
 	Delete(id int) error
 	LinkDevice(id int, deviceHash string) error
-	LinkDomain(id int, domain string) error
+	LinkRule(id int, ruleID int) error
 	LinkList(id int, listID int) error
 	LoadDeviceHashes(id int) ([]string, error)
-	LoadDomains(id int) ([]string, error)
+	LoadRuleIDs(id int) ([]int, error)
 	LoadListIDs(id int) ([]int, error)
 	LoadRelations(s *model.Schedule) error
 	FindByID(id int) (*model.Schedule, error)
 	FindByUser(userHash string) ([]*model.Schedule, error)
 	FindByDevice(deviceHash string) ([]*model.Schedule, error)
-	FindByDomain(domain string) ([]*model.Schedule, error)
+	FindByRule(ruleID int) ([]*model.Schedule, error)
 	FindByList(listID int) ([]*model.Schedule, error)
 	DomainBlocked(domain string, deviceHash string) (bool, error)
 }
@@ -134,10 +134,10 @@ func (repo *scheduleRepo) LinkDevice(id int, deviceHash string) error {
 	return err
 }
 
-// LinkDomain links a domain with given string to a schedule with given ID
-func (repo *scheduleRepo) LinkDomain(id int, domain string) error {
-	sql := "INSERT INTO schedule_domain (schedule_id, domain) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, sql, id, domain)
+// LinkRule links a rule with given ID to a schedule with given ID
+func (repo *scheduleRepo) LinkRule(id int, ruleID int) error {
+	sql := "INSERT INTO schedule_rule (schedule_id, rule_id) VALUES (?, ?)"
+	_, err := repo.db.ExecContext(repo.ctx, sql, id, ruleID)
 	return err
 }
 
@@ -165,21 +165,21 @@ func (repo *scheduleRepo) LoadDeviceHashes(id int) ([]string, error) {
 	return deviceHashes, nil
 }
 
-// LoadDomains returns domain strings linked to schedule with given id
-func (repo *scheduleRepo) LoadDomains(id int) ([]string, error) {
-	sql := "SELECT DISTINCT sd.domain FROM schedule_domain sd WHERE sd.schedule_id = ?"
-	var domains []string
+// LoadRuleIDs returns rule IDs linked to schedule with given id
+func (repo *scheduleRepo) LoadRuleIDs(id int) ([]int, error) {
+	sql := "SELECT DISTINCT sr.rule_id FROM schedule_rule sr WHERE sr.schedule_id = ?"
+	var ruleIDs []int
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &domains, sql, id); err != nil {
-		return []string{}, nil
+	if err := sqlscan.Select(repo.ctx, repo.db, &ruleIDs, sql, id); err != nil {
+		return []int{}, nil
 	}
 
 	// Ensure we return empty slice instead of nil
-	if domains == nil {
-		return []string{}, nil
+	if ruleIDs == nil {
+		return []int{}, nil
 	}
 
-	return domains, nil
+	return ruleIDs, nil
 }
 
 // LoadListIDs returns ids of all lists linked to schedule with given id
@@ -207,7 +207,7 @@ func (repo *scheduleRepo) LoadRelations(s *model.Schedule) error {
 		return err
 	}
 
-	if s.Domains, err = repo.LoadDomains(s.ID); err != nil {
+	if s.RuleIDs, err = repo.LoadRuleIDs(s.ID); err != nil {
 		return err
 	}
 
@@ -291,13 +291,13 @@ func (repo *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, er
 	return schedules, nil
 }
 
-// FindByDomain returns all existing schedules that are linked with domain with given string
-func (repo *scheduleRepo) FindByDomain(domain string) ([]*model.Schedule, error) {
+// FindByRule returns all existing schedules that are linked with rule with given ID
+func (repo *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
 	sql := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_hash
-          FROM schedule_domain sd JOIN schedule s ON sd.schedule_id = s.id WHERE sd.domain = ?`
+          FROM schedule_rule sr JOIN schedule s ON sr.schedule_id = s.id WHERE sr.rule_id = ?`
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, domain); err != nil {
+	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, sql, ruleID); err != nil {
 		return []*model.Schedule{}, nil
 	}
 
@@ -348,51 +348,48 @@ func (repo *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 func (repo *scheduleRepo) DomainBlocked(domain string, deviceHash string) (bool, error) {
 	query := `WITH CurrentDateTime AS (
               SELECT 
-                time('now', 'localtime') AS current_time_only,  -- Current local time in HH:MM
-                strftime('%w', 'now', 'localtime') AS current_day  -- Current day of the week (0 = Sunday, 1 = Monday, ...)
+                time('now', 'localtime') AS current_time_only,
+                (CAST(strftime('%w', 'now', 'localtime') AS INTEGER) + 6) % 7 AS current_day
             )
-            SELECT DISTINCT r.domain AS domain_name
+            SELECT COUNT(*) as blocked_count
             FROM (
-              -- Domains directly linked to schedule via schedule_domain table
-              SELECT sd.domain
-              FROM schedule_domain sd
-              JOIN schedule s ON sd.schedule_id = s.id
+              -- Domains blocked via rules directly linked to schedule
+              SELECT r.domain
+              FROM rule r
+              JOIN schedule_rule sr ON r.id = sr.rule_id
+              JOIN schedule s ON sr.schedule_id = s.id
               JOIN device_schedule ds ON s.id = ds.schedule_id
               CROSS JOIN CurrentDateTime
               WHERE 
-                CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-              AND (s.days & (1 << CurrentDateTime.current_day)) != 0
-              AND ds.device_hash = ?
+                r.allowed = 0
+                AND r.domain = ?
+                AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
+                AND (s.days & (1 << CAST(CurrentDateTime.current_day AS INTEGER))) != 0
+                AND ds.device_hash = ?
               UNION
               -- Domains blocked via rules in lists linked to schedule
               SELECT r.domain
               FROM rule r
-              JOIN list l ON r.list_id = l.id
+              JOIN list_rule lr ON r.id = lr.rule_id
+              JOIN list l ON lr.list_id = l.id
               JOIN list_schedule ls ON l.id = ls.list_id
               JOIN schedule s ON ls.schedule_id = s.id
               JOIN device_schedule ds ON s.id = ds.schedule_id
               CROSS JOIN CurrentDateTime
               WHERE 
-                r.allowed = 0  -- Only blocked rules (not whitelisted)
-              AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-              AND (s.days & (1 << CurrentDateTime.current_day)) != 0
-              AND ds.device_hash = ?
-            ) AS r
-            WHERE r.domain = ?;  -- Check if the specific domain is blocked`
+                r.allowed = 0
+                AND r.domain = ?
+                AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
+                AND (s.days & (1 << CAST(CurrentDateTime.current_day AS INTEGER))) != 0
+                AND ds.device_hash = ?
+            )`
 
-	var result string
-	err := repo.db.QueryRowContext(repo.ctx, query, deviceHash, deviceHash, domain).Scan(&result)
-
-	// Domain is not blocked
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
-
-	// An actual error occurred
+	var count int
+	err := repo.db.QueryRowContext(repo.ctx, query, domain, deviceHash, domain, deviceHash).Scan(&count)
+	
 	if err != nil {
 		return false, err
 	}
 
-	// Domain is blocked
-	return true, nil
+	return count > 0, nil
 }

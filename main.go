@@ -115,7 +115,7 @@ func initDependencies(cfg *Config) {
 	// Initialize db schema
 	err = schema.Init(db)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to initialize schema: %v", err)
 	}
 
 	// Initialize secret

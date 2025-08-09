@@ -35,7 +35,6 @@ type Device struct {
 // Rule represents a domain rule with allow/block behavior
 type Rule struct {
 	Domain  string `json:"domain"`
-	ListID  int    `json:"listId"`
 	Allowed bool   `json:"allowed"`
 	ID      int    `json:"id"`
 }
@@ -58,7 +57,7 @@ type Schedule struct {
 	Name         string   `json:"name"`
 	UserHash     string   `json:"userHash"`
 	DeviceHashes []string `json:"deviceHashes"`
-	Domains      []string `json:"domains"`
+	RuleIDs      []int    `json:"ruleIds"`
 	ListIds      []int    `json:"listIds"`
 	Monday       bool     `json:"monday"`
 	Tuesday      bool     `json:"tuesday"`

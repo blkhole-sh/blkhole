@@ -174,17 +174,22 @@ func (t test) AddList(list model.List, domains []string) (int, error) {
 	// Create blocking rules for each domain in the list
 	// By default, all rules are set to block (Allowed=false)
 	for _, domain := range domains {
-		_, err := t.AddRule(model.Rule{
+		ruleID, err := t.AddRule(model.Rule{
 			Domain:  domain, // The domain to block
-			ListID:  id,     // Link to the parent list
 			Allowed: false,  // Block this domain (false = block, true = allow/whitelist)
 		})
 		if err != nil {
 			return id, err
 		}
+
+		// Link the rule to the list
+		if err := t.ruleRepo.LinkToList(ruleID, id); err != nil {
+			return id, err
+		}
 	}
 
-	// Load the list into the list service (for caching/performance)
+	// Set the ID on the list model and load it into the list service
+	list.ID = id
 	t.listService.LoadList(&list)
 
 	return id, nil
@@ -219,10 +224,10 @@ func (t test) AddSchedule(schedule model.Schedule) (int, error) {
 		}
 	}
 
-	// Link direct domains to this schedule
-	// These domains are blocked directly without needing list rules
-	for _, domain := range schedule.Domains {
-		err = t.scheduleRepo.LinkDomain(id, domain)
+	// Create rules for direct domains and link them to this schedule
+	// Since we no longer support direct domain linking, create individual rules
+	for _, ruleID := range schedule.RuleIDs {
+		err = t.scheduleRepo.LinkRule(id, ruleID)
 		if err != nil {
 			return id, err
 		}
@@ -319,6 +324,25 @@ func (t test) Test() (string, error) {
 		return "", err
 	}
 
+	// Create individual rules for direct domain blocking
+	// Rule 1: Block example.com directly
+	r1i, err := t.AddRule(model.Rule{
+		Domain:  "example.com",
+		Allowed: false, // Blocked rule
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Rule 2: Block test.com directly
+	r2i, err := t.AddRule(model.Rule{
+		Domain:  "test.com",
+		Allowed: false, // Blocked rule
+	})
+	if err != nil {
+		return "", err
+	}
+
 	// Create an active schedule that applies all blocking lists to both devices
 	// This schedule is active most days but leaves Thursday unblocked for testing
 	_, err = t.AddSchedule(model.Schedule{
@@ -335,8 +359,8 @@ func (t test) Test() (string, error) {
 		Sunday:    true,  // Active on Sunday
 		// Link both devices to this schedule
 		DeviceHashes: []string{d1h, d2h},
-		// Block some domains directly (not via lists)
-		Domains: []string{"example.com", "test.com"},
+		// Block some domains directly (not via lists) - using rule IDs now
+		RuleIDs: []int{r1i, r2i}, // Rules for example.com and test.com
 		// Apply all three blocking lists
 		ListIds:  []int{l1i, l2i, l3i},
 		UserHash: uh, // Links schedule to the test user
