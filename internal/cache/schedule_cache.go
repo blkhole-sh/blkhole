@@ -166,15 +166,12 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 
 	// Use schedule rule sets for O(1) lookup
 	for _, schedID := range scheduleIDs {
-		ruleSet, exists := sc.scheduleRuleSet[schedID]
-		if !exists {
-			continue
-		}
-
-		// Check each domain rule against schedule rule set
-		for _, ruleID := range domainRules {
-			if _, exists := ruleSet[ruleID]; exists {
-				return true
+		if ruleSet := sc.scheduleRuleSet[schedID]; ruleSet != nil {
+			// Check each domain rule against schedule rule set
+			for _, ruleID := range domainRules {
+				if _, exists := ruleSet[ruleID]; exists {
+					return true
+				}
 			}
 		}
 	}
