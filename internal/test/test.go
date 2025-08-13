@@ -244,12 +244,12 @@ func (t *test) Test() (int, error) {
 
 	_, err = t.AddSchedule(model.Schedule{
 		Name:      "Base Protection",
-		StartTime: "09:00",
-		EndTime:   "22:00",
+		StartTime: "00:00",
+		EndTime:   "23:55",
 		Monday:    true,
 		Tuesday:   true,
 		Wednesday: true,
-		Thursday:  false,
+		Thursday:  true,
 		Friday:    true,
 		Saturday:  true,
 		Sunday:    true,
