@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,9 +33,10 @@ var devMode = "false" // Set via ldflags
 
 // Config defines the Leo configuration
 type Config struct {
-	Domain string
-	Port   string
-	Secret string
+	Domain      string
+	Port        string
+	UpstreamDNS string
+	Secret      string
 }
 
 var (
@@ -78,6 +80,7 @@ func initConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Port, "p", "", "Server port")
 	flag.StringVar(&cfg.Domain, "d", "", "Server domain")
+	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1:53", "Upstream DNS server")
 	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
 
 	flag.Parse()
@@ -90,6 +93,9 @@ func initConfig() (*Config, error) {
 	if cfg.Domain == "" {
 		missing = append(missing, "-d (domain)")
 	}
+	if cfg.UpstreamDNS == "" {
+		missing = append(missing, "-u (upstream dns server)")
+	}
 	if cfg.Secret == "" {
 		missing = append(missing, "-s (secret)")
 	}
@@ -99,6 +105,26 @@ func initConfig() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func initUpstreamDNS(addr string) (string, error) {
+	// Parse the address to validate format
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", fmt.Errorf("invalid upstream DNS format (expected host:port): %w", err)
+	}
+
+	// Validate IP address
+	if ip := net.ParseIP(host); ip == nil {
+		return "", fmt.Errorf("invalid IP address: %s", host)
+	}
+
+	// Validate port
+	if _, err := net.LookupPort("tcp", port); err != nil {
+		return "", fmt.Errorf("invalid port: %s", port)
+	}
+
+	return addr, nil
 }
 
 func initDependencies(cfg *Config) {
@@ -122,7 +148,13 @@ func initDependencies(cfg *Config) {
 	// Initialize secret
 	secret, err := hex.DecodeString(cfg.Secret)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to decode secret: %v", err)
+	}
+
+	// Initialize upstream dns server
+	upstreamDNS, err := initUpstreamDNS(cfg.UpstreamDNS)
+	if err != nil {
+		log.Fatalf("failed to initialize upstream dns server: %v", err)
 	}
 
 	// Initialize repos
@@ -145,7 +177,7 @@ func initDependencies(cfg *Config) {
 	// Initialize controllers
 	deviceController = controllers.NewDeviceController(devices, cryptoService)
 	userController = controllers.NewUserController(users, cryptoService)
-	dnsController = controllers.NewDNSController(contentBlocker)
+	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain, devices)
 	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)

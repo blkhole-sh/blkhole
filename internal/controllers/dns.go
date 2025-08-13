@@ -20,12 +20,16 @@ type DNSController interface {
 
 // dnsController implements the DnsController interface
 type dnsController struct {
-	ContentBlocker services.ContentBlocker
+	contentBlocker services.ContentBlocker
+	upstreamDNS    string
 }
 
 // NewDNSController creates a new DnsController instance
-func NewDNSController(contentBlocker services.ContentBlocker) DNSController {
-	return &dnsController{ContentBlocker: contentBlocker}
+func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string) DNSController {
+	return &dnsController{
+		contentBlocker: contentBlocker,
+		upstreamDNS:    upstreamDNS,
+	}
 }
 
 // DNSQuery handles GET and POST requests to process DNS queries
@@ -82,7 +86,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		domain := strings.TrimSuffix(question.Name, ".")
 
 		// Check if domain blocked
-		blocked, err := dc.ContentBlocker.IsBlocked(domain, deviceHash)
+		blocked, err := dc.contentBlocker.IsBlocked(domain, deviceHash)
 
 		// If domain is blocked or err return NXDOMAIN
 		if blocked || err != nil {
@@ -96,7 +100,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	// If no domain was blocked, forward the DNS query to the upstream server
 	if response.Rcode == dns.RcodeSuccess {
 		client := new(dns.Client)
-		res, _, err := client.Exchange(msg, "193.110.81.0:53")
+		res, _, err := client.Exchange(msg, dc.upstreamDNS)
 		if err != nil {
 			log.Printf("failed to forward dns query to upstream server: %v", err)
 
