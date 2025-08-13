@@ -93,8 +93,11 @@ func (rr *ruleRepo) FindAll() ([]*model.Rule, error) {
 	var rules []*model.Rule
 
 	err := sqlscan.Select(rr.ctx, rr.db, &rules, query)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || rules == nil {
+	if rules == nil {
 		return []*model.Rule{}, nil
 	}
 
@@ -119,8 +122,11 @@ func (rr *ruleRepo) FindByList(listID int) ([]*model.Rule, error) {
 	var rules []*model.Rule
 
 	err := sqlscan.Select(rr.ctx, rr.db, &rules, query, listID)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || rules == nil {
+	if rules == nil {
 		return []*model.Rule{}, nil
 	}
 
@@ -133,8 +139,11 @@ func (rr *ruleRepo) FindByDomain(domain string) ([]*model.Rule, error) {
 	var rules []*model.Rule
 
 	err := sqlscan.Select(rr.ctx, rr.db, &rules, query, domain)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || rules == nil {
+	if rules == nil {
 		return []*model.Rule{}, nil
 	}
 

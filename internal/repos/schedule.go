@@ -154,8 +154,11 @@ func (sr *scheduleRepo) LoadDeviceIDs(id int) ([]int, error) {
 	var deviceIDs []int
 
 	err := sqlscan.Select(sr.ctx, sr.db, &deviceIDs, query, id)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || deviceIDs == nil {
+	if deviceIDs == nil {
 		return []int{}, nil
 	}
 
@@ -168,8 +171,11 @@ func (sr *scheduleRepo) LoadRuleIDs(id int) ([]int, error) {
 	var ruleIDs []int
 
 	err := sqlscan.Select(sr.ctx, sr.db, &ruleIDs, query, id)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || ruleIDs == nil {
+	if ruleIDs == nil {
 		return []int{}, nil
 	}
 
@@ -182,8 +188,11 @@ func (sr *scheduleRepo) LoadListIDs(id int) ([]int, error) {
 	var listIDs []int
 
 	err := sqlscan.Select(sr.ctx, sr.db, &listIDs, query, id)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || listIDs == nil {
+	if listIDs == nil {
 		return []int{}, nil
 	}
 
@@ -235,7 +244,7 @@ func (sr *scheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, userID); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -261,7 +270,7 @@ func (sr *scheduleRepo) FindAll() ([]*model.Schedule, error) {
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -287,7 +296,7 @@ func (sr *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, erro
 	var deviceID int
 	deviceQuery := "SELECT id FROM device WHERE hash = ?"
 	if err := sr.db.QueryRowContext(sr.ctx, deviceQuery, deviceHash).Scan(&deviceID); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_id 
@@ -295,7 +304,7 @@ func (sr *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, erro
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, deviceID); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -322,7 +331,7 @@ func (sr *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, ruleID); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -349,7 +358,7 @@ func (sr *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, listID); err != nil {
-		return []*model.Schedule{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -376,13 +385,13 @@ func (sr *scheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
 	          SELECT ls.schedule_id, lr.rule_id
 	          FROM list_schedule ls
 	          JOIN list_rule lr ON ls.list_id = lr.list_id
-	          ORDER BY schedule_id, rule_id;`
+	          ORDER BY schedule_id, rule_id`
 
 	var scheduleRule []*model.ScheduleRule
 
 	err := sqlscan.Select(sr.ctx, sr.db, &scheduleRule, query)
 	if err != nil {
-		return []*model.ScheduleRule{}, nil
+		return nil, err
 	}
 
 	return scheduleRule, nil

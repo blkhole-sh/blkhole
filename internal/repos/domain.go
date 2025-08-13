@@ -83,8 +83,11 @@ func (dr *domainRepo) FindAll() ([]*model.Domain, error) {
 	var domains []*model.Domain
 
 	err := sqlscan.Select(dr.ctx, dr.db, &domains, query)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || domains == nil {
+	if domains == nil {
 		return []*model.Domain{}, nil
 	}
 

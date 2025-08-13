@@ -82,7 +82,11 @@ func (dr *deviceRepo) LoadScheduleIDs(id int) ([]int, error) {
 
 	err := sqlscan.Select(dr.ctx, dr.db, &scheduleIDs, query, id)
 
-	if err != nil || scheduleIDs == nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if scheduleIDs == nil {
 		return []int{}, nil
 	}
 
@@ -129,8 +133,11 @@ func (dr *deviceRepo) FindByUser(userID int) ([]*model.Device, error) {
 	var devices []*model.Device
 
 	err := sqlscan.Select(dr.ctx, dr.db, &devices, query, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || devices == nil {
+	if devices == nil {
 		return []*model.Device{}, nil
 	}
 
@@ -150,7 +157,7 @@ func (dr *deviceRepo) FindBySchedule(scheduleID int) ([]*model.Device, error) {
 
 	err := sqlscan.Select(dr.ctx, dr.db, &devices, query, scheduleID)
 	if err != nil {
-		return []*model.Device{}, nil
+		return nil, err
 	}
 
 	if devices == nil {
@@ -172,7 +179,11 @@ func (dr *deviceRepo) FindAll() ([]*model.Device, error) {
 	var devices []*model.Device
 
 	err := sqlscan.Select(dr.ctx, dr.db, &devices, query)
-	if err != nil || devices == nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if devices == nil {
 		return []*model.Device{}, nil
 	}
 
@@ -192,7 +203,7 @@ func (dr *deviceRepo) FindDeviceSchedule() ([]*model.DeviceSchedule, error) {
 
 	err := sqlscan.Select(dr.ctx, dr.db, &deviceSchedule, query)
 	if err != nil {
-		return []*model.DeviceSchedule{}, nil
+		return nil, err
 	}
 
 	return deviceSchedule, nil

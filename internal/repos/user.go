@@ -74,7 +74,7 @@ func (ur *userRepo) LoadDeviceIDs(id int) ([]int, error) {
 	var deviceIDs []int
 
 	if err := sqlscan.Select(ur.ctx, ur.db, &deviceIDs, query, id); err != nil {
-		return []int{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -91,7 +91,7 @@ func (ur *userRepo) LoadListIDs(id int) ([]int, error) {
 	var listIDs []int
 
 	if err := sqlscan.Select(ur.ctx, ur.db, &listIDs, query, id); err != nil {
-		return []int{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil
@@ -108,7 +108,7 @@ func (ur *userRepo) LoadScheduleIDs(id int) ([]int, error) {
 	var scheduleIDs []int
 
 	if err := sqlscan.Select(ur.ctx, ur.db, &scheduleIDs, query, id); err != nil {
-		return []int{}, nil
+		return nil, err
 	}
 
 	// Ensure we return empty slice instead of nil

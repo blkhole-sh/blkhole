@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS device (
 CREATE TABLE IF NOT EXISTS domain (
     id INTEGER PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
-);;
+);
 
 -- Create rule table:
 CREATE TABLE IF NOT EXISTS rule (

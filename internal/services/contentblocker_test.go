@@ -159,19 +159,19 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	now := time.Now()
 	startTime := now.Add(-1 * time.Hour)
 	endTime := now.Add(1 * time.Hour)
-	
+
 	// Round times to 5-minute boundaries to satisfy SQL constraints
 	startMinute := (startTime.Minute() / 5) * 5
 	endMinute := (endTime.Minute() / 5) * 5
 	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), startMinute, 0, 0, startTime.Location())
 	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
-	
+
 	schedule := &model.Schedule{
-		Name:      "Test Schedule",                         // Human-readable name
-		UserID:    userID,                                  // Links schedule to its owner
-		StartTime: startTime.Format("15:04"),               // Start time in HH:MM format
-		EndTime:   endTime.Format("15:04"),                 // End time in HH:MM format
-		Monday:    now.Weekday() == time.Monday,            // Active on current day
+		Name:      "Test Schedule",              // Human-readable name
+		UserID:    userID,                       // Links schedule to its owner
+		StartTime: startTime.Format("15:04"),    // Start time in HH:MM format
+		EndTime:   endTime.Format("15:04"),      // End time in HH:MM format
+		Monday:    now.Weekday() == time.Monday, // Active on current day
 		Tuesday:   now.Weekday() == time.Tuesday,
 		Wednesday: now.Weekday() == time.Wednesday,
 		Thursday:  now.Weekday() == time.Thursday,
@@ -393,20 +393,20 @@ func TestContentBlocker_TimeBasedBlocking(t *testing.T) {
 
 	// Create schedule that is NOT currently active (yesterday's day pattern)
 	yesterday := time.Now().Add(-24 * time.Hour)
-	
+
 	// Round times to 5-minute boundaries to satisfy SQL constraints
 	startMinute := (yesterday.Minute() / 5) * 5
 	endTime := yesterday.Add(1 * time.Hour)
 	endMinute := (endTime.Minute() / 5) * 5
 	yesterdayStart := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), yesterday.Hour(), startMinute, 0, 0, yesterday.Location())
 	yesterdayEnd := time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
-	
+
 	schedule := &model.Schedule{
 		Name:      "Inactive Schedule",
 		UserID:    userID,
-		StartTime: yesterdayStart.Format("15:04"),            // Use yesterday's time
-		EndTime:   yesterdayEnd.Format("15:04"),              // End time 1 hour later
-		Monday:    yesterday.Weekday() == time.Monday,       // Active only on yesterday's day
+		StartTime: yesterdayStart.Format("15:04"),     // Use yesterday's time
+		EndTime:   yesterdayEnd.Format("15:04"),       // End time 1 hour later
+		Monday:    yesterday.Weekday() == time.Monday, // Active only on yesterday's day
 		Tuesday:   yesterday.Weekday() == time.Tuesday,
 		Wednesday: yesterday.Weekday() == time.Wednesday,
 		Thursday:  yesterday.Weekday() == time.Thursday,
@@ -558,13 +558,13 @@ func TestContentBlocker_SubdomainBlocking(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "Block first-level subdomain", 
+			name:     "Block first-level subdomain",
 			domain:   "mail.google.com",
 			expected: true,
 		},
 		{
 			name:     "Block multi-level subdomain",
-			domain:   "accounts.mail.google.com", 
+			domain:   "accounts.mail.google.com",
 			expected: true,
 		},
 		{

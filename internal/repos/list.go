@@ -70,8 +70,11 @@ func (lr *listRepo) LoadRules(id int) ([]model.Rule, error) {
 	var rules []model.Rule
 
 	err := sqlscan.Select(lr.ctx, lr.db, &rules, query, id)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || rules == nil {
+	if rules == nil {
 		return []model.Rule{}, nil
 	}
 
@@ -84,8 +87,11 @@ func (lr *listRepo) LoadScheduleIDs(id int) ([]int, error) {
 	var scheduleIDs []int
 
 	err := sqlscan.Select(lr.ctx, lr.db, &scheduleIDs, query, id)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || scheduleIDs == nil {
+	if scheduleIDs == nil {
 		return []int{}, nil
 	}
 
@@ -129,8 +135,11 @@ func (lr *listRepo) FindAll() ([]*model.List, error) {
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || lists == nil {
+	if lists == nil {
 		return []*model.List{}, nil
 	}
 
@@ -149,8 +158,11 @@ func (lr *listRepo) FindByUser(userID int) ([]*model.List, error) {
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || lists == nil {
+	if lists == nil {
 		return []*model.List{}, nil
 	}
 
@@ -169,8 +181,11 @@ func (lr *listRepo) FindBySchedule(scheduleID int) ([]*model.List, error) {
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query, scheduleID)
+	if err != nil {
+		return nil, err
+	}
 
-	if err != nil || lists == nil {
+	if lists == nil {
 		return []*model.List{}, nil
 	}
 
