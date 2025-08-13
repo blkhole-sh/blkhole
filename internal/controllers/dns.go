@@ -22,13 +22,15 @@ type DNSController interface {
 type dnsController struct {
 	contentBlocker services.ContentBlocker
 	upstreamDNS    string
+	domain         string
 }
 
 // NewDNSController creates a new DnsController instance
-func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string) DNSController {
+func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string, domain string) DNSController {
 	return &dnsController{
 		contentBlocker: contentBlocker,
 		upstreamDNS:    upstreamDNS,
+		domain:         domain,
 	}
 }
 
@@ -88,11 +90,19 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		// Check if domain blocked
 		blocked, err := dc.contentBlocker.IsBlocked(domain, deviceHash)
 
-		// If domain is blocked or err return NXDOMAIN
+		// If domain is blocked or err return CNAME to domain
 		if blocked || err != nil {
-
-			// Set the NXDOMAIN response code
-			response.Rcode = dns.RcodeNameError
+			// Create a CNAME record pointing to the domain
+			cname := &dns.CNAME{
+				Hdr: dns.RR_Header{
+					Name:   question.Name,
+					Rrtype: dns.TypeCNAME,
+					Class:  dns.ClassINET,
+					Ttl:    300, // 5 minutes TTL
+				},
+				Target: "blocked" + dc.domain + ".",
+			}
+			response.Answer = append(response.Answer, cname)
 			break // Stop processing further questions if one domain is blocked
 		}
 	}

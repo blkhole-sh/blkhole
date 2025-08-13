@@ -80,7 +80,7 @@ func initConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Port, "p", "", "Server port")
 	flag.StringVar(&cfg.Domain, "d", "", "Server domain")
-	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1:53", "Upstream DNS server")
+	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1", "Upstream DNS server")
 	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
 
 	flag.Parse()
@@ -177,7 +177,7 @@ func initDependencies(cfg *Config) {
 	// Initialize controllers
 	deviceController = controllers.NewDeviceController(devices, cryptoService)
 	userController = controllers.NewUserController(users, cryptoService)
-	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS)
+	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, cfg.Domain)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain, devices)
 	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)
@@ -197,13 +197,16 @@ func initDependencies(cfg *Config) {
 	testController = controllers.NewTestController(t)
 }
 
-func initRouter() *chi.Mux {
+func initRouter(cfg *Config) *chi.Mux {
 	// Create a new router using chi
 	r := chi.NewRouter()
 
 	// Add some middleware for better logging and recovery
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+
+	// Add blocked page middleware
+	r.Use(middleware.BlockedPage(cfg.Domain))
 
 	// Configure CORS
 	r.Use(cors.Handler(cors.Options{
@@ -308,7 +311,7 @@ func main() {
 	}
 
 	// Initialize router
-	r := initRouter()
+	r := initRouter(cfg)
 
 	// Start server on given port
 	log.Printf("starting leo on :%s", cfg.Port)
