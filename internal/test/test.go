@@ -47,14 +47,14 @@ func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRep
 func (t *test) AddUser(user model.User, password string) (int, error) {
 	passwordHash, err := t.cryptoService.HashPassword(password)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	user.PasswordHash = passwordHash
 
 	err = t.users.Create(&user)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	return user.ID, nil
@@ -64,14 +64,14 @@ func (t *test) AddUser(user model.User, password string) (int, error) {
 func (t *test) AddDevice(device model.Device) (int, error) {
 	hash, err := t.cryptoService.RandomHash()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	device.Hash = hash
 
 	err = t.devices.Create(&device)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	return device.ID, nil
@@ -81,7 +81,7 @@ func (t *test) AddDevice(device model.Device) (int, error) {
 func (t *test) AddRule(rule model.Rule) (int, error) {
 	id, err := t.rules.CreateOrGet(&rule)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	return id, nil
@@ -91,7 +91,7 @@ func (t *test) AddRule(rule model.Rule) (int, error) {
 func (t *test) AddList(list model.List, domains []string) (int, error) {
 	id, err := t.lists.Create(&list)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	for _, domain := range domains {
@@ -180,7 +180,7 @@ func (t *test) Test() (int, error) {
 	}
 	d2i, err := t.AddDevice(device2)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	l1i, err := t.AddList(model.List{
@@ -190,7 +190,7 @@ func (t *test) Test() (int, error) {
 		UserID:      ui,
 	}, []string{})
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	l2i, err := t.AddList(model.List{
@@ -200,7 +200,7 @@ func (t *test) Test() (int, error) {
 		UserID:      ui,
 	}, []string{})
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	l3i, err := t.AddList(model.List{
@@ -210,20 +210,20 @@ func (t *test) Test() (int, error) {
 		UserID:      ui,
 	}, []string{})
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	// Create domains first
 	exampleDomain := &model.Domain{Name: "example.com"}
 	exampleDomainID, err := t.domains.CreateOrGet(exampleDomain)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	testDomain := &model.Domain{Name: "test.com"}
 	testDomainID, err := t.domains.CreateOrGet(testDomain)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	r1i, err := t.AddRule(model.Rule{
@@ -231,7 +231,7 @@ func (t *test) Test() (int, error) {
 		Allowed:  false,
 	})
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	r2i, err := t.AddRule(model.Rule{
@@ -239,7 +239,7 @@ func (t *test) Test() (int, error) {
 		Allowed:  false,
 	})
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	_, err = t.AddSchedule(model.Schedule{

@@ -2,7 +2,6 @@
 package cache
 
 import (
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -26,15 +25,17 @@ type ScheduleCache interface {
 
 // scheduleCache implements the ScheduleCache interface
 type scheduleCache struct {
-	scheduleToRule map[int][]int  // Schedule ID → Rule IDs
-	scheduleMasks  map[int]uint64 // Schedule ID → Pre-computed bitmask for time filtering
+	scheduleToRule  map[int][]int            // Schedule ID → Rule IDs
+	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → Rule IDs as hash set for O(1) lookup
+	scheduleMasks   map[int]uint64           // Schedule ID → Pre-computed bitmask for time filtering
 }
 
 // NewScheduleCache creates a new schedule cache instance
 func NewScheduleCache() ScheduleCache {
 	return &scheduleCache{
-		scheduleToRule: make(map[int][]int),
-		scheduleMasks:  make(map[int]uint64),
+		scheduleToRule:  make(map[int][]int),
+		scheduleRuleSet: make(map[int]map[int]struct{}),
+		scheduleMasks:   make(map[int]uint64),
 	}
 }
 
@@ -106,7 +107,7 @@ func timeStringToSlot(timeStr string) uint16 {
 		return 0
 	}
 
-	// Parse minute component (0-59) 
+	// Parse minute component (0-59)
 	minute, err := strconv.Atoi(parts[1])
 	if err != nil || minute < 0 || minute >= 60 {
 		return 0
@@ -141,7 +142,14 @@ func getCurrentTimeMask() uint64 {
 // LoadScheduleRules populates the schedule-to-rule mapping
 func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule) {
 	for _, sr := range scheduleRules {
+		// Add to slice (keep for compatibility)
 		sc.scheduleToRule[sr.ScheduleID] = append(sc.scheduleToRule[sr.ScheduleID], sr.RuleID)
+
+		// Add to hash set for O(1) lookup
+		if sc.scheduleRuleSet[sr.ScheduleID] == nil {
+			sc.scheduleRuleSet[sr.ScheduleID] = make(map[int]struct{})
+		}
+		sc.scheduleRuleSet[sr.ScheduleID][sr.RuleID] = struct{}{}
 	}
 }
 
@@ -156,16 +164,16 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 		return false
 	}
 
-	// Check each schedule's rules against the domain's rules
+	// Use schedule rule sets for O(1) lookup
 	for _, schedID := range scheduleIDs {
-		scheduleRules, exists := sc.scheduleToRule[schedID]
+		ruleSet, exists := sc.scheduleRuleSet[schedID]
 		if !exists {
 			continue
 		}
 
-		// Return true immediately if any rule matches (short-circuit)
-		for _, ruleID := range scheduleRules {
-			if slices.Contains(domainRules, ruleID) {
+		// Check each domain rule against schedule rule set
+		for _, ruleID := range domainRules {
+			if _, exists := ruleSet[ruleID]; exists {
 				return true
 			}
 		}
@@ -181,7 +189,7 @@ func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 
 	// Pre-allocate slice with capacity to avoid reallocations
 	activeScheduleIDs := make([]int, 0, len(scheduleIDs))
-	
+
 	// Get current time as bitmask for comparison
 	currentTimeMask := getCurrentTimeMask()
 
