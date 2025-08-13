@@ -13,7 +13,7 @@ export default function DeviceTile(props: Props) {
 		<li class="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2 sm:flex-nowrap">
 			<div class="flex-1">
 				<a
-					href={`/devices/${props.device.hash}/config`}
+					href={`/devices/${props.device.id}/config`}
 					class="text-sm/6 font-semibold text-gray-900"
 					rel="external"
 					download="leo.mobileconfig"
