@@ -32,10 +32,15 @@ func NewDomainCache() DomainCache {
 
 // reverseDomain converts "example.com" to "com.example" for radix tree storage
 func reverseDomain(domain string) string {
+	// Split domain by dots
 	parts := strings.Split(domain, ".")
+
+	// Reverse array in-place
 	for i := 0; i < len(parts)/2; i++ {
 		parts[i], parts[len(parts)-1-i] = parts[len(parts)-1-i], parts[i]
 	}
+
+	// Join reversed parts
 	return strings.Join(parts, ".")
 }
 

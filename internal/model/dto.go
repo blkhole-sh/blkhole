@@ -53,24 +53,3 @@ type ScheduleDTO struct {
 	Saturday  bool   `json:"saturday"`
 	Sunday    bool   `json:"sunday"`
 }
-
-// ToModel converts ScheduleDTO to Schedule model with boolean fields
-func (dto *ScheduleDTO) ToModel() *Schedule {
-	return &Schedule{
-		Name:      dto.Name,
-		UserID:    dto.UserID,
-		DeviceIDs: dto.DeviceIDs,
-		RuleIDs:   dto.RuleIDs,
-		ListIDs:   dto.ListIDs,
-		StartTime: dto.StartTime,
-		EndTime:   dto.EndTime,
-		Monday:    dto.Monday,
-		Tuesday:   dto.Tuesday,
-		Wednesday: dto.Wednesday,
-		Thursday:  dto.Thursday,
-		Friday:    dto.Friday,
-		Saturday:  dto.Saturday,
-		Sunday:    dto.Sunday,
-		ID:        dto.ID,
-	}
-}
