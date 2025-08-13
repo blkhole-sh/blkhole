@@ -42,23 +42,22 @@ func setupTestDB(t *testing.T) *sql.DB {
 //
 // Parameters:
 //   - t: Testing context for error reporting
-//   - userRepo: Repository for user operations
+//   - users: Repository for user operations
 //
 // Returns:
-//   - string: The hash/ID of the created user
-func createTestUser(t *testing.T, userRepo repos.UserRepo) string {
+//   - int: The ID of the created user
+func createTestUser(t *testing.T, users repos.UserRepo) int {
 	user := &model.User{
-		Hash:         "test-user-hash",   // Fixed hash for predictable testing
 		Name:         "Test User",        // Human-readable name
 		Email:        "test@example.com", // Valid email format
 		PasswordHash: "hashed-password",  // Pre-hashed password (not used in blocking tests)
 	}
 
-	if err := userRepo.Create(user); err != nil {
+	if err := users.Create(user); err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
 
-	return user.Hash
+	return user.ID
 }
 
 // createTestDevice creates a test device in the database.
@@ -66,20 +65,20 @@ func createTestUser(t *testing.T, userRepo repos.UserRepo) string {
 //
 // Parameters:
 //   - t: Testing context for error reporting
-//   - deviceRepo: Repository for device operations
-//   - userHash: Hash of the user who owns this device
+//   - devices: Repository for device operations
+//   - userID: ID of the user who owns this device
 //
 // Returns:
-//   - string: The hash/ID of the created device
-func createTestDevice(t *testing.T, deviceRepo repos.DeviceRepo, userHash string) string {
+//   - string: The hash of the created device (still used for DNS queries)
+func createTestDevice(t *testing.T, devices repos.DeviceRepo, userID int) string {
 	device := &model.Device{
-		Hash:     "test-device-hash", // Fixed hash matching the one used in mobileconfig URLs
-		Name:     "Test Device",      // Human-readable name for the device
-		OS:       model.IOS,          // Device operating system (iOS/Android/etc.)
-		UserHash: userHash,           // Links device to its owner
+		Hash:   "test-device-hash", // Fixed hash matching the one used in mobileconfig URLs
+		Name:   "Test Device",      // Human-readable name for the device
+		OS:     model.IOS,          // Device operating system (iOS/Android/etc.)
+		UserID: userID,             // Links device to its owner
 	}
 
-	if err := deviceRepo.Create(device); err != nil {
+	if err := devices.Create(device); err != nil {
 		t.Fatalf("Failed to create test device: %v", err)
 	}
 
@@ -91,22 +90,22 @@ func createTestDevice(t *testing.T, deviceRepo repos.DeviceRepo, userHash string
 //
 // Parameters:
 //   - t: Testing context for error reporting
-//   - listRepo: Repository for list operations
-//   - ruleRepo: Repository for rule operations
-//   - userHash: Hash of the user who owns this list
+//   - lists: Repository for list operations
+//   - rules: Repository for rule operations
+//   - userID: ID of the user who owns this list
 //   - domains: Slice of domain names to create blocking rules for
 //
 // Returns:
 //   - int: The ID of the created list
-func createTestList(t *testing.T, listRepo repos.ListRepo, ruleRepo repos.RuleRepo, userHash string, domains []string) int {
+func createTestList(t *testing.T, lists repos.ListRepo, rules repos.RuleRepo, domainRepo repos.DomainRepo, userID int, domains []string) int {
 	list := &model.List{
 		Name:        "Test Block List",                // Human-readable name for the list
 		Description: "Test list for blocking domains", // Description of what this list blocks
 		Source:      "test://source",                  // URL source (for external lists)
-		UserHash:    userHash,                         // Links list to its owner
+		UserID:      userID,                           // Links list to its owner
 	}
 
-	listID, err := listRepo.Create(list)
+	listID, err := lists.Create(list)
 	if err != nil {
 		t.Fatalf("Failed to create test list: %v", err)
 	}
@@ -114,17 +113,24 @@ func createTestList(t *testing.T, listRepo repos.ListRepo, ruleRepo repos.RuleRe
 	// Add blocking rules for each domain in the list
 	// Each rule defines whether a specific domain should be blocked or allowed
 	for _, domain := range domains {
-		rule := &model.Rule{
-			Domain:  domain, // The domain this rule applies to
-			Allowed: false,  // false = block, true = allow (whitelist)
+		// Create or get domain first
+		domainModel := &model.Domain{Name: domain}
+		domainID, err := domainRepo.CreateOrGet(domainModel)
+		if err != nil {
+			t.Fatalf("Failed to create domain %s: %v", domain, err)
 		}
-		ruleID, err := ruleRepo.CreateOrGet(rule)
+
+		rule := &model.Rule{
+			DomainID: domainID, // The domain ID this rule applies to
+			Allowed:  false,    // false = block, true = allow (whitelist)
+		}
+		ruleID, err := rules.CreateOrGet(rule)
 		if err != nil {
 			t.Fatalf("Failed to create blocking rule for domain %s: %v", domain, err)
 		}
 
 		// Link the rule to the list
-		if err := ruleRepo.LinkToList(ruleID, listID); err != nil {
+		if err := rules.LinkToList(ruleID, listID); err != nil {
 			t.Fatalf("Failed to link rule %d to list %d: %v", ruleID, listID, err)
 		}
 	}
@@ -138,29 +144,34 @@ func createTestList(t *testing.T, listRepo repos.ListRepo, ruleRepo repos.RuleRe
 //
 // Parameters:
 //   - t: Testing context for error reporting
-//   - scheduleRepo: Repository for schedule operations
+//   - schedules: Repository for schedule operations
+//   - devices: Repository for device operations
 //   - deviceHash: Hash of the device this schedule applies to
 //   - listIDs: IDs of lists to link to this schedule
 //   - directDomains: Domains to block directly (without lists)
-//   - userHash: Hash of the user who owns this schedule
+//   - userID: ID of the user who owns this schedule
 //
 // Returns:
 //   - int: The ID of the created schedule
-func createTestSchedule(t *testing.T, scheduleRepo repos.ScheduleRepo, ruleRepo repos.RuleRepo, deviceHash string, listIDs []int, directDomains []string, userHash string) int {
+func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.RuleRepo, domainRepo repos.DomainRepo, devices repos.DeviceRepo, deviceHash string, listIDs []int, directDomains []string, userID int) int {
 	// Create a schedule that is active NOW for testing
 	// This ensures that blocking rules will be applied during the test
 	now := time.Now()
-	startTime := now.Add(-1 * time.Hour).Format("15:04") // Started 1 hour ago
-	endTime := now.Add(1 * time.Hour).Format("15:04")    // Ends in 1 hour
-
+	startTime := now.Add(-1 * time.Hour)
+	endTime := now.Add(1 * time.Hour)
+	
+	// Round times to 5-minute boundaries to satisfy SQL constraints
+	startMinute := (startTime.Minute() / 5) * 5
+	endMinute := (endTime.Minute() / 5) * 5
+	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), startMinute, 0, 0, startTime.Location())
+	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
+	
 	schedule := &model.Schedule{
-		Name:      "Test Schedule", // Human-readable name
-		StartTime: startTime,       // Daily start time (HH:MM format)
-		EndTime:   endTime,         // Daily end time (HH:MM format)
-		UserHash:  userHash,        // Links schedule to its owner
-		// Set only the current day to true so the schedule is active today
-		// Days are stored as boolean flags for each day of the week
-		Monday:    now.Weekday() == time.Monday,
+		Name:      "Test Schedule",                         // Human-readable name
+		UserID:    userID,                                  // Links schedule to its owner
+		StartTime: startTime.Format("15:04"),               // Start time in HH:MM format
+		EndTime:   endTime.Format("15:04"),                 // End time in HH:MM format
+		Monday:    now.Weekday() == time.Monday,            // Active on current day
 		Tuesday:   now.Weekday() == time.Tuesday,
 		Wednesday: now.Weekday() == time.Wednesday,
 		Thursday:  now.Weekday() == time.Thursday,
@@ -169,21 +180,26 @@ func createTestSchedule(t *testing.T, scheduleRepo repos.ScheduleRepo, ruleRepo 
 		Sunday:    now.Weekday() == time.Sunday,
 	}
 
-	scheduleID, err := scheduleRepo.Create(schedule)
+	scheduleID, err := schedules.Create(schedule)
 	if err != nil {
 		t.Fatalf("Failed to create test schedule: %v", err)
 	}
 
 	// Link the target device to this schedule
 	// Only devices linked to a schedule will have its rules applied
-	if err := scheduleRepo.LinkDevice(scheduleID, deviceHash); err != nil {
+	// First get the device by hash to get its ID
+	device, err := devices.FindByHash(deviceHash)
+	if err != nil {
+		t.Fatalf("Failed to find device by hash: %v", err)
+	}
+	if err := schedules.LinkDevice(scheduleID, device.ID); err != nil {
 		t.Fatalf("Failed to link device to schedule: %v", err)
 	}
 
 	// Link blocking lists to this schedule
 	// All rules in these lists will be applied during the schedule's active time
 	for _, listID := range listIDs {
-		if err := scheduleRepo.LinkList(scheduleID, listID); err != nil {
+		if err := schedules.LinkList(scheduleID, listID); err != nil {
 			t.Fatalf("Failed to link list %d to schedule: %v", listID, err)
 		}
 	}
@@ -191,19 +207,25 @@ func createTestSchedule(t *testing.T, scheduleRepo repos.ScheduleRepo, ruleRepo 
 	// Create rules for direct domains and link them to this schedule
 	// These rules don't belong to any list - they're directly linked to the schedule
 	for _, domain := range directDomains {
+		// Create or get domain first
+		domainModel := &model.Domain{Name: domain}
+		domainID, err := domainRepo.CreateOrGet(domainModel)
+		if err != nil {
+			t.Fatalf("Failed to create domain %s: %v", domain, err)
+		}
+
 		// Create a rule for this domain (blocked by default with allowed=false)
 		rule := &model.Rule{
-			Domain: domain,
-			// ListID is 0/null - this rule doesn't belong to any list
-			Allowed: false, // Blocked rule
+			DomainID: domainID,
+			Allowed:  false, // Blocked rule
 		}
-		ruleID, err := ruleRepo.CreateOrGet(rule)
+		ruleID, err := rules.CreateOrGet(rule)
 		if err != nil {
 			t.Fatalf("Failed to create rule for domain %s: %v", domain, err)
 		}
 
 		// Link the rule to the schedule
-		if err := scheduleRepo.LinkRule(scheduleID, ruleID); err != nil {
+		if err := schedules.LinkRule(scheduleID, ruleID); err != nil {
 			t.Fatalf("Failed to link rule %d to schedule: %v", ruleID, err)
 		}
 	}
@@ -223,24 +245,25 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 	defer db.Close()
 
 	// Create all required repositories for testing
-	userRepo := repos.NewUserRepo(db)
-	deviceRepo := repos.NewDeviceRepo(db)
-	listRepo := repos.NewListRepo(db)
-	ruleRepo := repos.NewRuleRepo(db)
-	scheduleRepo := repos.NewScheduleRepo(db)
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
 
 	// Create the content blocker instance we're testing
-	contentBlocker := NewContentBlocker(scheduleRepo)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
 
 	// Setup test data hierarchy:
 	// User -> Device -> Schedule -> Lists/Rules -> Blocked Domains
-	userHash := createTestUser(t, userRepo)
-	deviceHash := createTestDevice(t, deviceRepo, userHash)
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
 
 	// Create a test list with several domains that should be blocked
 	// These domains will be blocked via list rules
 	blockedDomains := []string{"ads.example.com", "tracker.com", "malware.net"}
-	listID := createTestList(t, listRepo, ruleRepo, userHash, blockedDomains)
+	listID := createTestList(t, lists, rules, domains, userID, blockedDomains)
 
 	// Create domains that should be blocked directly (not via lists)
 	// These are linked directly to the schedule
@@ -248,7 +271,12 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 
 	// Create an active schedule that links everything together
 	// This schedule is active NOW and applies to our test device
-	createTestSchedule(t, scheduleRepo, ruleRepo, deviceHash, []int{listID}, directBlockedDomains, userHash)
+	createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{listID}, directBlockedDomains, userID)
+
+	// Initialize the content blocker with data from database
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Failed to initialize content blocker: %v", err)
+	}
 
 	// Define test cases covering different blocking scenarios
 	tests := []struct {
@@ -345,35 +373,40 @@ func TestContentBlocker_TimeBasedBlocking(t *testing.T) {
 	defer db.Close()
 
 	// Create repositories
-	userRepo := repos.NewUserRepo(db)
-	deviceRepo := repos.NewDeviceRepo(db)
-	listRepo := repos.NewListRepo(db)
-	ruleRepo := repos.NewRuleRepo(db)
-	scheduleRepo := repos.NewScheduleRepo(db)
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
 
 	// Create content blocker
-	contentBlocker := NewContentBlocker(scheduleRepo)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
 
 	// Setup test data
-	userHash := createTestUser(t, userRepo)
-	deviceHash := createTestDevice(t, deviceRepo, userHash)
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
 
 	// Create test list
 	blockedDomains := []string{"time-blocked.com"}
-	listID := createTestList(t, listRepo, ruleRepo, userHash, blockedDomains)
+	listID := createTestList(t, lists, rules, domains, userID, blockedDomains)
 
-	// Create schedule that is NOT currently active (yesterday's time window)
+	// Create schedule that is NOT currently active (yesterday's day pattern)
 	yesterday := time.Now().Add(-24 * time.Hour)
-	startTime := yesterday.Format("15:04")
-	endTime := yesterday.Add(1 * time.Hour).Format("15:04")
-
+	
+	// Round times to 5-minute boundaries to satisfy SQL constraints
+	startMinute := (yesterday.Minute() / 5) * 5
+	endTime := yesterday.Add(1 * time.Hour)
+	endMinute := (endTime.Minute() / 5) * 5
+	yesterdayStart := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), yesterday.Hour(), startMinute, 0, 0, yesterday.Location())
+	yesterdayEnd := time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
+	
 	schedule := &model.Schedule{
 		Name:      "Inactive Schedule",
-		StartTime: startTime,
-		EndTime:   endTime,
-		UserHash:  userHash,
-		// Set current day to false, all other days to true
-		Monday:    yesterday.Weekday() == time.Monday,
+		UserID:    userID,
+		StartTime: yesterdayStart.Format("15:04"),            // Use yesterday's time
+		EndTime:   yesterdayEnd.Format("15:04"),              // End time 1 hour later
+		Monday:    yesterday.Weekday() == time.Monday,       // Active only on yesterday's day
 		Tuesday:   yesterday.Weekday() == time.Tuesday,
 		Wednesday: yesterday.Weekday() == time.Wednesday,
 		Thursday:  yesterday.Weekday() == time.Thursday,
@@ -382,18 +415,28 @@ func TestContentBlocker_TimeBasedBlocking(t *testing.T) {
 		Sunday:    yesterday.Weekday() == time.Sunday,
 	}
 
-	scheduleID, err := scheduleRepo.Create(schedule)
+	scheduleID, err := schedules.Create(schedule)
 	if err != nil {
 		t.Fatalf("Failed to create inactive schedule: %v", err)
 	}
 
 	// Link device and list to inactive schedule
-	if err := scheduleRepo.LinkDevice(scheduleID, deviceHash); err != nil {
+	// First get the device by hash to get its ID
+	device, err := devices.FindByHash(deviceHash)
+	if err != nil {
+		t.Fatalf("Failed to find device by hash: %v", err)
+	}
+	if err := schedules.LinkDevice(scheduleID, device.ID); err != nil {
 		t.Fatalf("Failed to link device to inactive schedule: %v", err)
 	}
 
-	if err := scheduleRepo.LinkList(scheduleID, listID); err != nil {
+	if err := schedules.LinkList(scheduleID, listID); err != nil {
 		t.Fatalf("Failed to link list to inactive schedule: %v", err)
+	}
+
+	// Initialize the content blocker
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Failed to initialize content blocker: %v", err)
 	}
 
 	// Test that domain is NOT blocked when schedule is inactive
@@ -414,8 +457,11 @@ func TestContentBlocker_DomainNormalization(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	scheduleRepo := repos.NewScheduleRepo(db)
-	contentBlocker := NewContentBlocker(scheduleRepo)
+	schedules := repos.NewScheduleRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	rules := repos.NewRuleRepo(db)
+	domains := repos.NewDomainRepo(db)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
 
 	tests := []struct {
 		name        string
@@ -461,6 +507,158 @@ func TestContentBlocker_DomainNormalization(t *testing.T) {
 				if err != nil {
 					t.Errorf("IsBlocked() unexpected error for valid domain %s: %v", tt.inputDomain, err)
 				}
+			}
+		})
+	}
+}
+
+// TestContentBlocker_SubdomainBlocking tests that blocking a parent domain also blocks its subdomains.
+// This verifies the hierarchical domain blocking feature using the radix tree's longest-prefix matching.
+func TestContentBlocker_SubdomainBlocking(t *testing.T) {
+	// Setup test database
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create repositories
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
+
+	// Create content blocker
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+
+	// Setup test data
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
+
+	// Create a test list that blocks the parent domain "google.com"
+	blockedDomains := []string{"google.com"}
+	listID := createTestList(t, lists, rules, domains, userID, blockedDomains)
+
+	// Create an active schedule
+	createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{listID}, []string{}, userID)
+
+	// Initialize the content blocker
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Failed to initialize content blocker: %v", err)
+	}
+
+	// Test cases: parent domain should block all subdomains
+	tests := []struct {
+		name     string
+		domain   string
+		expected bool
+	}{
+		{
+			name:     "Block parent domain",
+			domain:   "google.com",
+			expected: true,
+		},
+		{
+			name:     "Block first-level subdomain", 
+			domain:   "mail.google.com",
+			expected: true,
+		},
+		{
+			name:     "Block multi-level subdomain",
+			domain:   "accounts.mail.google.com", 
+			expected: true,
+		},
+		{
+			name:     "Allow unrelated domain",
+			domain:   "example.com",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocked, err := contentBlocker.IsBlocked(tt.domain, deviceHash)
+			if err != nil {
+				t.Fatalf("IsBlocked() unexpected error: %v", err)
+			}
+
+			if blocked != tt.expected {
+				t.Errorf("IsBlocked() = %v, expected %v for domain %s", blocked, tt.expected, tt.domain)
+			}
+		})
+	}
+}
+
+// TestContentBlocker_SubdomainVsParent tests that blocking a subdomain does NOT block its parent domain.
+// This verifies that the blocking works only in the downward direction (parent → subdomain).
+func TestContentBlocker_SubdomainVsParent(t *testing.T) {
+	// Setup test database
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create repositories
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
+
+	// Create content blocker
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+
+	// Setup test data
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
+
+	// Create a test list that blocks only the subdomain "ads.example.com"
+	blockedDomains := []string{"ads.example.com"}
+	listID := createTestList(t, lists, rules, domains, userID, blockedDomains)
+
+	// Create an active schedule
+	createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{listID}, []string{}, userID)
+
+	// Initialize the content blocker
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Failed to initialize content blocker: %v", err)
+	}
+
+	// Test cases: subdomain blocking should NOT affect parent domains
+	tests := []struct {
+		name     string
+		domain   string
+		expected bool
+	}{
+		{
+			name:     "Block the specific subdomain",
+			domain:   "ads.example.com",
+			expected: true,
+		},
+		{
+			name:     "Allow parent domain",
+			domain:   "example.com",
+			expected: false,
+		},
+		{
+			name:     "Allow other subdomains",
+			domain:   "www.example.com",
+			expected: false,
+		},
+		{
+			name:     "Allow nested subdomains under blocked domain",
+			domain:   "tracking.ads.example.com",
+			expected: true, // This should be blocked as it's under ads.example.com
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocked, err := contentBlocker.IsBlocked(tt.domain, deviceHash)
+			if err != nil {
+				t.Fatalf("IsBlocked() unexpected error: %v", err)
+			}
+
+			if blocked != tt.expected {
+				t.Errorf("IsBlocked() = %v, expected %v for domain %s", blocked, tt.expected, tt.domain)
 			}
 		})
 	}

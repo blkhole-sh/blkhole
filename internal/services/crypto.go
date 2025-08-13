@@ -2,13 +2,12 @@ package services
 
 import (
 	"crypto/rand"
-	"encoding/base32"
 	"encoding/base64"
 	"fmt"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 )
 
 // CryptoService defines the interface for cryptographic operations
@@ -36,25 +35,22 @@ func (cs *cryptoService) RandomHash() (string, error) {
 		return "", err
 	}
 
-	// Create a keyed BLAKE2s hash
-	hasher, err := blake2s.New256(cs.secret)
+	// Create a keyed BLAKE2b hasher with 16-byte output
+	hasher, err := blake2b.New(16, cs.secret)
 	if err != nil {
 		return "", err
 	}
 
-	// Write data to the hasher
-	hasher.Write(cs.secret)
-
 	// Write random value to the hasher
 	hasher.Write(r)
 
-	// Get the hash (binary)
+	// Get the hash (16 bytes)
 	hash := hasher.Sum(nil)
 
-	// Encode the hash in Base32
-	base32EncodedHash := base32.StdEncoding.EncodeToString(hash)
+	// Encode the hash in Base64URL
+	base64UrlEncodedHash := base64.RawURLEncoding.EncodeToString(hash)
 
-	return base32EncodedHash, nil
+	return base64UrlEncodedHash, nil
 }
 
 // HashPassword hashes the given password using Argon2 and returns the hash encoded as a string with salt

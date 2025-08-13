@@ -33,19 +33,21 @@ type ListsService interface {
 
 // listsService implements the ListsService interface
 type listsService struct {
-	listRepo repos.ListRepo
-	ruleRepo repos.RuleRepo
+	lists      repos.ListRepo
+	ruleRepo   repos.RuleRepo
+	domainRepo repos.DomainRepo
 }
 
 // NewListsService creates a new ListsService instance
-func NewListsService(listRepo repos.ListRepo, ruleRepo repos.RuleRepo) ListsService {
+func NewListsService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo) ListsService {
 	return &listsService{
-		listRepo: listRepo,
-		ruleRepo: ruleRepo,
+		lists:      lists,
+		ruleRepo:   ruleRepo,
+		domainRepo: domainRepo,
 	}
 }
 
-func readAdblockFile(r io.Reader) ([]model.Rule, error) {
+func readAdblockFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	var rules []model.Rule
 	scanner := bufio.NewScanner(r)
 
@@ -82,11 +84,18 @@ func readAdblockFile(r io.Reader) ([]model.Rule, error) {
 			continue
 		}
 
+		// Create or get domain first
+		domainModel := &model.Domain{Name: domain}
+		domainID, err := domainRepo.CreateOrGet(domainModel)
+		if err != nil {
+			log.Printf("error creating domain %s: %v", domain, err)
+			continue
+		}
+
 		// Create rule
 		rule := model.Rule{
-			Domain:  domain,
-			Allowed: allowed,
-			// ListID will be set by the caller
+			DomainID: domainID,
+			Allowed:  allowed,
 		}
 		rules = append(rules, rule)
 	}
@@ -98,7 +107,7 @@ func readAdblockFile(r io.Reader) ([]model.Rule, error) {
 	return rules, nil
 }
 
-func readHostFile(r io.Reader) ([]model.Rule, error) {
+func readHostFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	var rules []model.Rule
 	scanner := bufio.NewScanner(r)
 
@@ -127,11 +136,18 @@ func readHostFile(r io.Reader) ([]model.Rule, error) {
 				continue
 			}
 
+				// Create or get domain first
+			domainModel := &model.Domain{Name: domain}
+			domainID, err := domainRepo.CreateOrGet(domainModel)
+			if err != nil {
+				log.Printf("error creating domain %s: %v", domain, err)
+				continue
+			}
+
 			// Create rule (hosts files are always blocking)
 			rule := model.Rule{
-				Domain:  domain,
-				Allowed: false,
-				// ListID will be set by the caller
+				DomainID: domainID,
+				Allowed:  false,
 			}
 			rules = append(rules, rule)
 		} else {
@@ -147,7 +163,7 @@ func readHostFile(r io.Reader) ([]model.Rule, error) {
 	return rules, nil
 }
 
-func readDomainsFile(r io.Reader) ([]model.Rule, error) {
+func readDomainsFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	var rules []model.Rule
 	scanner := bufio.NewScanner(r)
 
@@ -167,11 +183,18 @@ func readDomainsFile(r io.Reader) ([]model.Rule, error) {
 			continue
 		}
 
+		// Create or get domain first
+		domainModel := &model.Domain{Name: line}
+		domainID, err := domainRepo.CreateOrGet(domainModel)
+		if err != nil {
+			log.Printf("error creating domain %s: %v", line, err)
+			continue
+		}
+
 		// Create rule (default to blocking for domains file)
 		rule := model.Rule{
-			Domain:  line,
-			Allowed: false,
-			// ListID will be set by the caller
+			DomainID: domainID,
+			Allowed:  false,
 		}
 		rules = append(rules, rule)
 	}
@@ -184,7 +207,7 @@ func readDomainsFile(r io.Reader) ([]model.Rule, error) {
 }
 
 // detectAndReadFile auto-detects file format and calls appropriate parser
-func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
+func detectAndReadFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	// Read entire file content
 	content, err := io.ReadAll(r)
 	if err != nil {
@@ -224,11 +247,11 @@ func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
 
 	// Determine file type based on pattern counts
 	if adblockCount > 0 {
-		return readAdblockFile(strings.NewReader(contentStr))
+		return readAdblockFile(strings.NewReader(contentStr), domainRepo)
 	} else if hostsCount > 0 {
-		return readHostFile(strings.NewReader(contentStr))
+		return readHostFile(strings.NewReader(contentStr), domainRepo)
 	} else if domainCount > 0 {
-		return readDomainsFile(strings.NewReader(contentStr))
+		return readDomainsFile(strings.NewReader(contentStr), domainRepo)
 	} else {
 		log.Printf("warning: unable to detect file format - no recognizable patterns found in first %d lines", sampleSize)
 		return []model.Rule{}, nil
@@ -236,7 +259,7 @@ func detectAndReadFile(r io.Reader) ([]model.Rule, error) {
 }
 
 // readHTTPSFile reads rules from an HTTPS file.
-func readHTTPSFile(url string) ([]model.Rule, error) {
+func readHTTPSFile(url string, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET url %s: %w", url, err)
@@ -247,26 +270,26 @@ func readHTTPSFile(url string) ([]model.Rule, error) {
 		return nil, fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	return detectAndReadFile(resp.Body)
+	return detectAndReadFile(resp.Body, domainRepo)
 }
 
 // readLocalFile reads rules from a local file.
-func readLocalFile(path string) ([]model.Rule, error) {
+func readLocalFile(path string, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open local file %s: %w", path, err)
 	}
 	defer file.Close()
 
-	return detectAndReadFile(file)
+	return detectAndReadFile(file, domainRepo)
 }
 
-func readFromSource(source string) ([]model.Rule, error) {
+func readFromSource(source string, domainRepo repos.DomainRepo) ([]model.Rule, error) {
 	switch {
 	case httpsPattern.MatchString(source):
-		return readHTTPSFile(source)
+		return readHTTPSFile(source, domainRepo)
 	case localFilePattern.MatchString(source):
-		return readLocalFile(source)
+		return readLocalFile(source, domainRepo)
 	default:
 		return nil, fmt.Errorf("neither HTTPS file, nor local file")
 	}
@@ -279,7 +302,7 @@ func (ls *listsService) LoadList(l *model.List) error {
 	}
 
 	// Read rules from the source
-	rules, err := readFromSource(l.Source)
+	rules, err := readFromSource(l.Source, ls.domainRepo)
 	if err != nil {
 		return fmt.Errorf("failed to read from source %s: %w", l.Source, err)
 	}
@@ -288,7 +311,7 @@ func (ls *listsService) LoadList(l *model.List) error {
 	for _, rule := range rules {
 		ruleID, err := ls.ruleRepo.CreateOrGet(&rule)
 		if err != nil {
-			return fmt.Errorf("failed to create rule for domain %s: %w", rule.Domain, err)
+			return fmt.Errorf("failed to create rule for domain ID %d: %w", rule.DomainID, err)
 		}
 
 		// Link the rule to the list
@@ -298,7 +321,7 @@ func (ls *listsService) LoadList(l *model.List) error {
 	}
 
 	// Load the updated rules into the list model
-	l.Rules, err = ls.listRepo.LoadRules(l.ID)
+	l.Rules, err = ls.lists.LoadRules(l.ID)
 	if err != nil {
 		return fmt.Errorf("failed to load rules for list %d: %w", l.ID, err)
 	}

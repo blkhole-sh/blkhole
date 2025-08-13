@@ -18,6 +18,7 @@ type RuleRepo interface {
 	FindByID(id int) (*model.Rule, error)
 	FindByList(listID int) ([]*model.Rule, error)
 	FindByDomain(domain string) ([]*model.Rule, error)
+	FindAll() ([]*model.Rule, error)
 	LinkToList(ruleID int, listID int) error
 	UnlinkFromList(ruleID int, listID int) error
 }
@@ -36,8 +37,8 @@ func NewRuleRepo(db *sql.DB) RuleRepo {
 // CreateOrGet stores a new rule into the database or returns existing one
 func (rr *ruleRepo) CreateOrGet(r *model.Rule) (int, error) {
 	// First, try to find existing rule
-	query := "SELECT id FROM rule WHERE domain = ? AND allowed = ?"
-	err := rr.db.QueryRowContext(rr.ctx, query, r.Domain, r.Allowed).Scan(&r.ID)
+	query := "SELECT id FROM rule WHERE domain_id = ? AND allowed = ?"
+	err := rr.db.QueryRowContext(rr.ctx, query, r.DomainID, r.Allowed).Scan(&r.ID)
 	if err == nil {
 		// Rule already exists, return its ID
 		return r.ID, nil
@@ -45,8 +46,8 @@ func (rr *ruleRepo) CreateOrGet(r *model.Rule) (int, error) {
 
 	// Rule doesn't exist, create it
 	if err == sql.ErrNoRows {
-		query := "INSERT INTO rule (domain, allowed) VALUES (?, ?) RETURNING id"
-		err = rr.db.QueryRowContext(rr.ctx, query, r.Domain, r.Allowed).Scan(&r.ID)
+		query := "INSERT INTO rule (domain_id, allowed) VALUES (?, ?) RETURNING id"
+		err = rr.db.QueryRowContext(rr.ctx, query, r.DomainID, r.Allowed).Scan(&r.ID)
 		return r.ID, err
 	}
 
@@ -56,13 +57,13 @@ func (rr *ruleRepo) CreateOrGet(r *model.Rule) (int, error) {
 
 // Update modifies an existing rule with given ID in the database if not referenced
 func (rr *ruleRepo) Update(id int, r *model.Rule) error {
-	query := `UPDATE rule SET domain=?, allowed=? WHERE id = ? AND id NOT IN (
+	query := `UPDATE rule SET domain_id=?, allowed=? WHERE id = ? AND id NOT IN (
 		SELECT DISTINCT rule_id FROM list_rule 
 		UNION 
 		SELECT DISTINCT rule_id FROM schedule_rule
 	)`
 
-	_, err := rr.db.ExecContext(rr.ctx, query, r.Domain, r.Allowed, id)
+	_, err := rr.db.ExecContext(rr.ctx, query, r.DomainID, r.Allowed, id)
 	if err != nil {
 		return err
 	}
@@ -86,9 +87,23 @@ func (rr *ruleRepo) Delete(id int) error {
 	return err
 }
 
+// FindAll returns all existing rules from the database
+func (rr *ruleRepo) FindAll() ([]*model.Rule, error) {
+	query := "SELECT id, domain_id, allowed FROM rule"
+	var rules []*model.Rule
+
+	err := sqlscan.Select(rr.ctx, rr.db, &rules, query)
+
+	if err != nil || rules == nil {
+		return []*model.Rule{}, nil
+	}
+
+	return rules, nil
+}
+
 // FindByID returns an existing rule with given id from the database
 func (rr *ruleRepo) FindByID(id int) (*model.Rule, error) {
-	query := "SELECT id, domain, allowed FROM rule WHERE id=?"
+	query := "SELECT id, domain_id, allowed FROM rule WHERE id=?"
 	var r model.Rule
 
 	if err := sqlscan.Get(rr.ctx, rr.db, &r, query, id); err != nil {
@@ -100,15 +115,12 @@ func (rr *ruleRepo) FindByID(id int) (*model.Rule, error) {
 
 // FindByList returns all existing rules for a given list ID
 func (rr *ruleRepo) FindByList(listID int) ([]*model.Rule, error) {
-	query := "SELECT r.id, r.domain, r.allowed FROM rule r JOIN list_rule lr ON r.id = lr.rule_id WHERE lr.list_id=?"
+	query := "SELECT r.id, r.domain_id, r.allowed FROM rule r JOIN list_rule lr ON r.id = lr.rule_id WHERE lr.list_id=?"
 	var rules []*model.Rule
 
-	if err := sqlscan.Select(rr.ctx, rr.db, &rules, query, listID); err != nil {
-		return []*model.Rule{}, nil
-	}
+	err := sqlscan.Select(rr.ctx, rr.db, &rules, query, listID)
 
-	// Ensure we return empty slice instead of nil
-	if rules == nil {
+	if err != nil || rules == nil {
 		return []*model.Rule{}, nil
 	}
 
@@ -117,15 +129,12 @@ func (rr *ruleRepo) FindByList(listID int) ([]*model.Rule, error) {
 
 // FindByDomain returns all existing rules for a given domain
 func (rr *ruleRepo) FindByDomain(domain string) ([]*model.Rule, error) {
-	query := "SELECT id, domain, allowed FROM rule WHERE domain=?"
+	query := "SELECT r.id, r.domain_id, r.allowed FROM rule r JOIN domain d ON r.domain_id = d.id WHERE d.name=?"
 	var rules []*model.Rule
 
-	if err := sqlscan.Select(rr.ctx, rr.db, &rules, query, domain); err != nil {
-		return []*model.Rule{}, nil
-	}
+	err := sqlscan.Select(rr.ctx, rr.db, &rules, query, domain)
 
-	// Ensure we return empty slice instead of nil
-	if rules == nil {
+	if err != nil || rules == nil {
 		return []*model.Rule{}, nil
 	}
 

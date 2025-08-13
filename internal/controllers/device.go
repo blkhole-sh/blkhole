@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/lemon3studio/leo/internal/model"
 	"github.com/lemon3studio/leo/internal/repos"
@@ -15,6 +16,7 @@ import (
 // DeviceController defines the interface for device operations
 type DeviceController interface {
 	Create(http.ResponseWriter, *http.Request)
+	FindByID(http.ResponseWriter, *http.Request)
 	FindByHash(http.ResponseWriter, *http.Request)
 	FindByUser(http.ResponseWriter, *http.Request)
 	Update(http.ResponseWriter, *http.Request)
@@ -56,9 +58,32 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	d.Hash = hash
 
 	// Store device into db
-	dc.devices.Create(&d)
+	if err := dc.devices.Create(&d); err != nil {
+		log.Printf("failed to create device: %v", err)
+		http.Error(w, "Unable to create device", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with JSON encoded device DTO
+	json.NewEncoder(w).Encode(d.ToDTO())
+}
+
+func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	d, err := dc.devices.FindByID(id)
+	if err != nil {
+		log.Printf("failed to find device by id %d: %v", id, err)
+		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		return
+	}
+
 	json.NewEncoder(w).Encode(d.ToDTO())
 }
 
@@ -77,13 +102,18 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 }
 
 func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
-	// Get user hash from url params
-	userHash := chi.URLParam(r, "userHash")
+	// Get user ID from url params
+	userID, err := strconv.Atoi(chi.URLParam(r, "userId"))
+	if err != nil {
+		log.Printf("unable to parse userId from path parameter: %v", err)
+		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Find devices in db
-	d, err := dc.devices.FindByUser(userHash)
+	d, err := dc.devices.FindByUser(userID)
 	if err != nil {
-		log.Printf("failed to find devices for user %s: %v", userHash, err)
+		log.Printf("failed to find devices for user %d: %v", userID, err)
 		http.Error(w, "Unable to find devices in db", http.StatusNotFound)
 		return
 	}
@@ -107,8 +137,13 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize device
 	var d model.Device
 
-	// Get hash from url params
-	hash := chi.URLParam(r, "hash")
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Encode device from request body
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
@@ -118,18 +153,31 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update device in db
-	dc.devices.Update(hash, &d)
+	if err := dc.devices.Update(id, &d); err != nil {
+		log.Printf("failed to update device with id %d: %v", id, err)
+		http.Error(w, "Unable to update device", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with JSON encoded device DTO
 	json.NewEncoder(w).Encode(d.ToDTO())
 }
 
 func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
-	// Get hash from url params
-	hash := chi.URLParam(r, "hash")
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Delete device from db
-	dc.devices.Delete(hash)
+	if err := dc.devices.Delete(id); err != nil {
+		log.Printf("failed to delete device with id %d: %v", id, err)
+		http.Error(w, "Unable to delete device", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

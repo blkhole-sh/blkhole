@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
@@ -50,21 +51,28 @@ func NewMobileConfigController(domain string, devices repos.DeviceRepo) MobileCo
 }
 
 func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.Request) {
-	// Get device hash from url params
-	deviceHash := chi.URLParam(r, "hash")
-
-	device, err := mc.devices.FindByHash(deviceHash)
+	// Get device id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Printf("failed to find device by hash %s: %v", deviceHash, err)
-		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
 	}
 
-	// Generate UUIDs for mobile config using standard library
+	// Find device with given id in db
+	device, err := mc.devices.FindByID(id)
+	if err != nil {
+		log.Printf("failed to find device by id %d: %v", id, err)
+		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		return
+	}
+
+	// Generate UUIDs for mobile config
 	uuid1 := generateUUID()
 	uuid2 := generateUUID()
 
-	// Build server URL
-	serverURL := "https://" + mc.domain + "/" + deviceHash + "/dns-query"
+	// Build server URL using device hash (required for DNS query endpoint)
+	serverURL := "https://" + mc.domain + "/" + device.Hash + "/dns-query"
 
 	// Prepare template data
 	data := struct {

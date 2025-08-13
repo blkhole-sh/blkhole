@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+
 	"github.com/lemon3studio/leo/internal/test"
 )
 
@@ -25,12 +26,12 @@ func NewTestController(test test.Test) TestController {
 
 // RunTest executes the test suite
 func (tc *testController) RunTest(w http.ResponseWriter, r *http.Request) {
-	uh, err := tc.test.Test()
+	ui, err := tc.test.Test()
 	if err != nil {
 		http.Error(w, "Test failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Test completed successfully, userHash: %s", uh)
+	fmt.Fprintf(w, "Test completed successfully, userID: %d", ui)
 }

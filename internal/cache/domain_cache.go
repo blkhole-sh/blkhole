@@ -1,0 +1,81 @@
+// Package cache provides in-memory caching for DNS blocking lookups
+package cache
+
+import (
+	"strings"
+
+	"github.com/armon/go-radix"
+	"github.com/lemon3studio/leo/internal/model"
+)
+
+// DomainCache provides fast domain-to-rule lookups using a radix tree
+type DomainCache interface {
+	LoadDomains(domains []*model.Domain)
+	LoadRules(rules []*model.Rule)
+	LookupDomainID(domain string) (int, bool)
+	GetRules(domainID int) []int
+}
+
+// domainCache implements the DomainCache interface
+type domainCache struct {
+	domainTree   *radix.Tree   // Reversed domain → domain ID
+	domainToRule map[int][]int // Domain ID → Rule IDs
+}
+
+// NewDomainCache creates a new domain cache instance
+func NewDomainCache() DomainCache {
+	return &domainCache{
+		domainTree:   radix.New(),
+		domainToRule: make(map[int][]int),
+	}
+}
+
+// reverseDomain converts "example.com" to "com.example" for radix tree storage
+func reverseDomain(domain string) string {
+	parts := strings.Split(domain, ".")
+	for i := 0; i < len(parts)/2; i++ {
+		parts[i], parts[len(parts)-1-i] = parts[len(parts)-1-i], parts[i]
+	}
+	return strings.Join(parts, ".")
+}
+
+// LoadDomains populates the radix tree with domain data
+func (dc *domainCache) LoadDomains(domains []*model.Domain) {
+	for _, d := range domains {
+		reversedDomain := reverseDomain(d.Name)
+		dc.domainTree.Insert(reversedDomain, d.ID)
+	}
+}
+
+// LoadRules populates the domain-to-rule mapping
+func (dc *domainCache) LoadRules(rules []*model.Rule) {
+	for _, r := range rules {
+		dc.domainToRule[r.DomainID] = append(dc.domainToRule[r.DomainID], r.ID)
+	}
+}
+
+// LookupDomainID finds the most specific domain ID for a given domain using longest-prefix match
+func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
+	// Convert domain to reversed format for radix tree lookup (e.g., "api.example.com" → "com.example.api")
+	reversedDomain := reverseDomain(domain)
+
+	var domainID int
+
+	// Walk the radix tree to find the longest matching prefix (enables hierarchical domain blocking)
+	dc.domainTree.WalkPath(reversedDomain, func(key string, value any) bool {
+		// Extract domain ID from the matched node
+		if id, ok := value.(int); ok {
+			domainID = id
+		}
+		// Return false to get the longest match (most specific domain)
+		return false
+	})
+
+	// Return the domain ID and whether a match was found
+	return domainID, domainID != 0
+}
+
+// GetRules returns all rule IDs for a given domain ID
+func (dc *domainCache) GetRules(domainID int) []int {
+	return dc.domainToRule[domainID]
+}

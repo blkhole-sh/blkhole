@@ -3,6 +3,7 @@ module github.com/lemon3studio/leo
 go 1.24
 
 require (
+	github.com/armon/go-radix v1.0.0
 	github.com/georgysavva/scany/v2 v2.1.4
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.2

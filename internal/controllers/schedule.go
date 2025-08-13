@@ -94,11 +94,16 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request) {
-	// Get user hash from url params
-	userHash := chi.URLParam(r, "userHash")
+	// Get user ID from url params
+	userID, err := strconv.Atoi(chi.URLParam(r, "userId"))
+	if err != nil {
+		log.Printf("unable to parse userId from path parameter: %v", err)
+		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Find schedules in db
-	s, err := sc.schedules.FindByUser(userHash)
+	s, err := sc.schedules.FindByUser(userID)
 	if err != nil {
 		log.Printf("unable to find schedules in db: %v", err)
 		http.Error(w, "Unable to find schedules in db", http.StatusNotFound)

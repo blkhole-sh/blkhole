@@ -29,7 +29,7 @@ export const login = async (email: string, password: string) => {
 	console.log("Login response:", responseData);
 	const { user: userData } = responseData;
 	console.log("User data:", userData);
-	console.log("User hash:", userData?.hash);
+	console.log("User id:", userData?.id);
 
 	// Store user data in localStorage (not sensitive)
 	localStorage.setItem("user", JSON.stringify(userData));
@@ -141,17 +141,17 @@ export const getQuote = (): Promise<Quote> => api("/quote");
 /** Get all devices for the current user - returns DeviceDTO with schedule counts */
 export const getDevices = (): Promise<Device[]> => {
 	const user = getCurrentUser();
-	return api(`/users/${user.hash}/devices`);
+	return api(`/users/${user.id}/devices`);
 };
 
 /** Get all domain lists for the current user - returns ListDTO with rule and schedule counts */
 export const getLists = (): Promise<List[]> => {
 	const user = getCurrentUser();
-	return api(`/users/${user.hash}/lists`);
+	return api(`/users/${user.id}/lists`);
 };
 
 /** Get all schedules for the current user - returns ScheduleDTO with device, domain, and list counts */
 export const getSchedules = (): Promise<Schedule[]> => {
 	const user = getCurrentUser();
-	return api(`/users/${user.hash}/schedules`);
+	return api(`/users/${user.id}/schedules`);
 };

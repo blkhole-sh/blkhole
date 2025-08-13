@@ -3,15 +3,16 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/lemon3studio/leo/internal/model"
 	"github.com/lemon3studio/leo/internal/repos"
-	"time"
 
 	"github.com/go-chi/jwtauth/v5"
 )
 
 const (
-	TokenExpiry        = 1 * time.Hour   // Short-lived access token
+	TokenExpiry        = 1 * time.Hour      // Short-lived access token
 	RefreshTokenExpiry = 7 * 24 * time.Hour // 7 days refresh token
 )
 
@@ -53,13 +54,17 @@ func (as *authService) Login(email, password string) (*LoginResult, error) {
 	}
 
 	valid, err := as.cryptoService.VerifyPassword(password, user.PasswordHash)
-	if err != nil || !valid {
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	if !valid {
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
 	// Create access token (short-lived)
 	accessClaims := map[string]any{
-		"sub":   user.Hash,
+		"sub":   fmt.Sprintf("%d", user.ID),
 		"email": user.Email,
 		"type":  "access",
 		"exp":   time.Now().Add(TokenExpiry).Unix(),
@@ -73,7 +78,7 @@ func (as *authService) Login(email, password string) (*LoginResult, error) {
 
 	// Create refresh token (long-lived)
 	refreshClaims := map[string]any{
-		"sub":  user.Hash,
+		"sub":  fmt.Sprintf("%d", user.ID),
 		"type": "refresh",
 		"exp":  time.Now().Add(RefreshTokenExpiry).Unix(),
 		"iat":  time.Now().Unix(),
@@ -99,26 +104,26 @@ func (as *authService) RefreshToken(refreshToken string) (*LoginResult, error) {
 	}
 
 	claims := token.PrivateClaims()
-	
+
 	// Verify it's a refresh token
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "refresh" {
 		return nil, fmt.Errorf("invalid token type")
 	}
 
-	userHash, ok := claims["sub"].(string)
+	userID, ok := claims["sub"].(float64) // JSON numbers are float64 in Go
 	if !ok {
 		return nil, fmt.Errorf("invalid token subject")
 	}
 
-	user, err := as.userRepo.FindByHash(userHash)
+	user, err := as.userRepo.FindByID(int(userID))
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
 	// Create new access token
 	accessClaims := map[string]any{
-		"sub":   user.Hash,
+		"sub":   fmt.Sprintf("%d", user.ID),
 		"email": user.Email,
 		"type":  "access",
 		"exp":   time.Now().Add(TokenExpiry).Unix(),
@@ -132,7 +137,7 @@ func (as *authService) RefreshToken(refreshToken string) (*LoginResult, error) {
 
 	// Create new refresh token
 	refreshClaims := map[string]any{
-		"sub":  user.Hash,
+		"sub":  user.ID,
 		"type": "refresh",
 		"exp":  time.Now().Add(RefreshTokenExpiry).Unix(),
 		"iat":  time.Now().Unix(),
@@ -163,12 +168,12 @@ func (as *authService) UserFromContext(ctx context.Context) (*model.User, error)
 		return nil, fmt.Errorf("invalid token type")
 	}
 
-	userHash, ok := claims["sub"].(string)
+	userID, ok := claims["sub"].(float64) // JSON numbers are float64 in Go
 	if !ok {
 		return nil, fmt.Errorf("invalid token subject")
 	}
 
-	user, err := as.userRepo.FindByHash(userHash)
+	user, err := as.userRepo.FindByID(int(userID))
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}

@@ -1,13 +1,14 @@
 // Define UserDTO interface
 export interface UserDTO {
-	hash: string;
+	id: string;
 	name: string;
 	email: string;
 }
 
 // Define DeviceDTO interface
 export interface DeviceDTO {
-	hash: string;
+	id: string;
+	hash: string; // Keep hash for mobile config URLs
 	name: string;
 	os: string;
 }

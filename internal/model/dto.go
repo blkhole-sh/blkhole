@@ -2,7 +2,7 @@ package model
 
 // UserDTO represents a user data transfer object
 type UserDTO struct {
-	Hash         string `json:"hash"`
+	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"-"`
@@ -13,10 +13,11 @@ type UserDTO struct {
 
 // DeviceDTO represents a device data transfer object
 type DeviceDTO struct {
-	Hash      string `json:"hash"`
+	ID        int    `json:"id"`
 	Name      string `json:"name"`
 	OS        OS     `json:"os"`
-	UserHash  string `json:"userHash"`
+	Hash      string `json:"hash"`
+	UserID    int    `json:"userId"`
 	Schedules int    `json:"schedules"`
 }
 
@@ -26,7 +27,7 @@ type ListDTO struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Source      string `json:"source"`
-	UserHash    string `json:"userHash"`
+	UserID      int    `json:"userId"`
 	Rules       int    `json:"rules"`
 	Schedules   int    `json:"schedules"`
 }
@@ -37,7 +38,10 @@ type ScheduleDTO struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 	Name      string `json:"name"`
-	UserHash  string `json:"userHash"`
+	UserID    int    `json:"userId"`
+	DeviceIDs []int  `json:"deviceIds"`
+	RuleIDs   []int  `json:"ruleIds"`
+	ListIDs   []int  `json:"listIds"`
 	Devices   int    `json:"devices"`
 	Rules     int    `json:"rules"`
 	Lists     int    `json:"lists"`
@@ -50,59 +54,23 @@ type ScheduleDTO struct {
 	Sunday    bool   `json:"sunday"`
 }
 
-// ToDTO converts a User model to UserDTO with counts
-func (u *User) ToDTO() UserDTO {
-	return UserDTO{
-		Hash:      u.Hash,
-		Name:      u.Name,
-		Email:     u.Email,
-		Devices:   len(u.DeviceHashes),
-		Lists:     len(u.ListIds),
-		Schedules: len(u.ScheduleIds),
-	}
-}
-
-// ToDTO converts a Device model to DeviceDTO with counts
-func (d *Device) ToDTO() DeviceDTO {
-	return DeviceDTO{
-		Hash:      d.Hash,
-		Name:      d.Name,
-		OS:        d.OS,
-		UserHash:  d.UserHash,
-		Schedules: len(d.ScheduleIds),
-	}
-}
-
-// ToDTO converts a List model to ListDTO with counts
-func (l *List) ToDTO() ListDTO {
-	return ListDTO{
-		ID:          l.ID,
-		Name:        l.Name,
-		Description: l.Description,
-		Source:      l.Source,
-		UserHash:    l.UserHash,
-		Rules:       len(l.Rules),
-		Schedules:   len(l.ScheduleIds),
-	}
-}
-
-// ToDTO converts a Schedule model to ScheduleDTO with counts
-func (s *Schedule) ToDTO() ScheduleDTO {
-	return ScheduleDTO{
-		ID:        s.ID,
-		StartTime: s.StartTime,
-		EndTime:   s.EndTime,
-		Name:      s.Name,
-		UserHash:  s.UserHash,
-		Devices:   len(s.DeviceHashes),
-		Rules:     len(s.RuleIDs),
-		Lists:     len(s.ListIds),
-		Monday:    s.Monday,
-		Tuesday:   s.Tuesday,
-		Wednesday: s.Wednesday,
-		Thursday:  s.Thursday,
-		Friday:    s.Friday,
-		Saturday:  s.Saturday,
-		Sunday:    s.Sunday,
+// ToModel converts ScheduleDTO to Schedule model with boolean fields
+func (dto *ScheduleDTO) ToModel() *Schedule {
+	return &Schedule{
+		Name:      dto.Name,
+		UserID:    dto.UserID,
+		DeviceIDs: dto.DeviceIDs,
+		RuleIDs:   dto.RuleIDs,
+		ListIDs:   dto.ListIDs,
+		StartTime: dto.StartTime,
+		EndTime:   dto.EndTime,
+		Monday:    dto.Monday,
+		Tuesday:   dto.Tuesday,
+		Wednesday: dto.Wednesday,
+		Thursday:  dto.Thursday,
+		Friday:    dto.Friday,
+		Saturday:  dto.Saturday,
+		Sunday:    dto.Sunday,
+		ID:        dto.ID,
 	}
 }

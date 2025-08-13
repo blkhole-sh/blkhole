@@ -27,7 +27,7 @@ export default function DeviceTile(props: Props) {
 				</div>
 			</div>
 			<div class="flex gap-x-4">
-				<A href={`/devices/${props.device.hash}`}>
+				<A href={`/devices/${props.device.id}`}>
 					<Edit />
 				</A>
 				<Trash />

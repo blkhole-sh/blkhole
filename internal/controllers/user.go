@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+
 	"github.com/lemon3studio/leo/internal/model"
 	"github.com/lemon3studio/leo/internal/repos"
 	"github.com/lemon3studio/leo/internal/services"
@@ -15,7 +17,7 @@ import (
 // UserController defines the interface for user operations
 type UserController interface {
 	Create(http.ResponseWriter, *http.Request)
-	FindByHash(http.ResponseWriter, *http.Request)
+	FindByID(http.ResponseWriter, *http.Request)
 	Update(http.ResponseWriter, *http.Request)
 	Delete(http.ResponseWriter, *http.Request)
 }
@@ -45,27 +47,27 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := uc.cryptoService.RandomHash()
-	if err != nil {
-		log.Printf("unable to create hash for user: %v", err)
-		http.Error(w, "Unable to create hash for user", http.StatusInternalServerError)
+	// Store user into db
+	if err := uc.users.Create(&u); err != nil {
+		log.Printf("failed to create user: %v", err)
+		http.Error(w, "Unable to create user", http.StatusInternalServerError)
 		return
 	}
-
-	u.Hash = hash
-
-	// Store user into db
-	uc.users.Create(&u)
 
 	// Respond with JSON encoded user
 	json.NewEncoder(w).Encode(u.ToDTO())
 }
 
-func (uc *userController) FindByHash(w http.ResponseWriter, r *http.Request) {
-	// Get hash from url params
-	hash := chi.URLParam(r, "hash")
+func (uc *userController) FindByID(w http.ResponseWriter, r *http.Request) {
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
 
-	u, err := uc.users.FindByHash(hash)
+	u, err := uc.users.FindByID(id)
 	if err != nil {
 		log.Printf("unable to find user in db: %v", err)
 		http.Error(w, "Unable to find user in db", http.StatusNotFound)
@@ -80,8 +82,13 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	// Initialize user
 	var u model.User
 
-	// Get hash from url params
-	hash := chi.URLParam(r, "hash")
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Encode user from request body
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
@@ -91,19 +98,31 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user in db
-	uc.users.Update(hash, &u)
+	if err := uc.users.Update(id, &u); err != nil {
+		log.Printf("failed to update user with id %d: %v", id, err)
+		http.Error(w, "Unable to update user", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with JSON encoded user
 	json.NewEncoder(w).Encode(u.ToDTO())
 }
 
 func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {
-	// Get hash from url params
-	hash := chi.URLParam(r, "hash")
+	// Get id from url params
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Printf("unable to parse id from path parameter: %v", err)
+		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Delete user from db
-	uc.users.Delete(hash)
-	w.WriteHeader(http.StatusNoContent)
+	if err := uc.users.Delete(id); err != nil {
+		log.Printf("failed to delete user with id %d: %v", id, err)
+		http.Error(w, "Unable to delete user", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

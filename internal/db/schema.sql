@@ -1,6 +1,6 @@
 -- Create user table:
 CREATE TABLE IF NOT EXISTS user (
-    hash TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     password_hash TEXT NOT NULL
@@ -8,10 +8,25 @@ CREATE TABLE IF NOT EXISTS user (
 
 -- Create device table:
 CREATE TABLE IF NOT EXISTS device (
-    hash TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     os TEXT NOT NULL,
-    user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE
+    hash TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE
+);
+
+-- Create domain table:
+CREATE TABLE IF NOT EXISTS domain (
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);;
+
+-- Create rule table:
+CREATE TABLE IF NOT EXISTS rule (
+    id INTEGER PRIMARY KEY,
+    allowed INTEGER NOT NULL,
+    domain_id INTEGER NOT NULL REFERENCES domain (id) ON DELETE CASCADE,
+    UNIQUE(domain_id, allowed)
 );
 
 -- Create list table:
@@ -20,15 +35,7 @@ CREATE TABLE IF NOT EXISTS list (
     name TEXT UNIQUE NOT NULL,
     description TEXT,
     source TEXT,
-    user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE
-);
-
--- Create rule table:
-CREATE TABLE IF NOT EXISTS rule (
-    id INTEGER PRIMARY KEY,
-    domain TEXT NOT NULL,
-    allowed INTEGER NOT NULL,
-    UNIQUE(domain, allowed)
+    user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE
 );
 
 -- Create schedule table:
@@ -37,16 +44,25 @@ CREATE TABLE IF NOT EXISTS schedule (
     name TEXT NOT NULL,
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
-    user_hash TEXT NOT NULL REFERENCES user (hash) ON DELETE CASCADE,
     days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
-    CHECK (start_time < end_time)
+    user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
+    CHECK (start_time < end_time),
+    -- Validate that times follow HH:MM format
+    CHECK (start_time GLOB '[0-2][0-9]:[0-5][0-9]'),
+    CHECK (end_time GLOB '[0-2][0-9]:[0-5][0-9]'),
+    -- Validate that times fit 5-minute slots (minutes must be multiple of 5)
+    CHECK (CAST(SUBSTR(start_time, 4, 2) AS INTEGER) % 5 = 0),
+    CHECK (CAST(SUBSTR(end_time, 4, 2) AS INTEGER) % 5 = 0),
+    -- Validate that hours are 00-23
+    CHECK (CAST(SUBSTR(start_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(start_time, 1, 2) AS INTEGER) <= 23),
+    CHECK (CAST(SUBSTR(end_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(end_time, 1, 2) AS INTEGER) <= 23)
 );
 
 -- Create device - schedule reference table:
 CREATE TABLE IF NOT EXISTS device_schedule (
-    device_hash TEXT NOT NULL REFERENCES device (hash) ON DELETE CASCADE,
+    device_id INTEGER NOT NULL REFERENCES device (id) ON DELETE CASCADE,
     schedule_id INTEGER NOT NULL REFERENCES schedule (id) ON DELETE CASCADE,
-    PRIMARY KEY (device_hash, schedule_id)
+    PRIMARY KEY (device_id, schedule_id)
 );
 
 -- Create list - schedule reference table:
@@ -72,10 +88,11 @@ CREATE TABLE IF NOT EXISTS schedule_rule (
 
 -- Create indexes for performance optimization:
 CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
-CREATE INDEX IF NOT EXISTS idx_device_user_hash ON device(user_hash);
-CREATE INDEX IF NOT EXISTS idx_rule_domain ON rule(domain);
-CREATE INDEX IF NOT EXISTS idx_schedule_user_hash ON schedule(user_hash);
-CREATE INDEX IF NOT EXISTS idx_device_schedule_device_hash ON device_schedule(device_hash);
+CREATE INDEX IF NOT EXISTS idx_device_user_id ON device(user_id);
+CREATE INDEX IF NOT EXISTS idx_rule_domain_id ON rule(domain_id);
+CREATE INDEX IF NOT EXISTS idx_domain_name ON domain(name);
+CREATE INDEX IF NOT EXISTS idx_schedule_user_id ON schedule(user_id);
+CREATE INDEX IF NOT EXISTS idx_device_schedule_device_id ON device_schedule(device_id);
 CREATE INDEX IF NOT EXISTS idx_list_schedule_list_id ON list_schedule(list_id);
 CREATE INDEX IF NOT EXISTS idx_list_schedule_schedule_id ON list_schedule(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_list_rule_rule_id ON list_rule(rule_id);

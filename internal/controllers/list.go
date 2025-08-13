@@ -73,11 +73,16 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
-	// Get user hash from url params
-	userHash := chi.URLParam(r, "userHash")
+	// Get user ID from url params
+	userID, err := strconv.Atoi(chi.URLParam(r, "userId"))
+	if err != nil {
+		log.Printf("unable to parse userId from path parameter: %v", err)
+		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
 
 	// Find lists in db
-	l, err := lc.lists.FindByUser(userHash)
+	l, err := lc.lists.FindByUser(userID)
 	if err != nil {
 		log.Printf("unable to find blocklists in db: %v", err)
 		http.Error(w, "Unable to find blocklists in db", http.StatusNotFound)

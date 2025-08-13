@@ -48,6 +48,7 @@ var (
 	rules     repos.RuleRepo
 	lists     repos.ListRepo
 	schedules repos.ScheduleRepo
+	domains   repos.DomainRepo
 
 	// Services
 	contentBlocker services.ContentBlocker
@@ -130,11 +131,12 @@ func initDependencies(cfg *Config) {
 	lists = repos.NewListRepo(db)
 	schedules = repos.NewScheduleRepo(db)
 	users = repos.NewUserRepo(db)
+	domains = repos.NewDomainRepo(db)
 
 	// Initialize services
-	contentBlocker = services.NewContentBlocker(schedules)
+	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains)
 	cryptoService = services.NewCryptoService(secret)
-	listService = services.NewListsService(lists, rules)
+	listService = services.NewListsService(lists, rules, domains)
 
 	// Initialize auth service with token auth
 	tokenAuth = jwtauth.New("HS256", secret, nil)
@@ -159,7 +161,7 @@ func initDependencies(cfg *Config) {
 	webController = controllers.NewWebController(webSubFS)
 
 	// Initialize test
-	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService)
+	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains)
 	testController = controllers.NewTestController(t)
 }
 
@@ -206,29 +208,29 @@ func initRouter() *chi.Mux {
 			r.Get("/auth/me", authController.GetCurrentUser)
 
 			// User API routes
-			r.Get("/users/{hash}", userController.FindByHash)
+			r.Get("/users/{id}", userController.FindByID)
 			r.Put("/users", userController.Create)
-			r.Post("/users/{hash}", userController.Update)
-			r.Delete("/users/{hash}", userController.Delete)
+			r.Post("/users/{id}", userController.Update)
+			r.Delete("/users/{id}", userController.Delete)
 
 			// Device API routes
-			r.Get("/devices/{hash}", deviceController.FindByHash)
-			r.Get("/devices/{hash}/config", mobileConfigController.GenerateConfig)
-			r.Get("/users/{userHash}/devices", deviceController.FindByUser)
+			r.Get("/devices/{id}", deviceController.FindByID)
+			r.Get("/devices/{id}/config", mobileConfigController.GenerateConfig)
+			r.Get("/users/{userId}/devices", deviceController.FindByUser)
 			r.Put("/devices", deviceController.Create)
-			r.Post("/devices/{hash}", deviceController.Update)
-			r.Delete("/devices/{hash}", deviceController.Delete)
+			r.Post("/devices/{id}", deviceController.Update)
+			r.Delete("/devices/{id}", deviceController.Delete)
 
 			// List API routes
 			r.Get("/lists/{id}", listController.FindByID)
-			r.Get("/users/{userHash}/lists", listController.FindByUser)
+			r.Get("/users/{userId}/lists", listController.FindByUser)
 			r.Put("/lists", listController.Create)
 			r.Post("/lists/{id}", listController.Update)
 			r.Delete("/lists/{id}", listController.Delete)
 
 			// Schedule API routes
 			r.Get("/schedules/{id}", scheduleController.FindByID)
-			r.Get("/users/{userHash}/schedules", scheduleController.FindByUser)
+			r.Get("/users/{userId}/schedules", scheduleController.FindByUser)
 			r.Put("/schedules", scheduleController.Create)
 			r.Post("/schedules/{id}", scheduleController.Update)
 			r.Get("/is-blocked", scheduleController.IsBlocked)
@@ -270,6 +272,11 @@ func main() {
 
 	// Initialize dependencies
 	initDependencies(cfg)
+
+	// Initialize content blocker
+	if err = contentBlocker.Init(); err != nil {
+		log.Fatalf("failed to initialize content blocker: %v", err)
+	}
 
 	// Initialize router
 	r := initRouter()

@@ -15,22 +15,23 @@ type ScheduleRepo interface {
 	Create(s *model.Schedule) (int, error)
 	Update(id int, s *model.Schedule) error
 	Delete(id int) error
-	LinkDevice(id int, deviceHash string) error
+	LinkDevice(scheduleID int, deviceID int) error
 	LinkRule(id int, ruleID int) error
 	LinkList(id int, listID int) error
-	LoadDeviceHashes(id int) ([]string, error)
+	LoadDeviceIDs(id int) ([]int, error)
 	LoadRuleIDs(id int) ([]int, error)
 	LoadListIDs(id int) ([]int, error)
 	LoadRelations(s *model.Schedule) error
 	FindByID(id int) (*model.Schedule, error)
-	FindByUser(userHash string) ([]*model.Schedule, error)
+	FindByUser(userID int) ([]*model.Schedule, error)
 	FindByDevice(deviceHash string) ([]*model.Schedule, error)
 	FindByRule(ruleID int) ([]*model.Schedule, error)
 	FindByList(listID int) ([]*model.Schedule, error)
-	DomainBlocked(domain string, deviceHash string) (bool, error)
+	FindAll() ([]*model.Schedule, error)
+	FindScheduleRule() ([]*model.ScheduleRule, error)
 }
 
-// scheduleRepo implements the ScheduleRepo interface
+// scheduleRepo implements the Schedulesr interface
 type scheduleRepo struct {
 	db  *sql.DB
 	ctx context.Context
@@ -41,10 +42,9 @@ func NewScheduleRepo(db *sql.DB) ScheduleRepo {
 	return &scheduleRepo{db: db, ctx: context.Background()}
 }
 
-// encodeDaysToInt converts boolean weekday fields to integer encoding
-// Bit positions: Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+// encodeDaysToInt converts boolean days to integer bitmask for database storage
 func encodeDaysToInt(schedule *model.Schedule) int {
-	days := 0
+	var days uint8
 	if schedule.Monday {
 		days |= 1 << 0
 	}
@@ -66,19 +66,19 @@ func encodeDaysToInt(schedule *model.Schedule) int {
 	if schedule.Sunday {
 		days |= 1 << 6
 	}
-	return days
+	return int(days)
 }
 
-// decodeDaysFromInt converts integer encoding to boolean weekday fields
-// Bit positions: Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+// decodeDaysFromInt converts integer bitmask to boolean day fields
 func decodeDaysFromInt(days int, schedule *model.Schedule) {
-	schedule.Monday = (days & (1 << 0)) != 0
-	schedule.Tuesday = (days & (1 << 1)) != 0
-	schedule.Wednesday = (days & (1 << 2)) != 0
-	schedule.Thursday = (days & (1 << 3)) != 0
-	schedule.Friday = (days & (1 << 4)) != 0
-	schedule.Saturday = (days & (1 << 5)) != 0
-	schedule.Sunday = (days & (1 << 6)) != 0
+	dayBits := uint8(days)
+	schedule.Monday = dayBits&(1<<0) != 0
+	schedule.Tuesday = dayBits&(1<<1) != 0
+	schedule.Wednesday = dayBits&(1<<2) != 0
+	schedule.Thursday = dayBits&(1<<3) != 0
+	schedule.Friday = dayBits&(1<<4) != 0
+	schedule.Saturday = dayBits&(1<<5) != 0
+	schedule.Sunday = dayBits&(1<<6) != 0
 }
 
 // scheduleDbRow represents a schedule row from the database with integer days encoding
@@ -88,7 +88,7 @@ type dbSchedule struct {
 	StartTime string `db:"start_time"`
 	EndTime   string `db:"end_time"`
 	Days      int    `db:"days"`
-	UserHash  string `db:"user_hash"`
+	UserID    int    `db:"user_id"`
 }
 
 // toSchedule converts a scheduleDbRow to a model.Schedule
@@ -98,84 +98,78 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 		Name:      row.Name,
 		StartTime: row.StartTime,
 		EndTime:   row.EndTime,
-		UserHash:  row.UserHash,
+		UserID:    row.UserID,
 	}
 	decodeDaysFromInt(row.Days, s)
 	return s
 }
 
 // Create stores a new schedule into the database
-func (repo *scheduleRepo) Create(s *model.Schedule) (int, error) {
+func (sr *scheduleRepo) Create(s *model.Schedule) (int, error) {
 	days := encodeDaysToInt(s)
-	query := "INSERT INTO schedule (name, start_time, end_time, days, user_hash) VALUES (?, ?, ?, ?, ?) RETURNING id"
-	err := repo.db.QueryRowContext(repo.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserHash).Scan(&s.ID)
+	query := "INSERT INTO schedule (name, start_time, end_time, days, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id"
+	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserID).Scan(&s.ID)
 	return s.ID, err
 }
 
 // Update modifies an existing schedule with given ID in the database
-func (repo *scheduleRepo) Update(id int, s *model.Schedule) error {
+func (sr *scheduleRepo) Update(id int, s *model.Schedule) error {
 	days := encodeDaysToInt(s)
-	query := "UPDATE schedule SET name=?, start_time=?, end_time=?, days=?, user_hash=? WHERE id=?"
-	_, err := repo.db.ExecContext(repo.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserHash, id)
+	query := "UPDATE schedule SET name=?, start_time=?, end_time=?, days=?, user_id=? WHERE id=?"
+	_, err := sr.db.ExecContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserID, id)
 	return err
 }
 
 // Delete removes an existing schedule with given ID from the database
-func (repo *scheduleRepo) Delete(id int) error {
+func (sr *scheduleRepo) Delete(id int) error {
 	query := "DELETE FROM schedule WHERE id=?"
-	_, err := repo.db.ExecContext(repo.ctx, query, id)
+	_, err := sr.db.ExecContext(sr.ctx, query, id)
 	return err
 }
 
-// LinkDevice links a device with given hash to a schedule with given ID
-func (repo *scheduleRepo) LinkDevice(id int, deviceHash string) error {
-	query := "INSERT INTO device_schedule (device_hash, schedule_id) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, query, deviceHash, id)
+// LinkDevice links a device with given ID to a schedule with given ID
+func (sr *scheduleRepo) LinkDevice(scheduleID int, deviceID int) error {
+	query := "INSERT INTO device_schedule (device_id, schedule_id) VALUES (?, ?)"
+	_, err := sr.db.ExecContext(sr.ctx, query, deviceID, scheduleID)
 	return err
 }
 
 // LinkRule links a rule with given ID to a schedule with given ID
-func (repo *scheduleRepo) LinkRule(id int, ruleID int) error {
+func (sr *scheduleRepo) LinkRule(id int, ruleID int) error {
 	query := "INSERT INTO schedule_rule (schedule_id, rule_id) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, query, id, ruleID)
+	_, err := sr.db.ExecContext(sr.ctx, query, id, ruleID)
 	return err
 }
 
 // LinkList links a list with given ID to a schedule with given ID
-func (repo *scheduleRepo) LinkList(id int, listID int) error {
+func (sr *scheduleRepo) LinkList(id int, listID int) error {
 	query := "INSERT INTO list_schedule (list_id, schedule_id) VALUES (?, ?)"
-	_, err := repo.db.ExecContext(repo.ctx, query, listID, id)
+	_, err := sr.db.ExecContext(sr.ctx, query, listID, id)
 	return err
 }
 
-// LoadDeviceHashes returns hashes of all devices linked to schedule with given id
-func (repo *scheduleRepo) LoadDeviceHashes(id int) ([]string, error) {
-	query := "SELECT DISTINCT ds.device_hash FROM device_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE s.id = ?"
-	var deviceHashes []string
+// LoadDeviceIDs returns ids of all devices linked to schedule with given id
+func (sr *scheduleRepo) LoadDeviceIDs(id int) ([]int, error) {
+	query := "SELECT DISTINCT ds.device_id FROM device_schedule ds WHERE ds.schedule_id = ?"
+	var deviceIDs []int
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &deviceHashes, query, id); err != nil {
-		return []string{}, nil
-	}
+	err := sqlscan.Select(sr.ctx, sr.db, &deviceIDs, query, id)
 
-	// Ensure we return empty slice instead of nil
-	if deviceHashes == nil {
-		return []string{}, nil
-	}
-
-	return deviceHashes, nil
-}
-
-// LoadRuleIDs returns rule IDs linked to schedule with given id
-func (repo *scheduleRepo) LoadRuleIDs(id int) ([]int, error) {
-	query := "SELECT DISTINCT sr.rule_id FROM schedule_rule sr WHERE sr.schedule_id = ?"
-	var ruleIDs []int
-
-	if err := sqlscan.Select(repo.ctx, repo.db, &ruleIDs, query, id); err != nil {
+	if err != nil || deviceIDs == nil {
 		return []int{}, nil
 	}
 
-	// Ensure we return empty slice instead of nil
-	if ruleIDs == nil {
+	return deviceIDs, nil
+}
+
+// LoadRuleIDs returns rule IDs linked to schedule with given id
+func (sr *scheduleRepo) LoadRuleIDs(id int) ([]int, error) {
+	query := "SELECT DISTINCT sr.rule_id FROM schedule_rule sr WHERE sr.schedule_id = ?"
+	var ruleIDs []int
+
+	err := sqlscan.Select(sr.ctx, sr.db, &ruleIDs, query, id)
+
+	if err != nil || ruleIDs == nil {
 		return []int{}, nil
 	}
 
@@ -183,35 +177,32 @@ func (repo *scheduleRepo) LoadRuleIDs(id int) ([]int, error) {
 }
 
 // LoadListIDs returns ids of all lists linked to schedule with given id
-func (repo *scheduleRepo) LoadListIDs(id int) ([]int, error) {
+func (sr *scheduleRepo) LoadListIDs(id int) ([]int, error) {
 	query := "SELECT DISTINCT ls.list_id FROM list_schedule ls JOIN schedule s ON ls.schedule_id = s.id WHERE s.id = ?"
-	var listIds []int
+	var listIDs []int
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &listIds, query, id); err != nil {
+	err := sqlscan.Select(sr.ctx, sr.db, &listIDs, query, id)
+
+	if err != nil || listIDs == nil {
 		return []int{}, nil
 	}
 
-	// Ensure we return empty slice instead of nil
-	if listIds == nil {
-		return []int{}, nil
-	}
-
-	return listIds, nil
+	return listIDs, nil
 }
 
 // LoadRelations loads all relations (hashes, domains, ids) for schedule with given id
-func (repo *scheduleRepo) LoadRelations(s *model.Schedule) error {
+func (sr *scheduleRepo) LoadRelations(s *model.Schedule) error {
 	var err error
 
-	if s.DeviceHashes, err = repo.LoadDeviceHashes(s.ID); err != nil {
+	if s.DeviceIDs, err = sr.LoadDeviceIDs(s.ID); err != nil {
 		return err
 	}
 
-	if s.RuleIDs, err = repo.LoadRuleIDs(s.ID); err != nil {
+	if s.RuleIDs, err = sr.LoadRuleIDs(s.ID); err != nil {
 		return err
 	}
 
-	if s.ListIds, err = repo.LoadListIDs(s.ID); err != nil {
+	if s.ListIDs, err = sr.LoadListIDs(s.ID); err != nil {
 		return err
 	}
 
@@ -219,31 +210,31 @@ func (repo *scheduleRepo) LoadRelations(s *model.Schedule) error {
 }
 
 // FindByID returns an existing schedule with given id from the database
-func (repo *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, user_hash FROM schedule WHERE id=?"
+func (sr *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
+	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule WHERE id=?"
 	var s model.Schedule
 	var days int
 
-	row := repo.db.QueryRowContext(repo.ctx, query, id)
-	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.UserHash); err != nil {
+	row := sr.db.QueryRowContext(sr.ctx, query, id)
+	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.UserID); err != nil {
 		return nil, err
 	}
 
 	decodeDaysFromInt(days, &s)
 
-	if err := repo.LoadRelations(&s); err != nil {
+	if err := sr.LoadRelations(&s); err != nil {
 		return nil, err
 	}
 
 	return &s, nil
 }
 
-// FindByUser returns all existing schedules with given user hash from the database
-func (repo *scheduleRepo) FindByUser(userHash string) ([]*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, user_hash FROM schedule WHERE user_hash=?"
+// FindByUser returns all existing schedules with given user ID from the database
+func (sr *scheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
+	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule WHERE user_id=?"
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, query, userHash); err != nil {
+	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, userID); err != nil {
 		return []*model.Schedule{}, nil
 	}
 
@@ -255,7 +246,33 @@ func (repo *scheduleRepo) FindByUser(userHash string) ([]*model.Schedule, error)
 	var schedules []*model.Schedule
 	for _, row := range dbRows {
 		s := row.toSchedule()
-		if err := repo.LoadRelations(s); err != nil {
+		if err := sr.LoadRelations(s); err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+
+	return schedules, nil
+}
+
+// FindAll returns all existing schedules from the database
+func (sr *scheduleRepo) FindAll() ([]*model.Schedule, error) {
+	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule"
+	var dbRows []dbSchedule
+
+	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query); err != nil {
+		return []*model.Schedule{}, nil
+	}
+
+	// Ensure we return empty slice instead of nil
+	if dbRows == nil {
+		return []*model.Schedule{}, nil
+	}
+
+	var schedules []*model.Schedule
+	for _, row := range dbRows {
+		s := row.toSchedule()
+		if err := sr.LoadRelations(s); err != nil {
 			return nil, err
 		}
 		schedules = append(schedules, s)
@@ -265,12 +282,19 @@ func (repo *scheduleRepo) FindByUser(userHash string) ([]*model.Schedule, error)
 }
 
 // FindByDevice returns all existing schedules that are assigned to device with given hash
-func (repo *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, error) {
-	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_hash 
-          FROM device_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE ds.device_hash = ?`
+func (sr *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, error) {
+	// First get device ID from hash
+	var deviceID int
+	deviceQuery := "SELECT id FROM device WHERE hash = ?"
+	if err := sr.db.QueryRowContext(sr.ctx, deviceQuery, deviceHash).Scan(&deviceID); err != nil {
+		return []*model.Schedule{}, nil
+	}
+
+	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_id 
+          FROM device_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE ds.device_id = ?`
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, query, deviceHash); err != nil {
+	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, deviceID); err != nil {
 		return []*model.Schedule{}, nil
 	}
 
@@ -282,7 +306,7 @@ func (repo *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, er
 	var schedules []*model.Schedule
 	for _, row := range dbRows {
 		s := row.toSchedule()
-		if err := repo.LoadRelations(s); err != nil {
+		if err := sr.LoadRelations(s); err != nil {
 			return nil, err
 		}
 		schedules = append(schedules, s)
@@ -292,12 +316,12 @@ func (repo *scheduleRepo) FindByDevice(deviceHash string) ([]*model.Schedule, er
 }
 
 // FindByRule returns all existing schedules that are linked with rule with given ID
-func (repo *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
-	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_hash
+func (sr *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
+	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_id
           FROM schedule_rule sr JOIN schedule s ON sr.schedule_id = s.id WHERE sr.rule_id = ?`
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, query, ruleID); err != nil {
+	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, ruleID); err != nil {
 		return []*model.Schedule{}, nil
 	}
 
@@ -309,7 +333,7 @@ func (repo *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
 	var schedules []*model.Schedule
 	for _, row := range dbRows {
 		s := row.toSchedule()
-		if err := repo.LoadRelations(s); err != nil {
+		if err := sr.LoadRelations(s); err != nil {
 			return nil, err
 		}
 		schedules = append(schedules, s)
@@ -319,12 +343,12 @@ func (repo *scheduleRepo) FindByRule(ruleID int) ([]*model.Schedule, error) {
 }
 
 // FindByList returns all existing schedules that are linked with list with given id
-func (repo *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
-	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_hash
+func (sr *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
+	query := `SELECT DISTINCT s.id, s.name, s.start_time, s.end_time, s.days, s.user_id
           FROM list_schedule ls JOIN schedule s ON ls.schedule_id = s.id WHERE ls.list_id = ?`
 	var dbRows []dbSchedule
 
-	if err := sqlscan.Select(repo.ctx, repo.db, &dbRows, query, listID); err != nil {
+	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, listID); err != nil {
 		return []*model.Schedule{}, nil
 	}
 
@@ -336,7 +360,7 @@ func (repo *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 	var schedules []*model.Schedule
 	for _, row := range dbRows {
 		s := row.toSchedule()
-		if err := repo.LoadRelations(s); err != nil {
+		if err := sr.LoadRelations(s); err != nil {
 			return nil, err
 		}
 		schedules = append(schedules, s)
@@ -345,50 +369,21 @@ func (repo *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 	return schedules, nil
 }
 
-func (repo *scheduleRepo) DomainBlocked(domain string, deviceHash string) (bool, error) {
-	query := `WITH CurrentDateTime AS (
-              SELECT 
-                time('now', 'localtime') AS current_time_only,
-                (CAST(strftime('%w', 'now', 'localtime') AS INTEGER) + 6) % 7 AS current_day
-            )
-            SELECT COUNT(*) as blocked_count
-            FROM (
-              -- Domains blocked via rules directly linked to schedule
-              SELECT r.domain
-              FROM rule r
-              JOIN schedule_rule sr ON r.id = sr.rule_id
-              JOIN schedule s ON sr.schedule_id = s.id
-              JOIN device_schedule ds ON s.id = ds.schedule_id
-              CROSS JOIN CurrentDateTime
-              WHERE 
-                r.allowed = 0
-                AND r.domain = ?
-                AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-                AND (s.days & (1 << CAST(CurrentDateTime.current_day AS INTEGER))) != 0
-                AND ds.device_hash = ?
-              UNION
-              -- Domains blocked via rules in lists linked to schedule
-              SELECT r.domain
-              FROM rule r
-              JOIN list_rule lr ON r.id = lr.rule_id
-              JOIN list l ON lr.list_id = l.id
-              JOIN list_schedule ls ON l.id = ls.list_id
-              JOIN schedule s ON ls.schedule_id = s.id
-              JOIN device_schedule ds ON s.id = ds.schedule_id
-              CROSS JOIN CurrentDateTime
-              WHERE 
-                r.allowed = 0
-                AND r.domain = ?
-                AND CurrentDateTime.current_time_only BETWEEN s.start_time AND s.end_time
-                AND (s.days & (1 << CAST(CurrentDateTime.current_day AS INTEGER))) != 0
-                AND ds.device_hash = ?
-            )`
+// FindScheduleRule returns all existing entries from schedule rule many-to-many table
+func (sr *scheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
+	query := `SELECT schedule_id, rule_id FROM schedule_rule
+		        UNION
+	          SELECT ls.schedule_id, lr.rule_id
+	          FROM list_schedule ls
+	          JOIN list_rule lr ON ls.list_id = lr.list_id
+	          ORDER BY schedule_id, rule_id;`
 
-	var count int
-	err := repo.db.QueryRowContext(repo.ctx, query, domain, deviceHash, domain, deviceHash).Scan(&count)
+	var scheduleRule []*model.ScheduleRule
+
+	err := sqlscan.Select(sr.ctx, sr.db, &scheduleRule, query)
 	if err != nil {
-		return false, err
+		return []*model.ScheduleRule{}, nil
 	}
 
-	return count > 0, nil
+	return scheduleRule, nil
 }
