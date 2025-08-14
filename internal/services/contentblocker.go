@@ -59,6 +59,7 @@ func (cb *contentBlocker) initRules() error {
 	if err != nil {
 		return fmt.Errorf("failed to load rules: %w", err)
 	}
+	fmt.Printf("DEBUG: Loaded %d rules total\n", len(rules))
 	cb.domainCache.LoadRules(rules)
 	return nil
 }
