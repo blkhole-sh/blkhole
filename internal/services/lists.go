@@ -92,6 +92,11 @@ func readAdblockFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, er
 			continue
 		}
 
+		// Debug bild.de domains
+		if strings.Contains(domain, "bild.de") {
+			fmt.Printf("DEBUG: List loading - domain %s -> ID %d, allowed: %v\n", domain, domainID, allowed)
+		}
+
 		// Create rule
 		rule := model.Rule{
 			DomainID: domainID,
@@ -142,6 +147,11 @@ func readHostFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error
 			if err != nil {
 				log.Printf("error creating domain %s: %v", domain, err)
 				continue
+			}
+
+			// Debug bild.de domains
+			if strings.Contains(domain, "bild.de") {
+				fmt.Printf("DEBUG: Host file loading - domain %s -> ID %d, blocked\n", domain, domainID)
 			}
 
 			// Create rule (hosts files are always blocking)
