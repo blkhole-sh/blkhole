@@ -65,16 +65,23 @@ func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
 	reversedDomain := reverseDomain(domain)
 
 	var domainID int
+	var matchedKey string
 
 	// Walk the radix tree to find the longest matching prefix (enables hierarchical domain blocking)
 	dc.domainTree.WalkPath(reversedDomain, func(key string, value any) bool {
 		// Extract domain ID from the matched node
 		if id, ok := value.(int); ok {
 			domainID = id
+			matchedKey = key
 		}
 		// Return false to get the longest match (most specific domain)
 		return false
 	})
+
+	if domainID != 0 {
+		fmt.Printf("DEBUG: Domain lookup %s -> reversed %s -> matched key %s -> domain ID %d\n", 
+			domain, reversedDomain, matchedKey, domainID)
+	}
 
 	// Return the domain ID and whether a match was found
 	return domainID, domainID != 0
