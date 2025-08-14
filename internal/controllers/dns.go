@@ -108,7 +108,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If no domain was blocked, forward the DNS query to the upstream server
-	if response.Rcode == dns.RcodeSuccess {
+	if len(response.Answer) == 0 {
 		client := new(dns.Client)
 		res, _, err := client.Exchange(msg, dc.upstreamDNS)
 		if err != nil {

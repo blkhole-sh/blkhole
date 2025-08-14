@@ -663,3 +663,240 @@ func TestContentBlocker_SubdomainVsParent(t *testing.T) {
 		})
 	}
 }
+
+// TestContentBlocker_RealWorldData tests the content blocker with real-world data similar to test/test.go
+// This test mimics the production scenario with multiple devices, lists, and schedules.
+func TestContentBlocker_RealWorldData(t *testing.T) {
+	// Setup test database
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Create repositories
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
+
+	// Create content blocker
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+
+	// Create user - matching test/test.go
+	user := &model.User{
+		Name:         "Arian Gohari",
+		Email:        "arian@gohari.de",
+		PasswordHash: "hashed-password",
+	}
+	if err := users.Create(user); err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+	userID := user.ID
+
+	// Create devices - matching test/test.go
+	device1 := &model.Device{
+		Hash:   "iphone-test-hash",
+		Name:   "IPhone von Arian",
+		OS:     model.IOS,
+		UserID: userID,
+	}
+	if err := devices.Create(device1); err != nil {
+		t.Fatalf("Failed to create device1: %v", err)
+	}
+
+	device2 := &model.Device{
+		Hash:   "macbook-test-hash", 
+		Name:   "MacBook Pro von Arian",
+		OS:     model.MacOS,
+		UserID: userID,
+	}
+	if err := devices.Create(device2); err != nil {
+		t.Fatalf("Failed to create device2: %v", err)
+	}
+
+	// Create lists with some sample blocked domains (simplified from test/test.go)
+	// List 1: Ad blocking
+	list1 := &model.List{
+		Name:        "Ad Blocker",
+		Description: "Blocks ads and trackers",
+		Source:      "test://adblocker",
+		UserID:      userID,
+	}
+	list1ID, err := lists.Create(list1)
+	if err != nil {
+		t.Fatalf("Failed to create list1: %v", err)
+	}
+
+	// Add some ad domains to list1
+	adDomains := []string{"doubleclick.net", "googleadservices.com", "googlesyndication.com"}
+	for _, domain := range adDomains {
+		domainModel := &model.Domain{Name: domain}
+		domainID, err := domains.CreateOrGet(domainModel)
+		if err != nil {
+			t.Fatalf("Failed to create domain %s: %v", domain, err)
+		}
+
+		rule := &model.Rule{
+			DomainID: domainID,
+			Allowed:  false,
+		}
+		ruleID, err := rules.CreateOrGet(rule)
+		if err != nil {
+			t.Fatalf("Failed to create rule for %s: %v", domain, err)
+		}
+
+		if err := rules.LinkToList(ruleID, list1ID); err != nil {
+			t.Fatalf("Failed to link rule to list1: %v", err)
+		}
+	}
+
+	// List 2: Malware blocking  
+	list2 := &model.List{
+		Name:        "Malware Blocker",
+		Description: "Blocks malware and phishing",
+		Source:      "test://malware",
+		UserID:      userID,
+	}
+	list2ID, err := lists.Create(list2)
+	if err != nil {
+		t.Fatalf("Failed to create list2: %v", err)
+	}
+
+	// Add direct blocking rules (like in test/test.go)
+	directDomains := []string{"example.com", "test.com"}
+	var directRuleIDs []int
+	for _, domain := range directDomains {
+		domainModel := &model.Domain{Name: domain}
+		domainID, err := domains.CreateOrGet(domainModel)
+		if err != nil {
+			t.Fatalf("Failed to create domain %s: %v", domain, err)
+		}
+
+		rule := &model.Rule{
+			DomainID: domainID,
+			Allowed:  false,
+		}
+		ruleID, err := rules.CreateOrGet(rule)
+		if err != nil {
+			t.Fatalf("Failed to create rule for %s: %v", domain, err)
+		}
+		directRuleIDs = append(directRuleIDs, ruleID)
+	}
+
+	// Create schedule - Base Protection (00:00-23:55, all days) like in test/test.go
+	schedule := &model.Schedule{
+		Name:      "Base Protection",
+		UserID:    userID,
+		StartTime: "00:00",
+		EndTime:   "23:55",
+		Monday:    true,
+		Tuesday:   true,
+		Wednesday: true,
+		Thursday:  true,
+		Friday:    true,
+		Saturday:  true,
+		Sunday:    true,
+	}
+
+	scheduleID, err := schedules.Create(schedule)
+	if err != nil {
+		t.Fatalf("Failed to create schedule: %v", err)
+	}
+
+	// Link devices to schedule
+	if err := schedules.LinkDevice(scheduleID, device1.ID); err != nil {
+		t.Fatalf("Failed to link device1 to schedule: %v", err)
+	}
+	if err := schedules.LinkDevice(scheduleID, device2.ID); err != nil {
+		t.Fatalf("Failed to link device2 to schedule: %v", err)
+	}
+
+	// Link lists to schedule
+	if err := schedules.LinkList(scheduleID, list1ID); err != nil {
+		t.Fatalf("Failed to link list1 to schedule: %v", err)
+	}
+	if err := schedules.LinkList(scheduleID, list2ID); err != nil {
+		t.Fatalf("Failed to link list2 to schedule: %v", err)
+	}
+
+	// Link direct rules to schedule
+	for _, ruleID := range directRuleIDs {
+		if err := schedules.LinkRule(scheduleID, ruleID); err != nil {
+			t.Fatalf("Failed to link rule %d to schedule: %v", ruleID, err)
+		}
+	}
+
+	// Initialize the content blocker
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Failed to initialize content blocker: %v", err)
+	}
+
+	// Test cases
+	tests := []struct {
+		name       string
+		domain     string
+		deviceHash string
+		expected   bool
+	}{
+		// Test direct blocked domains
+		{
+			name:       "Block example.com on iPhone",
+			domain:     "example.com",
+			deviceHash: "iphone-test-hash",
+			expected:   true,
+		},
+		{
+			name:       "Block test.com on MacBook",
+			domain:     "test.com",
+			deviceHash: "macbook-test-hash",
+			expected:   true,
+		},
+		// Test list blocked domains
+		{
+			name:       "Block ad domain on iPhone",
+			domain:     "doubleclick.net",
+			deviceHash: "iphone-test-hash",
+			expected:   true,
+		},
+		{
+			name:       "Block ad subdomain on MacBook",
+			domain:     "stats.doubleclick.net",
+			deviceHash: "macbook-test-hash",
+			expected:   true,
+		},
+		// Test allowed domains
+		{
+			name:       "Allow google.com on iPhone",
+			domain:     "google.com",
+			deviceHash: "iphone-test-hash",
+			expected:   false,
+		},
+		{
+			name:       "Allow github.com on MacBook",
+			domain:     "github.com",
+			deviceHash: "macbook-test-hash",
+			expected:   false,
+		},
+		// Test unknown device
+		{
+			name:       "Unknown device should not block",
+			domain:     "example.com",
+			deviceHash: "unknown-device-hash",
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocked, err := contentBlocker.IsBlocked(tt.domain, tt.deviceHash)
+			if err != nil {
+				t.Fatalf("IsBlocked() unexpected error: %v", err)
+			}
+
+			if blocked != tt.expected {
+				t.Errorf("IsBlocked() = %v, expected %v for domain %s with device %s", 
+					blocked, tt.expected, tt.domain, tt.deviceHash)
+			}
+		})
+	}
+}
