@@ -100,7 +100,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 					Class:  dns.ClassINET,
 					Ttl:    300, // 5 minutes TTL
 				},
-				Target: "blocked" + dc.domain + ".",
+				Target: "blocked." + dc.domain + ".",
 			}
 			response.Answer = append(response.Answer, cname)
 			break // Stop processing further questions if one domain is blocked

@@ -153,33 +153,45 @@ func (cb *contentBlocker) IsBlocked(domain, deviceHash string) (bool, error) {
 	deviceID, ok := cb.deviceCache.GetDeviceID(deviceHash)
 	if !ok {
 		// Unknown devices are not blocked
+		fmt.Printf("DEBUG: Device hash %s not found\n", deviceHash)
 		return false, nil
 	}
+	fmt.Printf("DEBUG: Device hash %s -> ID %d\n", deviceHash, deviceID)
 
 	// 2. Get schedules for device and filter for currently active ones
 	scheduleIDs := cb.deviceCache.GetSchedules(deviceID)
 	if len(scheduleIDs) == 0 {
+		fmt.Printf("DEBUG: No schedules for device %d\n", deviceID)
 		return false, nil
 	}
+	fmt.Printf("DEBUG: Device %d has schedules: %v\n", deviceID, scheduleIDs)
 
 	// Filter to only active schedules using efficient bitmask comparison
 	activeScheduleIDs := cb.scheduleCache.FilterActiveSchedules(scheduleIDs)
 	if len(activeScheduleIDs) == 0 {
+		fmt.Printf("DEBUG: No active schedules from %v\n", scheduleIDs)
 		return false, nil
 	}
+	fmt.Printf("DEBUG: Active schedules: %v\n", activeScheduleIDs)
 
 	// 3. Resolve domain to ID using longest-prefix match
 	domainID, ok := cb.domainCache.LookupDomainID(domain)
 	if !ok {
+		fmt.Printf("DEBUG: Domain %s not found in cache\n", domain)
 		return false, nil
 	}
+	fmt.Printf("DEBUG: Domain %s -> ID %d\n", domain, domainID)
 
 	// 4. Get rules for the domain
 	domainRules := cb.domainCache.GetRules(domainID)
 	if len(domainRules) == 0 {
+		fmt.Printf("DEBUG: No rules for domain ID %d\n", domainID)
 		return false, nil
 	}
+	fmt.Printf("DEBUG: Domain %d has rules: %v\n", domainID, domainRules)
 
 	// 5. Check for intersection: active schedules → rules → domain rules
-	return cb.scheduleCache.HasRuleIntersection(activeScheduleIDs, domainRules), nil
+	result := cb.scheduleCache.HasRuleIntersection(activeScheduleIDs, domainRules)
+	fmt.Printf("DEBUG: Rule intersection check: %v\n", result)
+	return result, nil
 }
