@@ -2,6 +2,7 @@
 package cache
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/armon/go-radix"
@@ -72,7 +73,6 @@ func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
 	reversedDomain := reverseDomain(domain)
 
 	var domainID int
-	var matchedKey string
 	walkCalled := false
 
 	fmt.Printf("DEBUG: Starting domain lookup for %s -> reversed %s\n", domain, reversedDomain)
@@ -84,7 +84,6 @@ func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
 		// Extract domain ID from the matched node
 		if id, ok := value.(int); ok {
 			domainID = id
-			matchedKey = key
 			fmt.Printf("DEBUG: Found match - key: %s, domain ID: %d\n", key, id)
 		}
 		// Return false to get the longest match (most specific domain)
