@@ -49,6 +49,15 @@ func (cb *contentBlocker) initDomains() error {
 	if err != nil {
 		return fmt.Errorf("failed to load domains: %w", err)
 	}
+	fmt.Printf("DEBUG: Loaded %d domains total\n", len(domains))
+	
+	// Check if bild.de domains exist
+	for _, domain := range domains {
+		if strings.Contains(domain.Name, "bild.de") {
+			fmt.Printf("DEBUG: Found bild.de domain: %s -> ID %d\n", domain.Name, domain.ID)
+		}
+	}
+	
 	cb.domainCache.LoadDomains(domains)
 	return nil
 }

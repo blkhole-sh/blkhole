@@ -54,9 +54,16 @@ func (dc *domainCache) LoadDomains(domains []*model.Domain) {
 
 // LoadRules populates the domain-to-rule mapping
 func (dc *domainCache) LoadRules(rules []*model.Rule) {
+	bildCount := 0
 	for _, r := range rules {
 		dc.domainToRule[r.DomainID] = append(dc.domainToRule[r.DomainID], r.ID)
+		// Debug bild.de related rules
+		if r.DomainID == 279661 || (r.DomainID >= 12270 && r.DomainID <= 12280) {
+			fmt.Printf("DEBUG: Rule %d for domain ID %d\n", r.ID, r.DomainID)
+			bildCount++
+		}
 	}
+	fmt.Printf("DEBUG: Loaded rules for %d bild-related domains\n", bildCount)
 }
 
 // LookupDomainID finds the most specific domain ID for a given domain using longest-prefix match
