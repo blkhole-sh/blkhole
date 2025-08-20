@@ -83,32 +83,27 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	response := new(dns.Msg)
 	response.SetReply(msg)
 
-	// Process each question in the DNS query
+	// Check if any domain should be blocked
+	blocked := false
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
 
 		// Check if domain blocked
-		blocked, err := dc.contentBlocker.IsBlocked(domain, deviceHash)
+		isBlocked, err := dc.contentBlocker.IsBlocked(domain, deviceHash)
 
-		// If domain is blocked or err return CNAME to domain
-		if blocked || err != nil {
-			// Create a CNAME record pointing to the domain
-			cname := &dns.CNAME{
-				Hdr: dns.RR_Header{
-					Name:   question.Name,
-					Rrtype: dns.TypeCNAME,
-					Class:  dns.ClassINET,
-					Ttl:    300, // 5 minutes TTL
-				},
-				Target: "blocked." + dc.domain + ".",
-			}
-			response.Answer = append(response.Answer, cname)
+		// If domain is blocked or err, mark as blocked
+		if isBlocked || err != nil {
+			blocked = true
 			break // Stop processing further questions if one domain is blocked
 		}
 	}
 
-	// If no domain was blocked, forward the DNS query to the upstream server
-	if len(response.Answer) == 0 {
+	// If domain is blocked, return NXDOMAIN
+	if blocked {
+		response.SetRcode(msg, dns.RcodeNameError)
+		response.Answer = nil
+	} else {
+		// Forward the DNS query to the upstream server
 		client := new(dns.Client)
 		res, _, err := client.Exchange(msg, dc.upstreamDNS)
 		if err != nil {

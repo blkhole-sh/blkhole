@@ -197,16 +197,13 @@ func initDependencies(cfg *Config) {
 	testController = controllers.NewTestController(t)
 }
 
-func initRouter(cfg *Config) *chi.Mux {
+func initRouter() *chi.Mux {
 	// Create a new router using chi
 	r := chi.NewRouter()
 
 	// Add some middleware for better logging and recovery
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
-
-	// Add blocked page middleware
-	r.Use(middleware.BlockedPage(cfg.Domain))
 
 	// Configure CORS
 	r.Use(cors.Handler(cors.Options{
@@ -311,7 +308,7 @@ func main() {
 	}
 
 	// Initialize router
-	r := initRouter(cfg)
+	r := initRouter()
 
 	// Start server on given port
 	log.Printf("starting leo on :%s", cfg.Port)
