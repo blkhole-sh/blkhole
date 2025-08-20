@@ -116,7 +116,10 @@ func (t *test) AddList(list model.List, domains []string) (int, error) {
 	}
 
 	list.ID = id
-	t.listService.LoadList(&list)
+	err = t.listService.LoadList(&list)
+	if err != nil {
+		return id, err
+	}
 
 	return id, nil
 }

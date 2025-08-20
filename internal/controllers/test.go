@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/lemon3studio/leo/internal/test"
@@ -28,6 +29,7 @@ func NewTestController(test test.Test) TestController {
 func (tc *testController) RunTest(w http.ResponseWriter, r *http.Request) {
 	ui, err := tc.test.Test()
 	if err != nil {
+		log.Printf("failed to load test data: %v", err)
 		http.Error(w, "Test failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

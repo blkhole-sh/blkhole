@@ -152,7 +152,7 @@ func (rr *ruleRepo) FindByDomain(domain string) ([]*model.Rule, error) {
 
 // LinkToList creates a link between a rule and a list
 func (rr *ruleRepo) LinkToList(ruleID int, listID int) error {
-	query := "INSERT INTO list_rule (list_id, rule_id) VALUES (?, ?)"
+	query := "INSERT OR IGNORE INTO list_rule (list_id, rule_id) VALUES (?, ?)"
 	_, err := rr.db.ExecContext(rr.ctx, query, listID, ruleID)
 	return err
 }

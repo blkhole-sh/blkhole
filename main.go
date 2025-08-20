@@ -80,7 +80,7 @@ func initConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Port, "p", "", "Server port")
 	flag.StringVar(&cfg.Domain, "d", "", "Server domain")
-	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1", "Upstream DNS server")
+	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1:53", "Upstream DNS server")
 	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
 
 	flag.Parse()

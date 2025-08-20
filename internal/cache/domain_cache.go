@@ -2,7 +2,6 @@
 package cache
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/armon/go-radix"
@@ -60,11 +59,9 @@ func (dc *domainCache) LoadRules(rules []*model.Rule) {
 		dc.domainToRule[r.DomainID] = append(dc.domainToRule[r.DomainID], r.ID)
 		// Debug bild.de related rules
 		if r.DomainID == 279661 || r.DomainID == 279660 || (r.DomainID >= 12270 && r.DomainID <= 12280) {
-			fmt.Printf("DEBUG: Rule %d for domain ID %d\n", r.ID, r.DomainID)
 			bildCount++
 		}
 	}
-	fmt.Printf("DEBUG: Loaded rules for %d bild-related domains\n", bildCount)
 }
 
 // LookupDomainID finds the most specific domain ID for a given domain using longest-prefix match
@@ -73,28 +70,16 @@ func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
 	reversedDomain := reverseDomain(domain)
 
 	var domainID int
-	walkCalled := false
-
-	fmt.Printf("DEBUG: Starting domain lookup for %s -> reversed %s\n", domain, reversedDomain)
 
 	// Walk the radix tree to find the longest matching prefix (enables hierarchical domain blocking)
 	dc.domainTree.WalkPath(reversedDomain, func(key string, value any) bool {
-		walkCalled = true
-		fmt.Printf("DEBUG: WalkPath callback - key: %s, value: %v\n", key, value)
 		// Extract domain ID from the matched node
 		if id, ok := value.(int); ok {
 			domainID = id
-			fmt.Printf("DEBUG: Found match - key: %s, domain ID: %d\n", key, id)
 		}
 		// Return false to get the longest match (most specific domain)
 		return false
 	})
-
-	if !walkCalled {
-		fmt.Printf("DEBUG: WalkPath was never called - no matches in tree\n")
-	}
-
-	fmt.Printf("DEBUG: Final result - domain ID: %d, found: %v\n", domainID, domainID != 0)
 
 	// Return the domain ID and whether a match was found
 	return domainID, domainID != 0

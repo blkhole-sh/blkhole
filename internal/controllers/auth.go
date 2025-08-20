@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -47,19 +46,15 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 
 	result, err := c.authService.Login(req.Email, req.Password)
 	if err != nil {
-		fmt.Printf("DEBUG: Auth service login failed: %v\n", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	
-	fmt.Printf("DEBUG: Auth service login succeeded, setting cookies\n")
 
 	// Set secure HttpOnly cookies
 	c.setSecureCookie(w, "access_token", result.AccessToken, services.TokenExpiry)
 	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
 
 	// Return only user data (tokens are in cookies)
-	fmt.Printf("DEBUG: Sending JSON response\n")
 	json.NewEncoder(w).Encode(map[string]any{"user": result.User.ToDTO()})
 }
 
@@ -113,7 +108,7 @@ func (c *authController) setSecureCookie(w http.ResponseWriter, name, value stri
 		Path:     "/",
 		Expires:  time.Now().Add(expiry),
 		HttpOnly: true,
-		Secure:   false,                   // Set to false for development (HTTP)
+		Secure:   false,                // Set to false for development (HTTP)
 		SameSite: http.SameSiteLaxMode, // CSRF protection but allows same-site navigation
 	}
 	http.SetCookie(w, cookie)

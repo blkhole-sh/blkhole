@@ -92,11 +92,6 @@ func readAdblockFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, er
 			continue
 		}
 
-		// Debug bild.de domains
-		if strings.Contains(domain, "bild.de") {
-			fmt.Printf("DEBUG: List loading - domain %s -> ID %d, allowed: %v\n", domain, domainID, allowed)
-		}
-
 		// Create rule
 		rule := model.Rule{
 			DomainID: domainID,
@@ -141,17 +136,12 @@ func readHostFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error
 				continue
 			}
 
-				// Create or get domain first
+			// Create or get domain first
 			domainModel := &model.Domain{Name: domain}
 			domainID, err := domainRepo.CreateOrGet(domainModel)
 			if err != nil {
 				log.Printf("error creating domain %s: %v", domain, err)
 				continue
-			}
-
-			// Debug bild.de domains
-			if strings.Contains(domain, "bild.de") {
-				fmt.Printf("DEBUG: Host file loading - domain %s -> ID %d, blocked\n", domain, domainID)
 			}
 
 			// Create rule (hosts files are always blocking)
@@ -189,7 +179,7 @@ func readDomainsFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, er
 
 		// Validate domain format (line should be just a domain)
 		if !validDomainPattern.MatchString(line) {
-			log.Printf("warning: invalid domain format in domains file: %s", line)
+			log.Printf("invalid domain format in domains file: %s", line)
 			continue
 		}
 
