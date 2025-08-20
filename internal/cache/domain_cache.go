@@ -64,25 +64,23 @@ func (dc *domainCache) LoadRules(rules []*model.Rule) {
 	}
 }
 
-// LookupDomainID finds the most specific domain ID for a given domain using longest-prefix match
+// LookupDomainID finds the most specific domain ID for a given domain
 func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
-	// Convert domain to reversed format for radix tree lookup (e.g., "api.example.com" → "com.example.api")
+	// Reverse domain for radix tree lookup
 	reversedDomain := reverseDomain(domain)
+	parts := strings.Split(reversedDomain, ".")
 
-	var domainID int
-
-	// Walk the radix tree to find the longest matching prefix (enables hierarchical domain blocking)
-	dc.domainTree.WalkPath(reversedDomain, func(key string, value any) bool {
-		// Extract domain ID from the matched node
-		if id, ok := value.(int); ok {
-			domainID = id
+	// Check from full domain to parent domains
+	for i := len(parts); i > 0; i-- {
+		checkDomain := strings.Join(parts[:i], ".")
+		if val, ok := dc.domainTree.Get(checkDomain); ok {
+			if id, ok := val.(int); ok {
+				return id, true
+			}
 		}
-		// Return false to get the longest match (most specific domain)
-		return false
-	})
+	}
 
-	// Return the domain ID and whether a match was found
-	return domainID, domainID != 0
+	return 0, false
 }
 
 // GetRules returns all rule IDs for a given domain ID

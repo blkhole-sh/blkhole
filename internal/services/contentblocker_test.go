@@ -262,7 +262,7 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 
 	// Create a test list with several domains that should be blocked
 	// These domains will be blocked via list rules
-	blockedDomains := []string{"ads.example.com", "tracker.com", "malware.net"}
+	blockedDomains := []string{"ads.example.com", "tracker.com", "malware.net", "statsig.anthropic.com", "evil.com"}
 	listID := createTestList(t, lists, rules, domains, userID, blockedDomains)
 
 	// Create domains that should be blocked directly (not via lists)
@@ -334,6 +334,41 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 			device:   deviceHash,
 			expected: false,
 			wantErr:  true, // Should return an error
+		},
+		{
+			name:     "Block subdomain statsig.anthropic.com", // Should block: exact match in list
+			domain:   "statsig.anthropic.com",
+			device:   deviceHash,
+			expected: true, // Should be blocked
+			wantErr:  false,
+		},
+		{
+			name:     "Check parent domain anthropic.com", // Should NOT block: only subdomain is in list
+			domain:   "anthropic.com",
+			device:   deviceHash,
+			expected: false, // Should NOT be blocked (only subdomain is blocked)
+			wantErr:  false,
+		},
+		{
+			name:     "Check unrelated subdomain api.anthropic.com", // Should NOT block: different subdomain
+			domain:   "api.anthropic.com",
+			device:   deviceHash,
+			expected: false, // Should NOT be blocked (only statsig subdomain is blocked)
+			wantErr:  false,
+		},
+		{
+			name:     "Block parent domain evil.com", // Should block: exact match
+			domain:   "evil.com",
+			device:   deviceHash,
+			expected: true, // Should be blocked
+			wantErr:  false,
+		},
+		{
+			name:     "Block subdomain of blocked parent sub.evil.com", // Should block: parent is blocked
+			domain:   "sub.evil.com",
+			device:   deviceHash,
+			expected: true, // Should be blocked (parent domain is blocked)
+			wantErr:  false,
 		},
 	}
 
