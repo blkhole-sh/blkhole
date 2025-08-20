@@ -84,6 +84,9 @@ func readAdblockFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, er
 			continue
 		}
 
+		// Normalize domain by removing www. prefix
+		domain = strings.TrimPrefix(domain, "www.")
+
 		// Create or get domain first
 		domainModel := &model.Domain{Name: domain}
 		domainID, err := domainRepo.CreateOrGet(domainModel)
@@ -136,6 +139,9 @@ func readHostFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, error
 				continue
 			}
 
+			// Normalize domain by removing www. prefix
+			domain = strings.TrimPrefix(domain, "www.")
+
 			// Create or get domain first
 			domainModel := &model.Domain{Name: domain}
 			domainID, err := domainRepo.CreateOrGet(domainModel)
@@ -183,8 +189,11 @@ func readDomainsFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, er
 			continue
 		}
 
+		// Normalize domain by removing www. prefix
+		domain := strings.TrimPrefix(line, "www.")
+
 		// Create or get domain first
-		domainModel := &model.Domain{Name: line}
+		domainModel := &model.Domain{Name: domain}
 		domainID, err := domainRepo.CreateOrGet(domainModel)
 		if err != nil {
 			log.Printf("error creating domain %s: %v", line, err)
