@@ -2,9 +2,9 @@
 package test
 
 import (
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
-	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 )
 
 // Test interface defines methods for creating test data fixtures.
@@ -246,7 +246,7 @@ func (t *test) Test() (int, error) {
 	}
 
 	_, err = t.AddSchedule(model.Schedule{
-		Name:      "Base Protection",
+		Name:      "Malicious Content",
 		StartTime: "00:00",
 		EndTime:   "23:55",
 		Monday:    true,
@@ -254,7 +254,7 @@ func (t *test) Test() (int, error) {
 		Wednesday: true,
 		Thursday:  true,
 		Friday:    true,
-		Saturday:  true,
+		Saturday:  false,
 		Sunday:    true,
 		DeviceIDs: []int{d1i, d2i},
 		RuleIDs:   []int{r1i, r2i},

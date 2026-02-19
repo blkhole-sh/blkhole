@@ -1,4 +1,4 @@
-// Package services provides business logic services for the Leo DNS blocker application.
+// Package services provides business logic services for the blkhole DNS blocker application.
 package services
 
 import (
@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lemon3studio/leo/internal/cache"
-	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/cache"
+	"github.com/lemon3studio/blkhole/internal/repos"
 )
 
 // domainRegex is used to check for valid domain format

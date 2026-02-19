@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/miekg/dns"

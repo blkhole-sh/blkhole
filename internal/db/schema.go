@@ -1,4 +1,4 @@
-// Package db provides database schema initialization for the Leo DNS blocker.
+// Package db provides database schema initialization for the blkhole DNS blocker.
 package db
 
 import (

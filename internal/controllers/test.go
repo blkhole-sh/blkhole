@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/lemon3studio/leo/internal/test"
+	"github.com/lemon3studio/blkhole/internal/test"
 )
 
 // TestController defines the interface for test operations

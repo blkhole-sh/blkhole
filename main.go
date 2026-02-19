@@ -1,4 +1,4 @@
-// Package main provides the Leo  server application.
+// Package main provides the blkhole server application.
 package main
 
 import (
@@ -14,12 +14,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lemon3studio/leo/internal/controllers"
-	schema "github.com/lemon3studio/leo/internal/db"
-	"github.com/lemon3studio/leo/internal/middleware"
-	"github.com/lemon3studio/leo/internal/repos"
-	"github.com/lemon3studio/leo/internal/services"
-	"github.com/lemon3studio/leo/internal/test"
+	"github.com/lemon3studio/blkhole/internal/controllers"
+	schema "github.com/lemon3studio/blkhole/internal/db"
+	"github.com/lemon3studio/blkhole/internal/middleware"
+	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/lemon3studio/blkhole/internal/test"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -27,11 +27,12 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var devMode = "false" // Set via ldflags
 
-// Config defines the Leo configuration
+// Config defines the blkhole configuration
 type Config struct {
 	Domain      string
 	Port        string
@@ -78,21 +79,23 @@ var (
 func initConfig() (*Config, error) {
 	var cfg Config
 
-	flag.StringVar(&cfg.Port, "p", "", "Server port")
-	flag.StringVar(&cfg.Domain, "d", "", "Server domain")
+	flag.StringVar(&cfg.Port, "p", "", "HTTP port (local mode only, mutually exclusive with -d)")
+	flag.StringVar(&cfg.Domain, "d", "", "Domain for HTTPS with autocert (production mode, mutually exclusive with -p)")
 	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1:53", "Upstream DNS server")
 	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
 
 	flag.Parse()
 
-	// Validate required flags
+	// Validate mode flags
+	if cfg.Domain != "" && cfg.Port != "" {
+		return nil, fmt.Errorf("-p has no effect when -d is set")
+	}
+	if cfg.Domain == "" && cfg.Port == "" {
+		return nil, fmt.Errorf("either -p (local mode) or -d (production mode) is required")
+	}
+
+	// Validate common required flags
 	var missing []string
-	if cfg.Port == "" {
-		missing = append(missing, "-p (port)")
-	}
-	if cfg.Domain == "" {
-		missing = append(missing, "-d (domain)")
-	}
 	if cfg.UpstreamDNS == "" {
 		missing = append(missing, "-u (upstream dns server)")
 	}
@@ -130,8 +133,8 @@ func initUpstreamDNS(addr string) (string, error) {
 func initDependencies(cfg *Config) {
 	// Get database path
 	configDir, _ := os.UserConfigDir()
-	dbPath := filepath.Join(configDir, "leo", "leo.db")
-	os.MkdirAll(filepath.Dir(dbPath), 0755)
+	dbPath := filepath.Join(configDir, "blkhole", "blkhole.db")
+	os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 	// Initialize repos
 	db, err := sql.Open("sqlite3", dbPath)
@@ -175,12 +178,12 @@ func initDependencies(cfg *Config) {
 	authService = services.NewAuthService(users, cryptoService, tokenAuth)
 
 	// Initialize controllers
-	deviceController = controllers.NewDeviceController(devices, cryptoService)
+	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
 	userController = controllers.NewUserController(users, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, cfg.Domain)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain, devices)
-	scheduleController = controllers.NewScheduleController(schedules, contentBlocker)
+	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
 	testController = controllers.NewTestController(t)
@@ -226,10 +229,11 @@ func initRouter() *chi.Mux {
 		// Apply JSON middleware to all API routes
 		r.Use(middleware.JSONMiddleware)
 
-		// Public auth routes
+		// Public routes
 		r.Post("/auth/login", authController.Login)
 		r.Post("/auth/refresh", authController.RefreshToken)
 		r.Post("/auth/logout", authController.Logout)
+		r.Get("/quote", quoteController.Random)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
@@ -267,8 +271,6 @@ func initRouter() *chi.Mux {
 			r.Post("/schedules/{id}", scheduleController.Update)
 			r.Get("/is-blocked", scheduleController.IsBlocked)
 
-			// Quote API route
-			r.Get("/quote", quoteController.Random)
 		})
 	})
 
@@ -291,6 +293,33 @@ func initRouter() *chi.Mux {
 	return r
 }
 
+func startServer(cfg *Config, handler http.Handler) error {
+	// Local mode — plain HTTP on specified port
+	if cfg.Domain == "" {
+		log.Printf("starting blkhole on :%s", cfg.Port)
+		return http.ListenAndServe(":"+cfg.Port, handler)
+	}
+
+	// Store certs alongside the database in the user config directory
+	configDir, _ := os.UserConfigDir()
+	m := &autocert.Manager{
+		Cache:      autocert.DirCache(filepath.Join(configDir, "blkhole", "certs")),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(cfg.Domain),
+	}
+
+	// HTTP server on :80 for ACME challenge and redirect to HTTPS
+	go func() {
+		log.Printf("starting HTTP redirect on :80")
+		if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
+			log.Fatalf("HTTP redirect server error: %v", err)
+		}
+	}()
+
+	log.Printf("starting blkhole on :443 (domain: %s)", cfg.Domain)
+	return http.Serve(m.Listener(), handler)
+}
+
 func main() {
 	// Initialize config
 	cfg, err := initConfig()
@@ -310,10 +339,8 @@ func main() {
 	// Initialize router
 	r := initRouter()
 
-	// Start server on given port
-	log.Printf("starting leo on :%s", cfg.Port)
-	err = http.ListenAndServe(":"+cfg.Port, r)
-	if err != nil {
-		log.Fatal(err)
+	// Start server
+	if err = startServer(cfg, r); err != nil {
+		log.Fatalf("failed to start server :%v", err)
 	}
 }

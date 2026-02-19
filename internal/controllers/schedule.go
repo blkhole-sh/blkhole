@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
-	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -26,14 +26,18 @@ type ScheduleController interface {
 // scheduleController implements the ScheduleController interface
 type scheduleController struct {
 	schedules      repos.ScheduleRepo
+	devices        repos.DeviceRepo
+	lists          repos.ListRepo
 	contentBlocker services.ContentBlocker
 }
 
 // NewScheduleController creates a new ScheduleController instance
-func NewScheduleController(scheduleRepo repos.ScheduleRepo, contentBlocker services.ContentBlocker) ScheduleController {
+func NewScheduleController(scheduleRepo repos.ScheduleRepo, deviceRepo repos.DeviceRepo, listRepo repos.ListRepo, contentBlocker services.ContentBlocker) ScheduleController {
 	return &scheduleController{
 		contentBlocker: contentBlocker,
 		schedules:      scheduleRepo,
+		devices:        deviceRepo,
+		lists:          listRepo,
 	}
 }
 
@@ -69,7 +73,7 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	sc.schedules.Create(&s)
 
 	// Respond with JSON encoded schedule DTO
-	json.NewEncoder(w).Encode(s.ToDTO())
+	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
 }
 
 func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +94,7 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with JSON encoded schedule DTO
-	json.NewEncoder(w).Encode(s.ToDTO())
+	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
 }
 
 func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -110,14 +114,24 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Convert to DTOs with counts instead of arrays
+	// Convert to DTOs with device and list names
 	var scheduleDTOs []model.ScheduleDTO
 	if s == nil {
 		scheduleDTOs = []model.ScheduleDTO{}
 	} else {
 		scheduleDTOs = make([]model.ScheduleDTO, len(s))
 		for i, schedule := range s {
-			scheduleDTOs[i] = schedule.ToDTO()
+			deviceNames, err := sc.devices.FindNamesByScheduleID(schedule.ID)
+			if err != nil {
+				log.Printf("failed to load device names for schedule %d: %v", schedule.ID, err)
+				deviceNames = []string{}
+			}
+			listNames, err := sc.lists.FindNamesByScheduleID(schedule.ID)
+			if err != nil {
+				log.Printf("failed to load list names for schedule %d: %v", schedule.ID, err)
+				listNames = []string{}
+			}
+			scheduleDTOs[i] = schedule.ToDTO(deviceNames, listNames)
 		}
 	}
 
@@ -148,7 +162,7 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	sc.schedules.Update(id, &s)
 
 	// Respond with JSON encoded schedule DTO
-	json.NewEncoder(w).Encode(s.ToDTO())
+	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
 }
 
 func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {

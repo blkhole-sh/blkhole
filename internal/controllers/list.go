@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
 
 	"github.com/go-chi/chi/v5"
 )

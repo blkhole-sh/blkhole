@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
-	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/blkhole/internal/model"
 )
 
 // DomainRepo defines the interface for domain repository operations

@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
-	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -26,13 +26,15 @@ type DeviceController interface {
 // deviceController implements the DeviceController interface
 type deviceController struct {
 	devices       repos.DeviceRepo
+	schedules     repos.ScheduleRepo
 	cryptoService services.CryptoService
 }
 
 // NewDeviceController creates a new DeviceController instance
-func NewDeviceController(deviceRepo repos.DeviceRepo, cryptoService services.CryptoService) DeviceController {
+func NewDeviceController(deviceRepo repos.DeviceRepo, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService) DeviceController {
 	return &deviceController{
 		devices:       deviceRepo,
+		schedules:     scheduleRepo,
 		cryptoService: cryptoService,
 	}
 }
@@ -65,7 +67,7 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with JSON encoded device DTO
-	json.NewEncoder(w).Encode(d.ToDTO())
+	json.NewEncoder(w).Encode(d.ToDTO(nil))
 }
 
 func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +86,7 @@ func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(d.ToDTO())
+	json.NewEncoder(w).Encode(d.ToDTO(nil))
 }
 
 func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +100,7 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(d.ToDTO())
+	json.NewEncoder(w).Encode(d.ToDTO(nil))
 }
 
 func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -118,14 +120,19 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to DTOs with counts instead of arrays
+	// Convert to DTOs with schedule names
 	var deviceDTOs []model.DeviceDTO
 	if d == nil {
 		deviceDTOs = []model.DeviceDTO{}
 	} else {
 		deviceDTOs = make([]model.DeviceDTO, len(d))
 		for i, device := range d {
-			deviceDTOs[i] = device.ToDTO()
+			names, err := dc.schedules.FindNamesByDeviceID(device.ID)
+			if err != nil {
+				log.Printf("failed to load schedule names for device %d: %v", device.ID, err)
+				names = []string{}
+			}
+			deviceDTOs[i] = device.ToDTO(names)
 		}
 	}
 
@@ -160,7 +167,7 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with JSON encoded device DTO
-	json.NewEncoder(w).Encode(d.ToDTO())
+	json.NewEncoder(w).Encode(d.ToDTO(nil))
 }
 
 func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {

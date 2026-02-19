@@ -13,12 +13,12 @@ type UserDTO struct {
 
 // DeviceDTO represents a device data transfer object
 type DeviceDTO struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	OS        OS     `json:"os"`
-	Hash      string `json:"hash"`
-	UserID    int    `json:"userId"`
-	Schedules int    `json:"schedules"`
+	ID            int      `json:"id"`
+	Name          string   `json:"name"`
+	OS            OS       `json:"os"`
+	Hash          string   `json:"hash"`
+	UserID        int      `json:"userId"`
+	ScheduleNames []string `json:"scheduleNames"`
 }
 
 // ListDTO represents a list data transfer object
@@ -34,22 +34,22 @@ type ListDTO struct {
 
 // ScheduleDTO represents a schedule data transfer object
 type ScheduleDTO struct {
-	ID        int    `json:"id"`
-	StartTime string `json:"startTime"`
-	EndTime   string `json:"endTime"`
-	Name      string `json:"name"`
-	UserID    int    `json:"userId"`
-	DeviceIDs []int  `json:"deviceIds"`
-	RuleIDs   []int  `json:"ruleIds"`
-	ListIDs   []int  `json:"listIds"`
-	Devices   int    `json:"devices"`
-	Rules     int    `json:"rules"`
-	Lists     int    `json:"lists"`
-	Monday    bool   `json:"monday"`
-	Tuesday   bool   `json:"tuesday"`
-	Wednesday bool   `json:"wednesday"`
-	Thursday  bool   `json:"thursday"`
-	Friday    bool   `json:"friday"`
-	Saturday  bool   `json:"saturday"`
-	Sunday    bool   `json:"sunday"`
+	ID          int      `json:"id"`
+	StartTime   string   `json:"startTime"`
+	EndTime     string   `json:"endTime"`
+	Name        string   `json:"name"`
+	UserID      int      `json:"userId"`
+	DeviceIDs   []int    `json:"deviceIds"`
+	RuleIDs     []int    `json:"ruleIds"`
+	ListIDs     []int    `json:"listIds"`
+	DeviceNames []string `json:"deviceNames"`
+	Rules       int      `json:"rules"`
+	ListNames   []string `json:"listNames"`
+	Monday      bool     `json:"monday"`
+	Tuesday     bool     `json:"tuesday"`
+	Wednesday   bool     `json:"wednesday"`
+	Thursday    bool     `json:"thursday"`
+	Friday      bool     `json:"friday"`
+	Saturday    bool     `json:"saturday"`
+	Sunday      bool     `json:"sunday"`
 }

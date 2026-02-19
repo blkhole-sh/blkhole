@@ -1,7 +1,7 @@
 // Package cache provides in-memory caching for DNS blocking lookups
 package cache
 
-import "github.com/lemon3studio/leo/internal/model"
+import "github.com/lemon3studio/blkhole/internal/model"
 
 // DeviceCache provides fast device hash to ID lookups and device-schedule mappings
 type DeviceCache interface {

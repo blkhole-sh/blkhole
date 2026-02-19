@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
 )
 
 // Regex patterns used across file parsing functions

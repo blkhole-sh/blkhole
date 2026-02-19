@@ -10,7 +10,7 @@ import (
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/lemon3studio/leo/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/repos"
 )
 
 //go:embed mobileconfig.tmpl
@@ -91,7 +91,7 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 
 	// Set response headers
 	w.Header().Set("Content-Type", "application/x-apple-aspen-config")
-	w.Header().Set("Content-Disposition", `attachment; filename="leo.mobileconfig"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="blkhole.mobileconfig"`)
 
 	// Execute template
 	if err := mobileConfigTemplate.Execute(w, data); err != nil {

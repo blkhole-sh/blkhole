@@ -8,14 +8,14 @@ export interface User {
 	schedules: number;
 }
 
-// Define Device interface - now uses DTO format with counts
+// Define Device interface - now uses DTO format with schedule names
 export interface Device {
 	id: string;
 	hash: string; // Keep hash for mobile config URLs
 	name: string;
 	os: string;
 	userId: string;
-	schedules: number;
+	scheduleNames: string[];
 }
 
 // Define Rule interface
@@ -37,16 +37,16 @@ export interface List {
 	schedules: number; // Count of schedules using this list
 }
 
-// Define Schedule interface - now uses DTO format with counts
+// Define Schedule interface - now uses DTO format with names
 export interface Schedule {
 	id: number;
 	name: string;
 	startTime: string; // Backend sends as string, not Date
 	endTime: string; // Backend sends as string, not Date
 	userId: string;
-	devices: number;
+	deviceNames: string[];
 	rules: number;
-	lists: number;
+	listNames: string[];
 	monday: boolean;
 	tuesday: boolean;
 	wednesday: boolean;

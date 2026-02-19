@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/blkhole/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
 	_ "github.com/mattn/go-sqlite3"

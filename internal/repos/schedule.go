@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/blkhole/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
 	_ "github.com/mattn/go-sqlite3"
@@ -24,6 +24,7 @@ type ScheduleRepo interface {
 	LoadRelations(s *model.Schedule) error
 	FindByID(id int) (*model.Schedule, error)
 	FindByUser(userID int) ([]*model.Schedule, error)
+	FindNamesByDeviceID(deviceID int) ([]string, error)
 	FindByDevice(deviceHash string) ([]*model.Schedule, error)
 	FindByRule(ruleID int) ([]*model.Schedule, error)
 	FindByList(listID int) ([]*model.Schedule, error)
@@ -288,6 +289,22 @@ func (sr *scheduleRepo) FindAll() ([]*model.Schedule, error) {
 	}
 
 	return schedules, nil
+}
+
+// FindNamesByDeviceID returns the names of all schedules assigned to the device with given ID
+func (sr *scheduleRepo) FindNamesByDeviceID(deviceID int) ([]string, error) {
+	query := `SELECT DISTINCT s.name FROM device_schedule ds JOIN schedule s ON ds.schedule_id = s.id WHERE ds.device_id = ?`
+	var names []string
+
+	if err := sqlscan.Select(sr.ctx, sr.db, &names, query, deviceID); err != nil {
+		return nil, err
+	}
+
+	if names == nil {
+		return []string{}, nil
+	}
+
+	return names, nil
 }
 
 // FindByDevice returns all existing schedules that are assigned to device with given hash

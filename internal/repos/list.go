@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/lemon3studio/leo/internal/model"
+	"github.com/lemon3studio/blkhole/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
 	_ "github.com/mattn/go-sqlite3"
@@ -22,6 +22,7 @@ type ListRepo interface {
 	FindByID(id int) (*model.List, error)
 	FindAll() ([]*model.List, error)
 	FindByUser(userID int) ([]*model.List, error)
+	FindNamesByScheduleID(scheduleID int) ([]string, error)
 	FindBySchedule(scheduleID int) ([]*model.List, error)
 }
 
@@ -173,6 +174,22 @@ func (lr *listRepo) FindByUser(userID int) ([]*model.List, error) {
 	}
 
 	return lists, nil
+}
+
+// FindNamesByScheduleID returns the names of all lists linked to the schedule with given ID
+func (lr *listRepo) FindNamesByScheduleID(scheduleID int) ([]string, error) {
+	query := `SELECT DISTINCT l.name FROM list_schedule ls JOIN list l ON ls.list_id = l.id WHERE ls.schedule_id = ?`
+	var names []string
+
+	if err := sqlscan.Select(lr.ctx, lr.db, &names, query, scheduleID); err != nil {
+		return nil, err
+	}
+
+	if names == nil {
+		return []string{}, nil
+	}
+
+	return names, nil
 }
 
 // FindBySchedule returns all existing lists linked to schedule with given id

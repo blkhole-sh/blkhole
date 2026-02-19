@@ -1,4 +1,4 @@
-// Package model defines the data structures used throughout the Leo DNS blocker application.
+// Package model defines the data structures used throughout the blkhole DNS blocker application.
 package model
 
 // User represents a user in the system
@@ -106,15 +106,18 @@ func (u User) ToDTO() UserDTO {
 	}
 }
 
-// ToDTO converts a Device model to DeviceDTO with counts
-func (d Device) ToDTO() DeviceDTO {
+// ToDTO converts a Device model to DeviceDTO with schedule names
+func (d Device) ToDTO(scheduleNames []string) DeviceDTO {
+	if scheduleNames == nil {
+		scheduleNames = []string{}
+	}
 	return DeviceDTO{
-		ID:        d.ID,
-		Hash:      d.Hash,
-		Name:      d.Name,
-		OS:        d.OS,
-		UserID:    d.UserID,
-		Schedules: len(d.ScheduleIDs),
+		ID:            d.ID,
+		Hash:          d.Hash,
+		Name:          d.Name,
+		OS:            d.OS,
+		UserID:        d.UserID,
+		ScheduleNames: scheduleNames,
 	}
 }
 
@@ -131,23 +134,32 @@ func (l List) ToDTO() ListDTO {
 	}
 }
 
-// ToDTO converts Schedule model to ScheduleDTO
-func (s Schedule) ToDTO() ScheduleDTO {
+// ToDTO converts Schedule model to ScheduleDTO with device and list names
+func (s Schedule) ToDTO(deviceNames []string, listNames []string) ScheduleDTO {
+	if deviceNames == nil {
+		deviceNames = []string{}
+	}
+	if listNames == nil {
+		listNames = []string{}
+	}
 	return ScheduleDTO{
-		StartTime: s.StartTime,
-		EndTime:   s.EndTime,
-		Name:      s.Name,
-		UserID:    s.UserID,
-		DeviceIDs: s.DeviceIDs,
-		RuleIDs:   s.RuleIDs,
-		ListIDs:   s.ListIDs,
-		Monday:    s.Monday,
-		Tuesday:   s.Tuesday,
-		Wednesday: s.Wednesday,
-		Thursday:  s.Thursday,
-		Friday:    s.Friday,
-		Saturday:  s.Saturday,
-		Sunday:    s.Sunday,
-		ID:        s.ID,
+		StartTime:   s.StartTime,
+		EndTime:     s.EndTime,
+		Name:        s.Name,
+		UserID:      s.UserID,
+		DeviceIDs:   s.DeviceIDs,
+		RuleIDs:     s.RuleIDs,
+		ListIDs:     s.ListIDs,
+		DeviceNames: deviceNames,
+		Rules:       len(s.RuleIDs),
+		ListNames:   listNames,
+		Monday:      s.Monday,
+		Tuesday:     s.Tuesday,
+		Wednesday:   s.Wednesday,
+		Thursday:    s.Thursday,
+		Friday:      s.Friday,
+		Saturday:    s.Saturday,
+		Sunday:      s.Sunday,
+		ID:          s.ID,
 	}
 }

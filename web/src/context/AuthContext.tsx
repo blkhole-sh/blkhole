@@ -3,7 +3,6 @@ import {
 	createSignal,
 	ParentProps,
 	useContext,
-	onMount,
 } from "solid-js";
 import { User } from "~/lib/model";
 import { login as apiLogin, logout as apiLogout, refreshAuth } from "~/lib/api";
@@ -24,21 +23,19 @@ export const useAuth = (): AuthStore => {
 	return context;
 };
 
-export default function AuthProvider(props: ParentProps) {
-	const [user, setUser] = createSignal<User | null>(null);
+const loadUser = (): User | null => {
+	const saved = localStorage.getItem("user");
+	if (!saved) return null;
+	try {
+		return JSON.parse(saved);
+	} catch {
+		localStorage.removeItem("user");
+		return null;
+	}
+};
 
-	onMount(async () => {
-		// Try to load user from localStorage
-		const savedUser = localStorage.getItem("user");
-		if (savedUser) {
-			try {
-				setUser(JSON.parse(savedUser));
-			} catch {
-				// Invalid stored data, remove it
-				localStorage.removeItem("user");
-			}
-		}
-	});
+export default function AuthProvider(props: ParentProps) {
+	const [user, setUser] = createSignal<User | null>(loadUser());
 
 	const login = async (email: string, password: string) => {
 		const { user: userData } = await apiLogin(email, password);

@@ -1,4 +1,4 @@
-// Package controllers provides HTTP request handlers for the Leo DNS blocker API.
+// Package controllers provides HTTP request handlers for the blkhole DNS blocker API.
 package controllers
 
 import (
@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/leo/internal/model"
-	"github.com/lemon3studio/leo/internal/repos"
-	"github.com/lemon3studio/leo/internal/services"
+	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )

@@ -1,9 +1,9 @@
 /**
- * API client for authenticated requests to the Leo server backend
+ * API client for authenticated requests to the blkhole server backend
  */
 import { Device, List, Quote, Schedule } from "./model";
 
-const API_BASE = import.meta.env.DEV ? "http://localhost:8080/api" : "/api";
+const API_BASE = "/api";
 
 /**
  * Login user with email and password
@@ -103,7 +103,7 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 			} catch (refreshError) {
 				// Refresh failed, clear local data and redirect
 				localStorage.removeItem("user");
-				window.location.href = "/login";
+				window.location.href = "/auth/signin";
 				throw new Error("Authentication failed");
 			}
 		}
@@ -154,4 +154,13 @@ export const getLists = (): Promise<List[]> => {
 export const getSchedules = (): Promise<Schedule[]> => {
 	const user = getCurrentUser();
 	return api(`/users/${user.id}/schedules`);
+};
+
+/** Create a new device for the current user */
+export const createDevice = (name: string, os: string): Promise<Device> => {
+	const user = getCurrentUser();
+	return api("/devices", {
+		method: "PUT",
+		body: JSON.stringify({ name, os, userId: user.id }),
+	});
 };

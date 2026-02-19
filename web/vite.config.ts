@@ -3,8 +3,25 @@ import solid from "vite-plugin-solid";
 import UnoCSS from "unocss/vite";
 import { resolve } from "path";
 import compression from "vite-plugin-compression";
+import { execSync } from "child_process";
+import { readFileSync } from "fs";
+
+const { version } = JSON.parse(readFileSync(resolve(__dirname, "./package.json"), "utf-8"));
+let hash: string | null = null;
+try {
+	hash = execSync("git rev-parse --short HEAD").toString().trim();
+} catch {}
 
 export default defineConfig({
+	server: {
+		proxy: {
+			"/api": "http://localhost:8080",
+		},
+	},
+	define: {
+		__APP_VERSION__: JSON.stringify(version ?? null),
+		__APP_HASH__: JSON.stringify(hash),
+	},
 	plugins: [
 		solid(),
 		UnoCSS(),
