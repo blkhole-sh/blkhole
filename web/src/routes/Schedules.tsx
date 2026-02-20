@@ -1,22 +1,69 @@
-import { createResource, For } from "solid-js";
-import ScheduleTile from "~/components/ScheduleTile";
-import PageShell from "~/components/PageShell";
+import { createResource, createSignal, For, Show } from "solid-js";
+import ScheduleTile from "~/components/tile/ScheduleTile";
+import PageShell from "~/components/layout/PageShell";
+import ScheduleModal from "~/components/modal/ScheduleModal";
+import EmptyState from "~/components/ui/EmptyState";
 import { getSchedules } from "~/lib/api";
+import { Schedule } from "~/lib/model";
 
 export default function Schedules() {
-	const [schedules] = createResource(getSchedules);
+	const [modalOpen, setModalOpen] = createSignal(false);
+	const [editingSchedule, setEditingSchedule] = createSignal<Schedule | null>(
+		null,
+	);
+	const [schedules, { refetch }] = createResource(getSchedules);
+
+	const handleCreate = () => {
+		setEditingSchedule(null);
+		setModalOpen(true);
+	};
+
+	const handleEdit = (schedule: Schedule) => {
+		setEditingSchedule(schedule);
+		setModalOpen(true);
+	};
+
+	const handleSaved = () => {
+		setModalOpen(false);
+		setEditingSchedule(null);
+		refetch();
+	};
 
 	return (
 		<PageShell
 			title="Schedules"
-			description="Time-based rules that apply blocklists to specific devices automatically."
-			cta="ADD SCHEDULE"
+			description="Control when your black hole is hungry."
+			cta="CREATE SCHEDULE"
+			onCTA={handleCreate}
 		>
-			<div class="divide-y divide-zinc-200">
-				<For each={schedules()}>
-					{(schedule) => <ScheduleTile schedule={schedule} />}
-				</For>
-			</div>
+			<Show
+				when={schedules()?.length > 0}
+				fallback={
+					<EmptyState
+						message="blkhole exists outside of time"
+						subtitle="Set up time-based blocking rules"
+					/>
+				}
+			>
+				<div class="divide-y divide-zinc-200">
+					<For each={schedules()}>
+						{(schedule) => (
+							<ScheduleTile
+								schedule={schedule}
+								onEdit={handleEdit}
+								onDeleted={refetch}
+								onUpdated={refetch}
+							/>
+						)}
+					</For>
+				</div>
+			</Show>
+			<ScheduleModal
+				open={modalOpen()}
+				schedule={editingSchedule()}
+				onClose={() => setModalOpen(false)}
+				onSaved={handleSaved}
+			/>
 		</PageShell>
 	);
 }

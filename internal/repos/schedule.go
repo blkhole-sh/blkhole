@@ -89,6 +89,7 @@ type dbSchedule struct {
 	StartTime string `db:"start_time"`
 	EndTime   string `db:"end_time"`
 	Days      int    `db:"days"`
+	Active    bool   `db:"active"`
 	UserID    int    `db:"user_id"`
 }
 
@@ -99,6 +100,7 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 		Name:      row.Name,
 		StartTime: row.StartTime,
 		EndTime:   row.EndTime,
+		Active:    row.Active,
 		UserID:    row.UserID,
 	}
 	decodeDaysFromInt(row.Days, s)
@@ -108,17 +110,65 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 // Create stores a new schedule into the database
 func (sr *scheduleRepo) Create(s *model.Schedule) (int, error) {
 	days := encodeDaysToInt(s)
-	query := "INSERT INTO schedule (name, start_time, end_time, days, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id"
-	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserID).Scan(&s.ID)
-	return s.ID, err
+	query := "INSERT INTO schedule (name, start_time, end_time, days, active, user_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, s.UserID).Scan(&s.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Link devices
+	for _, deviceID := range s.DeviceIDs {
+		if err := sr.LinkDevice(s.ID, deviceID); err != nil {
+			return 0, err
+		}
+	}
+
+	// Link lists
+	for _, listID := range s.ListIDs {
+		if err := sr.LinkList(s.ID, listID); err != nil {
+			return 0, err
+		}
+	}
+
+	return s.ID, nil
 }
 
 // Update modifies an existing schedule with given ID in the database
 func (sr *scheduleRepo) Update(id int, s *model.Schedule) error {
 	days := encodeDaysToInt(s)
-	query := "UPDATE schedule SET name=?, start_time=?, end_time=?, days=?, user_id=? WHERE id=?"
-	_, err := sr.db.ExecContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.UserID, id)
-	return err
+	query := "UPDATE schedule SET name=?, start_time=?, end_time=?, days=?, active=? WHERE id=?"
+	_, err := sr.db.ExecContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, id)
+	if err != nil {
+		return err
+	}
+
+	// Update device relationships
+	// Delete existing device links
+	deleteDevicesQuery := "DELETE FROM device_schedule WHERE schedule_id=?"
+	if _, err := sr.db.ExecContext(sr.ctx, deleteDevicesQuery, id); err != nil {
+		return err
+	}
+	// Insert new device links
+	for _, deviceID := range s.DeviceIDs {
+		if err := sr.LinkDevice(id, deviceID); err != nil {
+			return err
+		}
+	}
+
+	// Update list relationships
+	// Delete existing list links
+	deleteListsQuery := "DELETE FROM list_schedule WHERE schedule_id=?"
+	if _, err := sr.db.ExecContext(sr.ctx, deleteListsQuery, id); err != nil {
+		return err
+	}
+	// Insert new list links
+	for _, listID := range s.ListIDs {
+		if err := sr.LinkList(id, listID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Delete removes an existing schedule with given ID from the database
@@ -221,12 +271,12 @@ func (sr *scheduleRepo) LoadRelations(s *model.Schedule) error {
 
 // FindByID returns an existing schedule with given id from the database
 func (sr *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule WHERE id=?"
+	query := "SELECT id, name, start_time, end_time, days, active, user_id FROM schedule WHERE id=?"
 	var s model.Schedule
 	var days int
 
 	row := sr.db.QueryRowContext(sr.ctx, query, id)
-	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.UserID); err != nil {
+	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.Active, &s.UserID); err != nil {
 		return nil, err
 	}
 
@@ -241,7 +291,7 @@ func (sr *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
 
 // FindByUser returns all existing schedules with given user ID from the database
 func (sr *scheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule WHERE user_id=?"
+	query := "SELECT id, name, start_time, end_time, days, active, user_id FROM schedule WHERE user_id=?"
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, userID); err != nil {

@@ -124,7 +124,11 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update list in db
-	lc.lists.Update(id, &l)
+	if err := lc.lists.Update(id, &l); err != nil {
+		log.Printf("failed to update list with id %d: %v", id, err)
+		http.Error(w, "Unable to update list", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with JSON encoded list DTO
 	json.NewEncoder(w).Encode(l.ToDTO())

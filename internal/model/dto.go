@@ -38,6 +38,7 @@ type ScheduleDTO struct {
 	StartTime   string   `json:"startTime"`
 	EndTime     string   `json:"endTime"`
 	Name        string   `json:"name"`
+	Active      bool     `json:"active"`
 	UserID      int      `json:"userId"`
 	DeviceIDs   []int    `json:"deviceIds"`
 	RuleIDs     []int    `json:"ruleIds"`

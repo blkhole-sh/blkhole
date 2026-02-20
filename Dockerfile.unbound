@@ -1,0 +1,109 @@
+# syntax=docker/dockerfile:1
+
+# =============================================================================
+# Build Stage: Compile Go application
+# =============================================================================
+FROM golang:1.26-bookworm AS builder
+
+WORKDIR /build
+
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code and build
+COPY . .
+# CGO_ENABLED=1: Required for SQLite support
+# -ldflags="-w -s": Strip debug info to reduce binary size
+RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o server .
+
+# =============================================================================
+# Runtime Stage: Minimal production image
+# =============================================================================
+FROM debian:bookworm-slim
+
+# Install runtime dependencies with pinned versions for security & reproducibility
+# - tini: Proper init system for signal handling and zombie process reaping
+# - unbound: Recursive DNS resolver (upstream for blkhole)
+# - ca-certificates: HTTPS/TLS certificate validation
+# - dns-root-data: Root DNS server hints for Unbound
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  tini=0.19.0-1+b3 \
+  unbound=1.17.1-2+deb12u4 \
+  ca-certificates=20230311+deb12u1 \
+  dns-root-data=2024071801~deb12u1 && \
+  rm -rf /var/lib/apt/lists/*
+
+# Copy compiled binary from builder stage
+COPY --from=builder /build/server /app/server
+
+# =============================================================================
+# Configuration: Unbound DNS resolver + startup script
+# =============================================================================
+RUN <<EOF
+# Configure Unbound as local recursive DNS resolver
+# Architecture: Client → blkhole (filter/block) → Unbound → Root DNS servers
+cat > /etc/unbound/unbound.conf <<'UNBOUNDCONF'
+server:
+    interface: 127.0.0.1      # Listen only on localhost
+    port: 5353                # Non-standard port (blkhole uses 53)
+    do-ip4: yes               # Enable IPv4
+    do-udp: yes               # Enable UDP queries
+    do-tcp: yes               # Enable TCP queries
+    hide-identity: yes        # Don't reveal server identity
+    hide-version: yes         # Don't reveal version (security)
+    access-control: 127.0.0.0/8 allow  # Only allow localhost
+    root-hints: /usr/share/dns/root.hints  # Root DNS servers
+UNBOUNDCONF
+
+# Create startup script to run both services
+# Uses trap for graceful shutdown on SIGTERM/SIGINT
+cat > /app/start.sh <<'STARTSCRIPT'
+#!/bin/sh
+set -e
+
+# Trap signals and forward to child processes
+trap 'kill \$UNBOUND_PID \$BLKHOLE_PID; wait' TERM INT
+
+# Start Unbound in background
+unbound -d &
+UNBOUND_PID=\$!
+
+# Wait for Unbound to initialize
+sleep 2
+
+# Start blkhole server in background
+/app/server "\$@" &
+BLKHOLE_PID=\$!
+
+# Wait for either process to exit
+wait -n
+STARTSCRIPT
+
+# Set permissions
+chmod +x /app/start.sh
+mkdir -p /data
+
+# Create non-root user for security (principle of least privilege)
+useradd -r -u 1000 -s /bin/false blkhole
+chown -R blkhole:blkhole /app /data
+EOF
+
+# =============================================================================
+# Runtime Configuration
+# =============================================================================
+# Switch to non-root user
+USER blkhole
+
+# Expose ports
+# - 53/udp, 53/tcp: DNS queries (standard DNS port)
+# - 8080/tcp: Web interface & API
+EXPOSE 53/udp 53/tcp 8080
+
+# Use tini as PID 1 for proper signal handling
+# -g flag: Forward signals to process group
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
+
+# Run startup script which launches both Unbound and blkhole
+CMD ["/app/start.sh"]

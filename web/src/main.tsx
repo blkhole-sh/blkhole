@@ -1,18 +1,22 @@
 import { render } from "solid-js/web";
 import { Router, Route } from "@solidjs/router";
-import { Suspense } from "solid-js";
+import { Suspense, lazy } from "solid-js";
 import "virtual:uno.css";
 import "./app.css";
 
-import SignIn from "./routes/auth/SignIn";
-import SignUp from "./routes/auth/SignUp";
-import Dashboard from "./routes/Dashboard";
-import Devices from "./routes/Devices";
-import Lists from "./routes/Lists";
-import Schedules from "./routes/Schedules";
-import AuthLayout from "./components/AuthLayout";
+// Lazy load routes for code splitting
+const SignIn = lazy(() => import("./routes/auth/SignIn"));
+const SignUp = lazy(() => import("./routes/auth/SignUp"));
+const Dashboard = lazy(() => import("./routes/Dashboard"));
+const Devices = lazy(() => import("./routes/Devices"));
+const Lists = lazy(() => import("./routes/Lists"));
+const Schedules = lazy(() => import("./routes/Schedules"));
+const Blocked = lazy(() => import("./routes/Blocked"));
+const Settings = lazy(() => import("./routes/Settings"));
+
+// Keep layout/context eager loaded (needed immediately)
+import AuthLayout from "./components/layout/AuthLayout";
 import AuthProvider from "./context/AuthContext";
-import Blocked from "./routes/Blocked";
 
 const root = document.getElementById("root");
 
@@ -35,6 +39,7 @@ render(
 						<Route path="/devices" component={Devices} />
 						<Route path="/lists" component={Lists} />
 						<Route path="/schedules" component={Schedules} />
+						<Route path="/settings" component={Settings} />
 					</Route>
 				</Suspense>
 			</Router>

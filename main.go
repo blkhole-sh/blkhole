@@ -246,7 +246,7 @@ func initRouter() *chi.Mux {
 			// User API routes
 			r.Get("/users/{id}", userController.FindByID)
 			r.Put("/users", userController.Create)
-			r.Post("/users/{id}", userController.Update)
+			r.Patch("/users/{id}", userController.Update)
 			r.Delete("/users/{id}", userController.Delete)
 
 			// Device API routes
@@ -254,23 +254,23 @@ func initRouter() *chi.Mux {
 			r.Get("/devices/{id}/config", mobileConfigController.GenerateConfig)
 			r.Get("/users/{userId}/devices", deviceController.FindByUser)
 			r.Put("/devices", deviceController.Create)
-			r.Post("/devices/{id}", deviceController.Update)
+			r.Patch("/devices/{id}", deviceController.Update)
 			r.Delete("/devices/{id}", deviceController.Delete)
 
 			// List API routes
 			r.Get("/lists/{id}", listController.FindByID)
 			r.Get("/users/{userId}/lists", listController.FindByUser)
 			r.Put("/lists", listController.Create)
-			r.Post("/lists/{id}", listController.Update)
+			r.Patch("/lists/{id}", listController.Update)
 			r.Delete("/lists/{id}", listController.Delete)
 
 			// Schedule API routes
 			r.Get("/schedules/{id}", scheduleController.FindByID)
 			r.Get("/users/{userId}/schedules", scheduleController.FindByUser)
 			r.Put("/schedules", scheduleController.Create)
-			r.Post("/schedules/{id}", scheduleController.Update)
+			r.Patch("/schedules/{id}", scheduleController.Update)
+			r.Delete("/schedules/{id}", scheduleController.Delete)
 			r.Get("/is-blocked", scheduleController.IsBlocked)
-
 		})
 	})
 

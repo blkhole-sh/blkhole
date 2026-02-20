@@ -112,6 +112,11 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 			throw new Error(`API Error: ${response.status}`);
 		}
 
+		// Handle 204 No Content responses (e.g., successful DELETE)
+		if (response.status === 204) {
+			return;
+		}
+
 		return response.json();
 	};
 
@@ -162,5 +167,72 @@ export const createDevice = (name: string, os: string): Promise<Device> => {
 	return api("/devices", {
 		method: "PUT",
 		body: JSON.stringify({ name, os, userId: user.id }),
+	});
+};
+
+/** Update a device by ID */
+export const updateDevice = (id: string, name: string, os: string): Promise<Device> =>
+	api(`/devices/${id}`, {
+		method: "PATCH",
+		body: JSON.stringify({ name, os }),
+	});
+
+/** Delete a device by ID */
+export const deleteDevice = (id: string): Promise<void> =>
+	api(`/devices/${id}`, { method: "DELETE" });
+
+/** Update a blocklist by ID */
+export const updateList = (id: number, name: string, description: string, source: string): Promise<List> =>
+	api(`/lists/${id}`, {
+		method: "PATCH",
+		body: JSON.stringify({ name, description, source }),
+	});
+
+/** Delete a blocklist by ID */
+export const deleteList = (id: number): Promise<void> =>
+	api(`/lists/${id}`, { method: "DELETE" });
+
+/** Update a schedule by ID */
+export const updateSchedule = (
+	id: number,
+	name: string,
+	startTime: string,
+	endTime: string,
+	active: boolean,
+	days: { monday: boolean; tuesday: boolean; wednesday: boolean; thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean },
+	listIds: number[],
+	deviceIds: string[],
+): Promise<Schedule> =>
+	api(`/schedules/${id}`, {
+		method: "PATCH",
+		body: JSON.stringify({ name, startTime, endTime, active, listIds, deviceIds, ...days }),
+	});
+
+/** Delete a schedule by ID */
+export const deleteSchedule = (id: number): Promise<void> =>
+	api(`/schedules/${id}`, { method: "DELETE" });
+
+/** Create a new blocklist for the current user */
+export const createList = (name: string, description: string, source: string): Promise<List> => {
+	const user = getCurrentUser();
+	return api("/lists", {
+		method: "PUT",
+		body: JSON.stringify({ name, description, source, userId: user.id }),
+	});
+};
+
+/** Create a new schedule for the current user */
+export const createSchedule = (
+	name: string,
+	startTime: string,
+	endTime: string,
+	days: { monday: boolean; tuesday: boolean; wednesday: boolean; thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean },
+	listIds: number[],
+	deviceIds: string[],
+): Promise<Schedule> => {
+	const user = getCurrentUser();
+	return api("/schedules", {
+		method: "PUT",
+		body: JSON.stringify({ name, startTime, endTime, active: true, userId: user.id, listIds, deviceIds, ...days }),
 	});
 };

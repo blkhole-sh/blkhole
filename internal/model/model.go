@@ -62,6 +62,7 @@ type Schedule struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 	Name      string `json:"name"`
+	Active    bool   `json:"active"`
 	UserID    int    `json:"userId"`
 	DeviceIDs []int  `json:"deviceIds"`
 	RuleIDs   []int  `json:"ruleIds"`
@@ -146,6 +147,7 @@ func (s Schedule) ToDTO(deviceNames []string, listNames []string) ScheduleDTO {
 		StartTime:   s.StartTime,
 		EndTime:     s.EndTime,
 		Name:        s.Name,
+		Active:      s.Active,
 		UserID:      s.UserID,
 		DeviceIDs:   s.DeviceIDs,
 		RuleIDs:     s.RuleIDs,

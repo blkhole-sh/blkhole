@@ -1,10 +1,10 @@
-import PageShell from "~/components/PageShell";
+import PageShell from "~/components/layout/PageShell";
 
 export default function Dashboard() {
 	return (
 		<PageShell
 			title="Dashboard"
-			description="An overview of your network activity and blocking status."
+			description="Observatory of your DNS universe."
 		/>
 	);
 }

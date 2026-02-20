@@ -159,7 +159,11 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update schedule in db
-	sc.schedules.Update(id, &s)
+	if err := sc.schedules.Update(id, &s); err != nil {
+		log.Printf("failed to update schedule with id %d: %v", id, err)
+		http.Error(w, "Unable to update schedule", http.StatusInternalServerError)
+		return
+	}
 
 	// Respond with JSON encoded schedule DTO
 	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))

@@ -46,8 +46,8 @@ func (lr *listRepo) Create(l *model.List) (int, error) {
 
 // Update modifies an existing list with given ID in the database
 func (lr *listRepo) Update(id int, l *model.List) error {
-	query := "UPDATE list SET name=?, description=?, source=?, user_id=? WHERE id=?"
-	_, err := lr.db.ExecContext(lr.ctx, query, l.Name, l.Description, l.Source, l.UserID, id)
+	query := "UPDATE list SET name=?, description=?, source=? WHERE id=?"
+	_, err := lr.db.ExecContext(lr.ctx, query, l.Name, l.Description, l.Source, id)
 	return err
 }
 

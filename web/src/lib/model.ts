@@ -43,10 +43,13 @@ export interface Schedule {
 	name: string;
 	startTime: string; // Backend sends as string, not Date
 	endTime: string; // Backend sends as string, not Date
+	active: boolean;
 	userId: string;
+	deviceIds: string[];
 	deviceNames: string[];
-	rules: number;
+	listIds: number[];
 	listNames: string[];
+	rules: number;
 	monday: boolean;
 	tuesday: boolean;
 	wednesday: boolean;

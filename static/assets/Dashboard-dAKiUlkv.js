@@ -1,0 +1,1 @@
+import{P as o}from"./PageShell-D2cM9Zcn.js";import{a as r}from"./vendor-CZLfp3KX.js";import"./ButtonSolid-RYNoSWNq.js";function t(){return r(o,{title:"Dashboard",description:"Observatory of your DNS universe."})}export{t as default};

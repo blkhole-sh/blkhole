@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS schedule (
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
     days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
+    active INTEGER NOT NULL DEFAULT 1,
     user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
     CHECK (start_time < end_time),
     -- Validate that times follow HH:MM format

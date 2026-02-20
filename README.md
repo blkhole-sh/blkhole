@@ -30,6 +30,10 @@ CGO_ENABLED=1 go install github.com/lemon3studio/blkhole@latest
 
 ### Docker
 
+**Standard (Distroless):**
+
+Smallest image, minimal attack surface.
+
 ```sh
 docker build -t blkhole .
 docker run -d \
@@ -37,6 +41,20 @@ docker run -d \
   -p 80:80 -p 443:443 \
   blkhole -d yourdomain.com -s $(openssl rand -hex 32)
 ```
+
+**With Unbound (Self-hosted DNS resolver):**
+
+Includes Unbound recursive DNS resolver.
+
+```sh
+docker build -f Dockerfile.unbound -t blkhole:unbound .
+docker run -d \
+  -v blkhole-data:/data \
+  -p 53:53/udp -p 53:53/tcp -p 8080:8080 \
+  blkhole:unbound
+```
+
+Flow: `Client → blkhole:53 → Unbound:5353 → Root DNS servers`
 
 ---
 

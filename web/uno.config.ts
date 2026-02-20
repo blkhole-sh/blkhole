@@ -11,8 +11,18 @@ export default defineConfig({
 			},
 		}),
 	],
+	preflights: [
+		{
+			getCSS: () => `
+				body {
+					font-family: "Noto Sans", sans-serif;
+				}
+			`,
+		},
+	],
 	shortcuts: {
-		"font-hedvig": "font-[Hedvig_Letters_Serif,serif]",
-		"font-inter": "font-[Inter,sans-serif]",
+		"font-sans": "font-[Noto_Sans,sans-serif]",
+		"font-display": "font-[Hedvig_Letters_Serif,serif]",
+		"font-mono": "font-[Commit_Mono,monospace]",
 	},
 });

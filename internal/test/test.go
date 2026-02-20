@@ -126,27 +126,15 @@ func (t *test) AddList(list model.List, domains []string) (int, error) {
 
 // AddSchedule creates a new schedule with linked devices, rules, and lists.
 func (t *test) AddSchedule(schedule model.Schedule) (int, error) {
+	// Create now automatically links devices and lists
 	id, err := t.schedules.Create(&schedule)
 	if err != nil {
 		return -1, err
 	}
 
-	for _, deviceID := range schedule.DeviceIDs {
-		err = t.schedules.LinkDevice(id, deviceID)
-		if err != nil {
-			return id, err
-		}
-	}
-
+	// Only need to manually link rules since Create doesn't handle those
 	for _, ruleID := range schedule.RuleIDs {
 		err = t.schedules.LinkRule(id, ruleID)
-		if err != nil {
-			return id, err
-		}
-	}
-
-	for _, li := range schedule.ListIDs {
-		err = t.schedules.LinkList(id, li)
 		if err != nil {
 			return id, err
 		}
