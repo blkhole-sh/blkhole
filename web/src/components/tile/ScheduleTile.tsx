@@ -1,10 +1,12 @@
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createSignal, Index } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { Schedule } from "~/lib/model";
 import ActionButton from "~/components/ui/ActionButton";
 import Tag from "~/components/ui/Tag";
 import Switch from "~/components/ui/Switch";
 import { deleteSchedule, updateSchedule } from "~/lib/api";
 import DeleteModal from "~/components/modal/DeleteModal";
+import { useScrollToHash } from "~/lib/hooks";
 
 interface Props {
 	schedule: Schedule;
@@ -31,6 +33,7 @@ const formatTime = (t: string) => {
 };
 
 export default function ScheduleTile(props: Props) {
+	const navigate = useNavigate();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
 	const handleToggleActive = async () => {
@@ -57,7 +60,7 @@ export default function ScheduleTile(props: Props) {
 	};
 
 	return (
-		<div class="py-8 flex flex-col gap-8">
+		<div id={`schedule-${props.schedule.id}`} class="py-8 flex flex-col gap-7">
 			<div class="flex flex-col gap-1">
 				<div class="flex flex-row justify-between items-center">
 					<p
@@ -106,9 +109,17 @@ export default function ScheduleTile(props: Props) {
 							when={props.schedule.deviceNames.length > 0}
 							fallback={<p>-</p>}
 						>
-							<For each={props.schedule.deviceNames}>
-								{(name) => <Tag>{name}</Tag>}
-							</For>
+							<Index each={props.schedule.deviceNames}>
+								{(name, i) => (
+									<Tag
+										onclick={() =>
+											navigate(`/devices#device-${props.schedule.deviceIds[i]}`)
+										}
+									>
+										{name()}
+									</Tag>
+								)}
+							</Index>
 						</Show>
 					</div>
 					<div class="flex flex-row flex-wrap gap-2 max-w-sm">
@@ -116,9 +127,17 @@ export default function ScheduleTile(props: Props) {
 							when={props.schedule.listNames.length > 0}
 							fallback={<p>-</p>}
 						>
-							<For each={props.schedule.listNames}>
-								{(name) => <Tag>{name}</Tag>}
-							</For>
+							<Index each={props.schedule.listNames}>
+								{(name, i) => (
+									<Tag
+										onclick={() =>
+											navigate(`/lists#list-${props.schedule.listIds[i]}`)
+										}
+									>
+										{name()}
+									</Tag>
+								)}
+							</Index>
 						</Show>
 					</div>
 				</div>

@@ -1,7 +1,7 @@
 /**
  * API client for authenticated requests to the blkhole server backend
  */
-import { Device, List, Quote, Schedule } from "./model";
+import { Device, List, Quote, QueryStats, Schedule } from "./model";
 
 const API_BASE = "/api";
 
@@ -171,7 +171,11 @@ export const createDevice = (name: string, os: string): Promise<Device> => {
 };
 
 /** Update a device by ID */
-export const updateDevice = (id: string, name: string, os: string): Promise<Device> =>
+export const updateDevice = (
+	id: string,
+	name: string,
+	os: string,
+): Promise<Device> =>
 	api(`/devices/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify({ name, os }),
@@ -182,7 +186,12 @@ export const deleteDevice = (id: string): Promise<void> =>
 	api(`/devices/${id}`, { method: "DELETE" });
 
 /** Update a blocklist by ID */
-export const updateList = (id: number, name: string, description: string, source: string): Promise<List> =>
+export const updateList = (
+	id: number,
+	name: string,
+	description: string,
+	source: string,
+): Promise<List> =>
 	api(`/lists/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify({ name, description, source }),
@@ -199,13 +208,29 @@ export const updateSchedule = (
 	startTime: string,
 	endTime: string,
 	active: boolean,
-	days: { monday: boolean; tuesday: boolean; wednesday: boolean; thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean },
+	days: {
+		monday: boolean;
+		tuesday: boolean;
+		wednesday: boolean;
+		thursday: boolean;
+		friday: boolean;
+		saturday: boolean;
+		sunday: boolean;
+	},
 	listIds: number[],
 	deviceIds: string[],
 ): Promise<Schedule> =>
 	api(`/schedules/${id}`, {
 		method: "PATCH",
-		body: JSON.stringify({ name, startTime, endTime, active, listIds, deviceIds, ...days }),
+		body: JSON.stringify({
+			name,
+			startTime,
+			endTime,
+			active,
+			listIds,
+			deviceIds,
+			...days,
+		}),
 	});
 
 /** Delete a schedule by ID */
@@ -213,7 +238,11 @@ export const deleteSchedule = (id: number): Promise<void> =>
 	api(`/schedules/${id}`, { method: "DELETE" });
 
 /** Create a new blocklist for the current user */
-export const createList = (name: string, description: string, source: string): Promise<List> => {
+export const createList = (
+	name: string,
+	description: string,
+	source: string,
+): Promise<List> => {
 	const user = getCurrentUser();
 	return api("/lists", {
 		method: "PUT",
@@ -226,13 +255,38 @@ export const createSchedule = (
 	name: string,
 	startTime: string,
 	endTime: string,
-	days: { monday: boolean; tuesday: boolean; wednesday: boolean; thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean },
+	days: {
+		monday: boolean;
+		tuesday: boolean;
+		wednesday: boolean;
+		thursday: boolean;
+		friday: boolean;
+		saturday: boolean;
+		sunday: boolean;
+	},
 	listIds: number[],
 	deviceIds: string[],
 ): Promise<Schedule> => {
 	const user = getCurrentUser();
 	return api("/schedules", {
 		method: "PUT",
-		body: JSON.stringify({ name, startTime, endTime, active: true, userId: user.id, listIds, deviceIds, ...days }),
+		body: JSON.stringify({
+			name,
+			startTime,
+			endTime,
+			active: true,
+			userId: user.id,
+			listIds,
+			deviceIds,
+			...days,
+		}),
 	});
+};
+
+/** Get query statistics for the current user - returns total and blocked query counts over time */
+export const getQueryStats = (
+	range: "24h" | "7d" | "30d" = "24h",
+): Promise<QueryStats> => {
+	const user = getCurrentUser();
+	return api(`/users/${user.id}/stats/queries?range=${range}`);
 };

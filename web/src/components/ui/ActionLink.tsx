@@ -1,4 +1,5 @@
 import { ParentProps } from "solid-js";
+import { cx } from "~/lib/utils";
 
 interface Props extends ParentProps {
 	href: string;
@@ -13,7 +14,10 @@ export default function ActionLink(props: Props) {
 			href={props.href}
 			download={props.download}
 			rel={props.rel}
-			class={`font-medium text-sm tracking-wider cursor-pointer ${props.class ?? "text-zinc-500"}`}
+			class={cx(
+				"font-medium text-sm tracking-wider cursor-pointer",
+				props.class || "text-zinc-500",
+			)}
 		>
 			{props.children}
 		</a>

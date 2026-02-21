@@ -107,8 +107,11 @@ func (u User) ToDTO() UserDTO {
 	}
 }
 
-// ToDTO converts a Device model to DeviceDTO with schedule names
-func (d Device) ToDTO(scheduleNames []string) DeviceDTO {
+// ToDTO converts a Device model to DeviceDTO with schedule IDs and names
+func (d Device) ToDTO(scheduleIDs []int, scheduleNames []string) DeviceDTO {
+	if scheduleIDs == nil {
+		scheduleIDs = []int{}
+	}
 	if scheduleNames == nil {
 		scheduleNames = []string{}
 	}
@@ -118,6 +121,7 @@ func (d Device) ToDTO(scheduleNames []string) DeviceDTO {
 		Name:          d.Name,
 		OS:            d.OS,
 		UserID:        d.UserID,
+		ScheduleIDs:   scheduleIDs,
 		ScheduleNames: scheduleNames,
 	}
 }

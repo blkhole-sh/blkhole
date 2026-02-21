@@ -54,8 +54,8 @@ export default function TextInput(props: Props) {
 						class="absolute right-1 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
 						aria-label={showPassword() ? "Hide password" : "Show password"}
 					>
-						<Show when={showPassword()} fallback={<Eye />}>
-							<EyeSlash class="size-4" />
+						<Show when={showPassword()} fallback={<Eye class="size-5" />}>
+							<EyeSlash class="size-5" />
 						</Show>
 					</button>
 				</Show>

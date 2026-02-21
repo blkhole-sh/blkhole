@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
@@ -23,14 +24,16 @@ type dnsController struct {
 	contentBlocker services.ContentBlocker
 	upstreamDNS    string
 	domain         string
+	statsCache     cache.StatsCache
 }
 
 // NewDNSController creates a new DnsController instance
-func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string, domain string) DNSController {
+func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string, domain string, statsCache cache.StatsCache) DNSController {
 	return &dnsController{
 		contentBlocker: contentBlocker,
 		upstreamDNS:    upstreamDNS,
 		domain:         domain,
+		statsCache:     statsCache,
 	}
 }
 
@@ -70,6 +73,9 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	// Get device hash from url params
 	deviceHash := chi.URLParam(r, "deviceHash")
 
+	// Increment query count for this device
+	dc.statsCache.Increment(deviceHash)
+
 	// Unpack the DNS message to analyze it
 	msg := new(dns.Msg)
 	err = msg.Unpack(dnsMsg)
@@ -100,6 +106,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 
 	// If domain is blocked, return NXDOMAIN
 	if blocked {
+		dc.statsCache.IncrementBlocked(deviceHash)
 		response.SetRcode(msg, dns.RcodeNameError)
 		response.Answer = nil
 	} else {

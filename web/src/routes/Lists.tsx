@@ -5,8 +5,10 @@ import ListModal from "~/components/modal/ListModal";
 import EmptyState from "~/components/ui/EmptyState";
 import { getLists } from "~/lib/api";
 import { List } from "~/lib/model";
+import { useScrollToHash } from "~/lib/hooks";
 
 export default function Lists() {
+	useScrollToHash();
 	const [modalOpen, setModalOpen] = createSignal(false);
 	const [editingList, setEditingList] = createSignal<List | null>(null);
 	const [lists, { refetch }] = createResource(getLists);
@@ -35,12 +37,14 @@ export default function Lists() {
 			onCTA={handleCreate}
 		>
 			<Show
-				when={lists()?.length > 0}
+				when={lists() && lists()!.length > 0}
 				fallback={
-					<EmptyState
-						message="blkhole is letting everything escape"
-						subtitle="Create your first blocklist to start filtering domains"
-					/>
+					<Show when={!lists.loading}>
+						<EmptyState
+							message="blkhole is letting everything escape"
+							subtitle="Create a blocklist to start pulling domains into the void"
+						/>
+					</Show>
 				}
 			>
 				<div class="divide-y divide-zinc-200">

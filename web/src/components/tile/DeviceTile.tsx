@@ -1,10 +1,13 @@
-import { For, Show, createSignal } from "solid-js";
+import { Show, createSignal, Index } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { Device } from "~/lib/model";
 import ActionButton from "~/components/ui/ActionButton";
 import Tag from "~/components/ui/Tag";
+import OSIcon from "~/components/icons/OSIcon";
 import { deleteDevice } from "~/lib/api";
 import DeleteModal from "../modal/DeleteModal";
 import DeviceSetupModal from "../modal/DeviceSetupModal";
+import { useScrollToHash } from "~/lib/hooks";
 
 interface Props {
 	device: Device;
@@ -13,32 +16,39 @@ interface Props {
 }
 
 export default function DeviceTile(props: Props) {
+	const navigate = useNavigate();
+	useScrollToHash();
 	const [setupDeviceOpen, setSetupDeviceOpen] = createSignal(false);
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
 	return (
-		<div class="py-8 flex flex-col gap-6">
+		<div id={`device-${props.device.id}`} class="py-8 flex flex-col gap-5">
 			<p class="font-display text-xl">{props.device.name}</p>
 			<div class="flex flex-row">
 				<div class="flex-1 grid grid-cols-3 items-start text-zinc-500">
 					<p class="pb-2 text-sm tracking-wider">STATUS</p>
 					<p class="pb-2 text-sm tracking-wider">OS</p>
 					<p class="pb-2 text-sm tracking-wider">SCHEDULES</p>
-					<div class="flex flex-row gap-2 items-center">
-						<div class="w-2 h-2 bg-black rounded-full" />
-						<p class="text-black">Connected</p>
-					</div>
-					<div class="w-fit justify-self-start">
-						<Tag>{props.device.os}</Tag>
-					</div>
+					<p>Connected</p>
+					<OSIcon os={props.device.os} />
 					<div class="flex flex-row flex-wrap gap-2">
 						<Show
 							when={props.device.scheduleNames.length > 0}
 							fallback={<p>—</p>}
 						>
-							<For each={props.device.scheduleNames}>
-								{(name) => <Tag>{name}</Tag>}
-							</For>
+							<Index each={props.device.scheduleNames}>
+								{(name, i) => (
+									<Tag
+										onclick={() =>
+											navigate(
+												`/schedules#schedule-${props.device.scheduleIds[i]}`,
+											)
+										}
+									>
+										{name()}
+									</Tag>
+								)}
+							</Index>
 						</Show>
 					</div>
 				</div>

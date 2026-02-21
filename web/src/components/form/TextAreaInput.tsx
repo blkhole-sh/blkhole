@@ -1,5 +1,6 @@
 import { JSX, Show } from "solid-js";
 import Divider from "../ui/Divider";
+import { cx } from "~/lib/utils";
 
 interface Props {
 	label: string;
@@ -35,7 +36,10 @@ export default function TextAreaInput(props: Props) {
 				value={props.value}
 				onInput={props.onInput}
 				rows={props.rows}
-				class={`w-full py-2 text-sm leading-snug tracking-wider outline-none resize-y ${props.class ?? ""}`}
+				class={cx(
+					"w-full py-2 text-sm leading-snug tracking-wider outline-none resize-y",
+					props.class,
+				)}
 			/>
 			<Divider class={isError() ? "border-red-600" : ""} />
 			<Show when={message()}>

@@ -57,8 +57,8 @@ func (dr *deviceRepo) Create(d *model.Device) error {
 
 // Update modifies an existing device given id in the database
 func (dr *deviceRepo) Update(id int, d *model.Device) error {
-	query := "UPDATE device SET name=?, os=?, hash=? WHERE id=?"
-	_, err := dr.db.ExecContext(dr.ctx, query, d.Name, d.OS, d.Hash, id)
+	query := "UPDATE device SET name=?, os=? WHERE id=?"
+	_, err := dr.db.ExecContext(dr.ctx, query, d.Name, d.OS, id)
 	return err
 }
 

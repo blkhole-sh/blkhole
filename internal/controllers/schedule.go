@@ -165,8 +165,28 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the updated schedule from database
+	updatedSchedule, err := sc.schedules.FindByID(id)
+	if err != nil {
+		log.Printf("failed to fetch updated schedule with id %d: %v", id, err)
+		http.Error(w, "Unable to fetch updated schedule", http.StatusInternalServerError)
+		return
+	}
+
+	// Load device and list names for the schedule
+	deviceNames, err := sc.devices.FindNamesByScheduleID(id)
+	if err != nil {
+		log.Printf("failed to load device names for schedule %d: %v", id, err)
+		deviceNames = []string{}
+	}
+	listNames, err := sc.lists.FindNamesByScheduleID(id)
+	if err != nil {
+		log.Printf("failed to load list names for schedule %d: %v", id, err)
+		listNames = []string{}
+	}
+
 	// Respond with JSON encoded schedule DTO
-	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
+	json.NewEncoder(w).Encode(updatedSchedule.ToDTO(deviceNames, listNames))
 }
 
 func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {

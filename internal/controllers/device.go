@@ -67,7 +67,7 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with JSON encoded device DTO
-	json.NewEncoder(w).Encode(d.ToDTO(nil))
+	json.NewEncoder(w).Encode(d.ToDTO(nil, nil))
 }
 
 func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,7 @@ func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(d.ToDTO(nil))
+	json.NewEncoder(w).Encode(d.ToDTO(nil, nil))
 }
 
 func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,7 @@ func (dc *deviceController) FindByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(d.ToDTO(nil))
+	json.NewEncoder(w).Encode(d.ToDTO(nil, nil))
 }
 
 func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
@@ -120,19 +120,24 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to DTOs with schedule names
+	// Convert to DTOs with schedule IDs and names
 	var deviceDTOs []model.DeviceDTO
 	if d == nil {
 		deviceDTOs = []model.DeviceDTO{}
 	} else {
 		deviceDTOs = make([]model.DeviceDTO, len(d))
 		for i, device := range d {
+			ids, err := dc.devices.LoadScheduleIDs(device.ID)
+			if err != nil {
+				log.Printf("failed to load schedule IDs for device %d: %v", device.ID, err)
+				ids = []int{}
+			}
 			names, err := dc.schedules.FindNamesByDeviceID(device.ID)
 			if err != nil {
 				log.Printf("failed to load schedule names for device %d: %v", device.ID, err)
 				names = []string{}
 			}
-			deviceDTOs[i] = device.ToDTO(names)
+			deviceDTOs[i] = device.ToDTO(ids, names)
 		}
 	}
 
@@ -166,8 +171,28 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the updated device from database
+	updatedDevice, err := dc.devices.FindByID(id)
+	if err != nil {
+		log.Printf("failed to fetch updated device with id %d: %v", id, err)
+		http.Error(w, "Unable to fetch updated device", http.StatusInternalServerError)
+		return
+	}
+
+	// Load schedule IDs and names for the device
+	scheduleIDs, err := dc.devices.LoadScheduleIDs(id)
+	if err != nil {
+		log.Printf("failed to load schedule IDs for device %d: %v", id, err)
+		scheduleIDs = []int{}
+	}
+	scheduleNames, err := dc.schedules.FindNamesByDeviceID(id)
+	if err != nil {
+		log.Printf("failed to load schedule names for device %d: %v", id, err)
+		scheduleNames = []string{}
+	}
+
 	// Respond with JSON encoded device DTO
-	json.NewEncoder(w).Encode(d.ToDTO(nil))
+	json.NewEncoder(w).Encode(updatedDevice.ToDTO(scheduleIDs, scheduleNames))
 }
 
 func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {

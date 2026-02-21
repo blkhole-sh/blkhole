@@ -1,5 +1,6 @@
 import { JSX, Show } from "solid-js";
 import Divider from "../ui/Divider";
+import { cx } from "~/lib/utils";
 
 interface Props {
 	label: string;
@@ -20,7 +21,7 @@ export default function TimeInput(props: Props) {
 	const isError = () => !!activeError();
 
 	return (
-		<div class={`flex flex-col gap-1 ${props.class ?? ""}`}>
+		<div class={cx("flex flex-col gap-1", props.class)}>
 			<label
 				for={props.label}
 				class="font-medium text-zinc-700 text-sm tracking-wider"

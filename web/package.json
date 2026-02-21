@@ -9,6 +9,7 @@
 	},
 	"dependencies": {
 		"@solidjs/router": "^0.15.4",
+		"solid-charts": "^0.0.2",
 		"solid-js": "^1.9.11"
 	},
 	"devDependencies": {

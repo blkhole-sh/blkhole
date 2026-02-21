@@ -1,5 +1,19 @@
 package model
 
+import "time"
+
+// StatCount represents a query count at a specific timestamp
+type StatCount struct {
+	Timestamp time.Time `json:"timestamp"`
+	Count     int       `json:"count"`
+}
+
+// QueryStatsDTO represents combined query statistics
+type QueryStatsDTO struct {
+	Total   []StatCount `json:"total"`
+	Blocked []StatCount `json:"blocked"`
+}
+
 // UserDTO represents a user data transfer object
 type UserDTO struct {
 	ID           int    `json:"id"`
@@ -18,6 +32,7 @@ type DeviceDTO struct {
 	OS            OS       `json:"os"`
 	Hash          string   `json:"hash"`
 	UserID        int      `json:"userId"`
+	ScheduleIDs   []int    `json:"scheduleIds"`
 	ScheduleNames []string `json:"scheduleNames"`
 }
 

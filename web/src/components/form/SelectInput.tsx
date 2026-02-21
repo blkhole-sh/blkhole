@@ -1,6 +1,7 @@
 import { JSX, ParentProps, Show } from "solid-js";
 import Divider from "../ui/Divider";
 import ChevronDown from "../icons/ChevronDown";
+import { cx } from "~/lib/utils";
 
 interface Props extends ParentProps {
 	label: string;
@@ -13,7 +14,7 @@ interface Props extends ParentProps {
 
 export default function SelectInput(props: Props) {
 	return (
-		<div class={`flex flex-col gap-1 ${props.class ?? ""}`}>
+		<div class={cx("flex flex-col gap-1", props.class)}>
 			<label
 				for={props.label}
 				class="font-medium text-zinc-700 text-sm tracking-wider"

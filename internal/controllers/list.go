@@ -130,8 +130,16 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the updated list with all relations
+	updatedList, err := lc.lists.FindByID(id)
+	if err != nil {
+		log.Printf("failed to fetch updated list with id %d: %v", id, err)
+		http.Error(w, "Unable to fetch updated list", http.StatusInternalServerError)
+		return
+	}
+
 	// Respond with JSON encoded list DTO
-	json.NewEncoder(w).Encode(l.ToDTO())
+	json.NewEncoder(w).Encode(updatedList.ToDTO())
 }
 
 func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {

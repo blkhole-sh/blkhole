@@ -42,7 +42,7 @@ function MultiStepModal(props: Props) {
 		if (!props.open) setStep(0);
 	});
 
-	const steps = () => resolved.toArray() as JSX.Element[];
+	const steps = () => (resolved.toArray() as JSX.Element[]).filter(Boolean);
 	const isFirst = () => step() === 0;
 	const isLast = () => step() === steps().length - 1;
 
@@ -52,38 +52,51 @@ function MultiStepModal(props: Props) {
 		setStep((s) => s + 1);
 	};
 
+	const handleSubmit = async (e: Event) => {
+		e.preventDefault();
+		if (isLast()) {
+			props.onConfirm();
+		} else {
+			await handleNext();
+		}
+	};
+
 	return (
 		<dialog
 			ref={ref}
 			onClose={props.onClose}
 			class="w-full max-w-lg max-h-[90vh] open:flex open:flex-col divide-y divide-zinc-100 open:fixed open:top-1/2 open:left-1/2 open:-translate-x-1/2 open:-translate-y-1/2 backdrop:bg-black/30 backdrop:backdrop-blur-sm outline-none"
 		>
-			<div class="p-8 flex flex-row justify-between items-start flex-shrink-0">
-				<div class="flex flex-col gap-1">
-					<p class="text-xs text-zinc-400 tracking-wider">
-						STEP {step() + 1} OF {steps().length}
-					</p>
-					<h2 class="font-display text-2xl">{props.title}</h2>
+			<form onSubmit={handleSubmit} class="flex flex-col divide-y divide-zinc-100 flex-1">
+				<div class="p-8 flex flex-row justify-between items-start flex-shrink-0">
+					<div class="flex flex-col gap-1">
+						<Show when={steps().length > 1}>
+							<p class="text-xs text-zinc-400 tracking-wider">
+								STEP {step() + 1} OF {steps().length}
+							</p>
+						</Show>
+						<h2 class="font-display text-2xl">{props.title}</h2>
+					</div>
+					<ActionButton onclick={props.onClose} tabindex={-1} type="button">
+						<XMark />
+					</ActionButton>
 				</div>
-				<ActionButton onclick={props.onClose} tabindex={-1}>
-					<XMark />
-				</ActionButton>
-			</div>
-			<div class="p-8 overflow-y-auto">{steps()[step()]}</div>
-			<div class="px-8 py-6 flex flex-row justify-end items-center gap-6 w-full flex-shrink-0">
-				<Show when={isFirst()}>
-					<ButtonGhost onclick={props.onClose}>CANCEL</ButtonGhost>
-				</Show>
-				<Show when={!isFirst()}>
-					<ButtonGhost onclick={() => setStep((s) => s - 1)}>BACK</ButtonGhost>
-				</Show>
-				<Show when={!isLast()}>
-					<ButtonSolid onclick={handleNext}>NEXT</ButtonSolid>
-				</Show>
-				<Show when={isLast()}>
-					<ButtonSolid onclick={props.onConfirm}>CONFIRM</ButtonSolid>
-				</Show>
-			</div>
+				<div class="p-8 overflow-y-auto">{steps()[step()]}</div>
+				<div class="px-8 py-6 flex flex-row justify-end items-center gap-6 w-full flex-shrink-0">
+					<Show when={isFirst()}>
+						<ButtonGhost onclick={props.onClose} type="button">CANCEL</ButtonGhost>
+					</Show>
+					<Show when={!isFirst()}>
+						<ButtonGhost onclick={() => setStep((s) => s - 1)} type="button">BACK</ButtonGhost>
+					</Show>
+					<Show when={!isLast()}>
+						<ButtonSolid type="submit">NEXT</ButtonSolid>
+					</Show>
+					<Show when={isLast()}>
+						<ButtonSolid type="submit">CONFIRM</ButtonSolid>
+					</Show>
+				</div>
+			</form>
 		</dialog>
 	);
 }

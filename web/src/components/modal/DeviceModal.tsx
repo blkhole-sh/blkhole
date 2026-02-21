@@ -1,15 +1,14 @@
 import { createEffect, createSignal } from "solid-js";
 import Modal from "./Modal";
 import TextInput from "../form/TextInput";
-import TileGrid, { TileOption } from "../form/TileGrid";
-import MacOS from "../icons/MacOS";
-import IOS from "../icons/IOS";
+import TileInput, { TileOption } from "../form/TileInput";
 import Android from "../icons/Android";
 import Linux from "../icons/Linux";
 import Windows from "../icons/Windows";
 import { createDevice, updateDevice } from "~/lib/api";
 import { required } from "~/lib/validate";
 import { Device } from "~/lib/model";
+import Apple from "../icons/Apple";
 
 interface Props {
 	open: boolean;
@@ -19,8 +18,8 @@ interface Props {
 }
 
 const OS_OPTIONS: TileOption[] = [
-	{ value: "macOS", label: "macOS", icon: () => <MacOS /> },
-	{ value: "iOS", label: "iOS", icon: () => <IOS /> },
+	{ value: "macOS", label: "macOS", icon: () => <Apple /> },
+	{ value: "iOS", label: "iOS", icon: () => <Apple /> },
 	{ value: "Android", label: "Android", icon: () => <Android /> },
 	{ value: "Linux", label: "Linux", icon: () => <Linux /> },
 	{ value: "Windows", label: "Windows", icon: () => <Windows /> },
@@ -34,7 +33,7 @@ export default function DeviceModal(props: Props) {
 	const [error, setError] = createSignal("");
 
 	const isEditMode = () => !!props.device;
-	const title = () => isEditMode() ? "Edit Device" : "Add Device";
+	const title = () => (isEditMode() ? "Edit Device" : "Add Device");
 
 	// Pre-fill form when opening in edit mode
 	createEffect(() => {
@@ -105,7 +104,7 @@ export default function DeviceModal(props: Props) {
 					validate={required()}
 					showError={submitted()}
 				/>
-				<TileGrid
+				<TileInput
 					label="OPERATING SYSTEM"
 					options={OS_OPTIONS}
 					value={os()}

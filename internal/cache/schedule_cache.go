@@ -4,6 +4,7 @@ package cache
 import (
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lemon3studio/blkhole/internal/model"
@@ -25,6 +26,7 @@ type ScheduleCache interface {
 
 // scheduleCache implements the ScheduleCache interface
 type scheduleCache struct {
+	mu              sync.RWMutex
 	scheduleToRule  map[int][]int            // Schedule ID → Rule IDs
 	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → Rule IDs as hash set for O(1) lookup
 	scheduleMasks   map[int]uint64           // Schedule ID → Pre-computed bitmask for time filtering
@@ -41,6 +43,9 @@ func NewScheduleCache() ScheduleCache {
 
 // LoadSchedules populates the schedule cache with pre-computed bitmasks for active filtering
 func (sc *scheduleCache) LoadSchedules(schedules []*model.Schedule) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+
 	for _, schedule := range schedules {
 		sc.scheduleMasks[schedule.ID] = convertToBitmask(schedule)
 	}
@@ -141,6 +146,9 @@ func getCurrentTimeMask() uint64 {
 
 // LoadScheduleRules populates the schedule-to-rule mapping
 func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+
 	for _, sr := range scheduleRules {
 		// Add to slice (keep for compatibility)
 		sc.scheduleToRule[sr.ScheduleID] = append(sc.scheduleToRule[sr.ScheduleID], sr.RuleID)
@@ -155,6 +163,9 @@ func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule) 
 
 // GetRules returns all rule IDs for a given schedule ID
 func (sc *scheduleCache) GetRules(scheduleID int) []int {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
 	return sc.scheduleToRule[scheduleID]
 }
 
@@ -163,6 +174,9 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 	if len(scheduleIDs) == 0 || len(domainRules) == 0 {
 		return false
 	}
+
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
 
 	// Use schedule rule sets for O(1) lookup
 	for _, schedID := range scheduleIDs {
@@ -183,6 +197,9 @@ func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 	if len(scheduleIDs) == 0 {
 		return nil
 	}
+
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
 
 	// Pre-allocate slice with capacity to avoid reallocations
 	activeScheduleIDs := make([]int, 0, len(scheduleIDs))

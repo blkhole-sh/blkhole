@@ -11,7 +11,7 @@ interface Props extends ParentProps {
 
 export default function PageShell(props: Props) {
 	return (
-		<div class="px-24 py-8 flex flex-col flex-1">
+		<div class="px-24 py-4 flex flex-col flex-1">
 			<div class="flex flex-row justify-between items-end">
 				<div class="flex flex-col gap-4">
 					<h1 class="font-display text-5xl tracking-tight">{props.title}</h1>

@@ -205,15 +205,12 @@ export default function ScheduleModal(props: Props) {
 					</div>
 				</div>
 			</MultiStepModal.Step>
-			<MultiStepModal.Step>
-				<div class="flex flex-col gap-1">
-					<p class="font-medium text-zinc-700 text-sm tracking-wider">
-						SELECT BLOCKLISTS
-					</p>
-					<Show
-						when={lists()}
-						fallback={<p class="text-sm text-zinc-400 py-2">Loading...</p>}
-					>
+			{lists() && lists()!.length > 0 && (
+				<MultiStepModal.Step>
+					<div class="flex flex-col gap-1">
+						<p class="font-medium text-zinc-700 text-sm tracking-wider">
+							SELECT BLOCKLISTS
+						</p>
 						<div class="flex flex-col divide-y divide-zinc-100">
 							<For each={lists()}>
 								{(list) => (
@@ -226,19 +223,16 @@ export default function ScheduleModal(props: Props) {
 								)}
 							</For>
 						</div>
-					</Show>
-					{listsError() && <p class="text-xs text-red-700 mt-2">{listsError()}</p>}
-				</div>
-			</MultiStepModal.Step>
-			<MultiStepModal.Step>
-				<div class="flex flex-col gap-1">
-					<p class="font-medium text-zinc-700 text-sm tracking-wider">
-						APPLY TO DEVICES
-					</p>
-					<Show
-						when={devices()}
-						fallback={<p class="text-sm text-zinc-400 py-2">Loading...</p>}
-					>
+						{listsError() && <p class="text-xs text-red-700 mt-2">{listsError()}</p>}
+					</div>
+				</MultiStepModal.Step>
+			)}
+			{devices() && devices()!.length > 0 && (
+				<MultiStepModal.Step>
+					<div class="flex flex-col gap-1">
+						<p class="font-medium text-zinc-700 text-sm tracking-wider">
+							APPLY TO DEVICES
+						</p>
 						<div class="flex flex-col divide-y divide-zinc-100">
 							<For each={devices()}>
 								{(device) => (
@@ -252,11 +246,11 @@ export default function ScheduleModal(props: Props) {
 								)}
 							</For>
 						</div>
-					</Show>
-					{devicesError() && <p class="text-xs text-red-700 mt-2">{devicesError()}</p>}
-					{error() && <p class="text-xs text-red-700 mt-2">{error()}</p>}
-				</div>
-			</MultiStepModal.Step>
+						{devicesError() && <p class="text-xs text-red-700 mt-2">{devicesError()}</p>}
+						{error() && <p class="text-xs text-red-700 mt-2">{error()}</p>}
+					</div>
+				</MultiStepModal.Step>
+			)}
 		</MultiStepModal>
 	);
 }

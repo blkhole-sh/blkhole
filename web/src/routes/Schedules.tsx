@@ -5,8 +5,10 @@ import ScheduleModal from "~/components/modal/ScheduleModal";
 import EmptyState from "~/components/ui/EmptyState";
 import { getSchedules } from "~/lib/api";
 import { Schedule } from "~/lib/model";
+import { useScrollToHash } from "~/lib/hooks";
 
 export default function Schedules() {
+	useScrollToHash();
 	const [modalOpen, setModalOpen] = createSignal(false);
 	const [editingSchedule, setEditingSchedule] = createSignal<Schedule | null>(
 		null,
@@ -37,12 +39,14 @@ export default function Schedules() {
 			onCTA={handleCreate}
 		>
 			<Show
-				when={schedules()?.length > 0}
+				when={schedules() && schedules()!.length > 0}
 				fallback={
-					<EmptyState
-						message="blkhole exists outside of time"
-						subtitle="Set up time-based blocking rules"
-					/>
+					<Show when={!schedules.loading}>
+						<EmptyState
+							message="blkhole exists outside of time"
+							subtitle="Create a schedule to control when blocking occurs"
+						/>
+					</Show>
 				}
 			>
 				<div class="divide-y divide-zinc-200">

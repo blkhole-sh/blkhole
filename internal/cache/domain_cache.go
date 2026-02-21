@@ -3,6 +3,7 @@ package cache
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/armon/go-radix"
 	"github.com/lemon3studio/blkhole/internal/model"
@@ -18,6 +19,7 @@ type DomainCache interface {
 
 // domainCache implements the DomainCache interface
 type domainCache struct {
+	mu           sync.RWMutex
 	domainTree   *radix.Tree   // Reversed domain → domain ID
 	domainToRule map[int][]int // Domain ID → Rule IDs
 }
@@ -46,6 +48,9 @@ func reverseDomain(domain string) string {
 
 // LoadDomains populates the radix tree with domain data
 func (dc *domainCache) LoadDomains(domains []*model.Domain) {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+
 	for _, d := range domains {
 		reversedDomain := reverseDomain(d.Name)
 		dc.domainTree.Insert(reversedDomain, d.ID)
@@ -54,6 +59,9 @@ func (dc *domainCache) LoadDomains(domains []*model.Domain) {
 
 // LoadRules populates the domain-to-rule mapping
 func (dc *domainCache) LoadRules(rules []*model.Rule) {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+
 	bildCount := 0
 	for _, r := range rules {
 		dc.domainToRule[r.DomainID] = append(dc.domainToRule[r.DomainID], r.ID)
@@ -66,6 +74,9 @@ func (dc *domainCache) LoadRules(rules []*model.Rule) {
 
 // LookupDomainID finds the most specific domain ID for a given domain
 func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
+	dc.mu.RLock()
+	defer dc.mu.RUnlock()
+
 	// Reverse domain for radix tree lookup
 	reversedDomain := reverseDomain(domain)
 	parts := strings.Split(reversedDomain, ".")
@@ -85,5 +96,8 @@ func (dc *domainCache) LookupDomainID(domain string) (int, bool) {
 
 // GetRules returns all rule IDs for a given domain ID
 func (dc *domainCache) GetRules(domainID int) []int {
+	dc.mu.RLock()
+	defer dc.mu.RUnlock()
+
 	return dc.domainToRule[domainID]
 }

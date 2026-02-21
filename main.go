@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/controllers"
 	schema "github.com/lemon3studio/blkhole/internal/db"
 	"github.com/lemon3studio/blkhole/internal/middleware"
@@ -60,6 +61,9 @@ var (
 	authService    services.AuthService
 	tokenAuth      *jwtauth.JWTAuth
 
+	// Caches
+	statsCache cache.StatsCache
+
 	// Controllers
 	deviceController       controllers.DeviceController
 	userController         controllers.UserController
@@ -69,6 +73,7 @@ var (
 	scheduleController     controllers.ScheduleController
 	quoteController        controllers.QuoteController
 	authController         controllers.AuthController
+	statsController        controllers.StatsController
 	webController          controllers.WebController
 
 	// Test
@@ -130,64 +135,67 @@ func initUpstreamDNS(addr string) (string, error) {
 	return addr, nil
 }
 
-func initDependencies(cfg *Config) {
-	// Get database path
+func initDatabase() *sql.DB {
 	configDir, _ := os.UserConfigDir()
 	dbPath := filepath.Join(configDir, "blkhole", "blkhole.db")
 	os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
-	// Initialize repos
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Initialize db schema
 	err = schema.Init(db)
 	if err != nil {
 		log.Fatalf("failed to initialize schema: %v", err)
 	}
 
-	// Initialize secret
-	secret, err := hex.DecodeString(cfg.Secret)
+	return db
+}
+
+func initSecret(secretHex string) []byte {
+	secret, err := hex.DecodeString(secretHex)
 	if err != nil {
 		log.Fatalf("failed to decode secret: %v", err)
 	}
+	return secret
+}
 
-	// Initialize upstream dns server
-	upstreamDNS, err := initUpstreamDNS(cfg.UpstreamDNS)
-	if err != nil {
-		log.Fatalf("failed to initialize upstream dns server: %v", err)
-	}
-
-	// Initialize repos
+func initRepos(db *sql.DB) {
 	devices = repos.NewDeviceRepo(db)
 	rules = repos.NewRuleRepo(db)
 	lists = repos.NewListRepo(db)
 	schedules = repos.NewScheduleRepo(db)
 	users = repos.NewUserRepo(db)
 	domains = repos.NewDomainRepo(db)
+}
 
-	// Initialize services
+func initCaches() {
+	statsCache = cache.NewStatsCache()
+}
+
+func initServices(secret []byte) {
 	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListsService(lists, rules, domains)
 
-	// Initialize auth service with token auth
 	tokenAuth = jwtauth.New("HS256", secret, nil)
 	authService = services.NewAuthService(users, cryptoService, tokenAuth)
+}
 
-	// Initialize controllers
+func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
 	userController = controllers.NewUserController(users, cryptoService)
-	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, cfg.Domain)
+	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, domain, statsCache)
 	listController = controllers.NewListController(lists)
-	mobileConfigController = controllers.NewMobileConfigController(cfg.Domain, devices)
+	mobileConfigController = controllers.NewMobileConfigController(domain, devices)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
-	testController = controllers.NewTestController(t)
+	statsController = controllers.NewStatsController(statsCache, devices)
+}
 
+func initWebAndTest(db *sql.DB) {
 	// Initialize frontend controller with embedded assets
 	webSubFS, err := fs.Sub(webFS, "static")
 	if err != nil {
@@ -196,8 +204,23 @@ func initDependencies(cfg *Config) {
 	webController = controllers.NewWebController(webSubFS)
 
 	// Initialize test
-	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains)
+	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache)
 	testController = controllers.NewTestController(t)
+}
+
+func initDependencies(cfg *Config) {
+	db := initDatabase()
+	secret := initSecret(cfg.Secret)
+	upstreamDNS, err := initUpstreamDNS(cfg.UpstreamDNS)
+	if err != nil {
+		log.Fatalf("failed to initialize upstream dns server: %v", err)
+	}
+
+	initRepos(db)
+	initCaches()
+	initServices(secret)
+	initControllers(cfg.Domain, upstreamDNS)
+	initWebAndTest(db)
 }
 
 func initRouter() *chi.Mux {
@@ -271,6 +294,9 @@ func initRouter() *chi.Mux {
 			r.Patch("/schedules/{id}", scheduleController.Update)
 			r.Delete("/schedules/{id}", scheduleController.Delete)
 			r.Get("/is-blocked", scheduleController.IsBlocked)
+
+			// Stats API routes
+			r.Get("/users/{userId}/stats/queries", statsController.GetQueryStats)
 		})
 	})
 
@@ -335,6 +361,9 @@ func main() {
 	if err = contentBlocker.Init(); err != nil {
 		log.Fatalf("failed to initialize content blocker: %v", err)
 	}
+
+	// Start background tasks
+	statsCache.Start()
 
 	// Initialize router
 	r := initRouter()

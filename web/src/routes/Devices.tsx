@@ -5,8 +5,10 @@ import DeviceModal from "~/components/modal/DeviceModal";
 import EmptyState from "~/components/ui/EmptyState";
 import { getDevices } from "~/lib/api";
 import { Device } from "~/lib/model";
+import { useScrollToHash } from "~/lib/hooks";
 
 export default function Devices() {
+	useScrollToHash();
 	const [modalOpen, setModalOpen] = createSignal(false);
 	const [editingDevice, setEditingDevice] = createSignal<Device | null>(null);
 	const [devices, { refetch }] = createResource(getDevices);
@@ -35,12 +37,14 @@ export default function Devices() {
 			onCTA={handleAdd}
 		>
 			<Show
-				when={devices()?.length > 0}
+				when={devices() && devices()!.length > 0}
 				fallback={
-					<EmptyState
-						message="blkhole has nothing in orbit"
-						subtitle="Add your first device to start blocking"
-					/>
+					<Show when={!devices.loading}>
+						<EmptyState
+							message="blkhole has nothing in orbit"
+							subtitle="Add your first device to start blocking"
+						/>
+					</Show>
 				}
 			>
 				<div class="divide-y divide-zinc-200">

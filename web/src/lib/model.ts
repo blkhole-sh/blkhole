@@ -8,13 +8,14 @@ export interface User {
 	schedules: number;
 }
 
-// Define Device interface - now uses DTO format with schedule names
+// Define Device interface - now uses DTO format with schedule IDs and names
 export interface Device {
 	id: string;
 	hash: string; // Keep hash for mobile config URLs
 	name: string;
 	os: string;
 	userId: string;
+	scheduleIds: number[];
 	scheduleNames: string[];
 }
 
@@ -33,7 +34,7 @@ export interface List {
 	description: string;
 	source: string;
 	userId: string;
-	rules: number;    // Count of rules in this list
+	rules: number; // Count of rules in this list
 	schedules: number; // Count of schedules using this list
 }
 
@@ -63,4 +64,16 @@ export interface Schedule {
 export interface Quote {
 	quote: string;
 	author: string;
+}
+
+// Define StatCount interface for time-series data points
+export interface StatCount {
+	timestamp: string; // ISO 8601 timestamp
+	count: number;
+}
+
+// Define QueryStats interface - API response for query statistics
+export interface QueryStats {
+	total: StatCount[];
+	blocked: StatCount[];
 }
