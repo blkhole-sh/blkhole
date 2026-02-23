@@ -153,13 +153,43 @@ func (rr *ruleRepo) FindByDomain(domain string) ([]*model.Rule, error) {
 // LinkToList creates a link between a rule and a list
 func (rr *ruleRepo) LinkToList(ruleID int, listID int) error {
 	query := "INSERT OR IGNORE INTO list_rule (list_id, rule_id) VALUES (?, ?)"
-	_, err := rr.db.ExecContext(rr.ctx, query, listID, ruleID)
-	return err
+	result, err := rr.db.ExecContext(rr.ctx, query, listID, ruleID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows > 0 {
+		updateQuery := "UPDATE list SET count = count + 1 WHERE id = ?"
+		_, err := rr.db.ExecContext(rr.ctx, updateQuery, listID)
+		return err
+	}
+
+	return nil
 }
 
 // UnlinkFromList removes a link between a rule and a list
 func (rr *ruleRepo) UnlinkFromList(ruleID int, listID int) error {
 	query := "DELETE FROM list_rule WHERE list_id=? AND rule_id=?"
-	_, err := rr.db.ExecContext(rr.ctx, query, listID, ruleID)
-	return err
+	result, err := rr.db.ExecContext(rr.ctx, query, listID, ruleID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows > 0 {
+		updateQuery := "UPDATE list SET count = count - 1 WHERE id = ?"
+		_, err := rr.db.ExecContext(rr.ctx, updateQuery, listID)
+		return err
+	}
+
+	return nil
 }

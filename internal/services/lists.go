@@ -335,5 +335,7 @@ func (ls *listsService) LoadList(l *model.List) error {
 		return fmt.Errorf("failed to load rules for list %d: %w", l.ID, err)
 	}
 
+	l.Count = len(l.Rules)
+
 	return nil
 }
