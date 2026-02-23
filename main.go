@@ -185,7 +185,7 @@ func initServices(secret []byte) {
 
 func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
-	userController = controllers.NewUserController(users, cryptoService)
+	userController = controllers.NewUserController(users, authService, cryptoService)
 	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, domain, statsCache)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices)
