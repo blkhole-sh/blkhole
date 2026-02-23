@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/services"
@@ -25,6 +26,7 @@ type dnsController struct {
 	upstreamDNS    string
 	domain         string
 	statsCache     cache.StatsCache
+	dnsClient      *dns.Client
 }
 
 // NewDNSController creates a new DnsController instance
@@ -34,6 +36,10 @@ func NewDNSController(contentBlocker services.ContentBlocker, upstreamDNS string
 		upstreamDNS:    upstreamDNS,
 		domain:         domain,
 		statsCache:     statsCache,
+		dnsClient: &dns.Client{
+			Timeout:        1 * time.Second,
+			SingleInflight: true,
+		},
 	}
 }
 
@@ -111,8 +117,7 @@ func (dc *dnsController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 		response.Answer = nil
 	} else {
 		// Forward the DNS query to the upstream server
-		client := new(dns.Client)
-		res, _, err := client.Exchange(msg, dc.upstreamDNS)
+		res, _, err := dc.dnsClient.Exchange(msg, dc.upstreamDNS)
 		if err != nil {
 			log.Printf("failed to forward dns query to upstream server: %v", err)
 
