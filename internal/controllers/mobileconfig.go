@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 )
 
 //go:embed mobileconfig.tmpl
@@ -38,15 +39,17 @@ type MobileConfigController interface {
 
 // mobileConfigController implements the MobileConfigController interface
 type mobileConfigController struct {
-	domain  string
-	devices repos.DeviceRepo
+	domain      string
+	devices     repos.DeviceRepo
+	authService services.AuthService
 }
 
 // NewMobileConfigController creates a new MobileConfigController instance
-func NewMobileConfigController(domain string, devices repos.DeviceRepo) MobileConfigController {
+func NewMobileConfigController(domain string, devices repos.DeviceRepo, authService services.AuthService) MobileConfigController {
 	return &mobileConfigController{
-		domain:  domain,
-		devices: devices,
+		domain:      domain,
+		devices:     devices,
+		authService: authService,
 	}
 }
 
@@ -59,11 +62,26 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Get current user from context
+	user, err := mc.authService.UserFromContext(r.Context())
+	if err != nil {
+		log.Printf("failed to get user from context: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Find device with given id in db
 	device, err := mc.devices.FindByID(id)
 	if err != nil {
 		log.Printf("failed to find device by id %d: %v", id, err)
 		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		return
+	}
+
+	// Verify device belongs to user
+	if device.UserID != user.ID {
+		log.Printf("user %d attempted to access device %d owned by %d", user.ID, device.ID, device.UserID)
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
