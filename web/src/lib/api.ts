@@ -38,6 +38,35 @@ export const login = async (email: string, password: string) => {
 };
 
 /**
+ * Register user with email and password
+ * Backend will set secure HttpOnly cookies automatically
+ * @param email - User email
+ * @param password - User password
+ * @returns Promise containing user data
+ * @throws Error on registration failure
+ */
+export const register = async (email: string, password: string) => {
+	const response = await fetch(`${API_BASE}/auth/register`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, password }),
+		credentials: "include", // Include cookies in request
+	});
+
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
+
+	const responseData = await response.json();
+	const { user: userData } = responseData;
+
+	// Store user data in localStorage (not sensitive)
+	localStorage.setItem("user", JSON.stringify(userData));
+
+	return { user: userData };
+};
+
+/**
  * Logout user by calling backend logout endpoint
  * @returns Promise that resolves when logout is complete
  */

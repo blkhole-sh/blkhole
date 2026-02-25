@@ -254,6 +254,7 @@ func initRouter() *chi.Mux {
 
 		// Public routes
 		r.Post("/auth/login", authController.Login)
+		r.Post("/auth/register", authController.Register)
 		r.Post("/auth/refresh", authController.RefreshToken)
 		r.Post("/auth/logout", authController.Logout)
 		r.Get("/quote", quoteController.Random)
