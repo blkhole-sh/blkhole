@@ -166,11 +166,20 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), startMinute, 0, 0, startTime.Location())
 	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
 
+	startStr := startTime.Format("15:04")
+	endStr := endTime.Format("15:04")
+
+	// Handle midnight wrap-around or invalid range by using full day
+	if startStr >= endStr {
+		startStr = "00:00"
+		endStr = "23:55"
+	}
+
 	schedule := &model.Schedule{
 		Name:      "Test Schedule",              // Human-readable name
 		UserID:    userID,                       // Links schedule to its owner
-		StartTime: startTime.Format("15:04"),    // Start time in HH:MM format
-		EndTime:   endTime.Format("15:04"),      // End time in HH:MM format
+		StartTime: startStr,                     // Start time in HH:MM format
+		EndTime:   endStr,                       // End time in HH:MM format
 		Monday:    now.Weekday() == time.Monday, // Active on current day
 		Tuesday:   now.Weekday() == time.Tuesday,
 		Wednesday: now.Weekday() == time.Wednesday,
