@@ -316,17 +316,26 @@ func (ls *listsService) LoadList(l *model.List) error {
 		return fmt.Errorf("failed to read from source %s: %w", l.Source, err)
 	}
 
-	// Save each rule to database and link to list
-	for _, rule := range rules {
-		ruleID, err := ls.ruleRepo.CreateOrGet(&rule)
-		if err != nil {
-			return fmt.Errorf("failed to create rule for domain ID %d: %w", rule.DomainID, err)
-		}
+	// Prepare rules for batch creation
+	rulePtrs := make([]*model.Rule, len(rules))
+	for i := range rules {
+		rulePtrs[i] = &rules[i]
+	}
 
-		// Link the rule to the list
-		if err := ls.ruleRepo.LinkToList(ruleID, l.ID); err != nil {
-			return fmt.Errorf("failed to link rule %d to list %d: %w", ruleID, l.ID, err)
-		}
+	// Batch create or get rules
+	if err := ls.ruleRepo.BatchCreateOrGet(rulePtrs); err != nil {
+		return fmt.Errorf("failed to batch create rules: %w", err)
+	}
+
+	// Extract rule IDs for linking
+	ruleIDs := make([]int, len(rules))
+	for i, r := range rules {
+		ruleIDs[i] = r.ID
+	}
+
+	// Batch link rules to list
+	if err := ls.ruleRepo.BatchLinkToList(ruleIDs, l.ID); err != nil {
+		return fmt.Errorf("failed to batch link rules to list %d: %w", l.ID, err)
 	}
 
 	// Load the updated rules into the list model
