@@ -31,10 +31,11 @@ type test struct {
 	cryptoService services.CryptoService
 	domains       repos.DomainRepo
 	statsCache    cache.StatsCache
+	deviceCache   cache.DeviceCache
 }
 
 // NewTest creates a new test instance.
-func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRepo, lists repos.ListRepo, listService services.ListsService, schedules repos.ScheduleRepo, cryptoService services.CryptoService, domains repos.DomainRepo, statsCache cache.StatsCache) Test {
+func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRepo, lists repos.ListRepo, listService services.ListsService, schedules repos.ScheduleRepo, cryptoService services.CryptoService, domains repos.DomainRepo, statsCache cache.StatsCache, deviceCache cache.DeviceCache) Test {
 	return &test{
 		users:         users,
 		devices:       devices,
@@ -45,6 +46,7 @@ func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRep
 		cryptoService: cryptoService,
 		domains:       domains,
 		statsCache:    statsCache,
+		deviceCache:   deviceCache,
 	}
 }
 
@@ -78,6 +80,13 @@ func (t *test) AddDevice(device model.Device) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	// Reload device cache to include the new device
+	allDevices, err := t.devices.FindAll()
+	if err != nil {
+		return device.ID, err
+	}
+	t.deviceCache.LoadDevices(allDevices)
 
 	return device.ID, nil
 }
