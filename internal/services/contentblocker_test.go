@@ -157,20 +157,12 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	// Create a schedule that is active NOW for testing
 	// This ensures that blocking rules will be applied during the test
 	now := time.Now()
-	startTime := now.Add(-1 * time.Hour)
-	endTime := now.Add(1 * time.Hour)
-
-	// Round times to 5-minute boundaries to satisfy SQL constraints
-	startMinute := (startTime.Minute() / 5) * 5
-	endMinute := (endTime.Minute() / 5) * 5
-	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), startMinute, 0, 0, startTime.Location())
-	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
 
 	schedule := &model.Schedule{
 		Name:      "Test Schedule",              // Human-readable name
 		UserID:    userID,                       // Links schedule to its owner
-		StartTime: startTime.Format("15:04"),    // Start time in HH:MM format
-		EndTime:   endTime.Format("15:04"),      // End time in HH:MM format
+		StartTime: "00:00",                      // Start time in HH:MM format
+		EndTime:   "23:55",                      // End time in HH:MM format
 		Monday:    now.Weekday() == time.Monday, // Active on current day
 		Tuesday:   now.Weekday() == time.Tuesday,
 		Wednesday: now.Weekday() == time.Wednesday,
