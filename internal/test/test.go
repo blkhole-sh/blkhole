@@ -2,8 +2,6 @@
 package test
 
 import (
-	"time"
-
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/model"
 	"github.com/lemon3studio/blkhole/internal/repos"
@@ -159,26 +157,6 @@ func (t *test) Test() (int, error) {
 		return 0, err
 	}
 
-	device1 := model.Device{
-		Name:   "iPhone von Arian",
-		OS:     model.IOS,
-		UserID: ui,
-	}
-	d1i, err := t.AddDevice(device1)
-	if err != nil {
-		return 0, err
-	}
-
-	device2 := model.Device{
-		Name:   "MacBook Pro von Arian",
-		OS:     model.MacOS,
-		UserID: ui,
-	}
-	d2i, err := t.AddDevice(device2)
-	if err != nil {
-		return 0, err
-	}
-
 	l1i, err := t.AddList(model.List{
 		Name:        "Hagezi Multi ULTIMATE",
 		Description: "Ultimate Sweeper - Strictly cleans the Internet and protects your privacy! Blocks Ads, Affiliate, Tracking, Metrics, Telemetry, Phishing, Malware, Scam, Free Hoster, Fake, Cryptojacking and other Crap.",
@@ -249,66 +227,13 @@ func (t *test) Test() (int, error) {
 		Friday:    true,
 		Saturday:  false,
 		Sunday:    true,
-		DeviceIDs: []int{d1i, d2i},
+		DeviceIDs: []int{},
 		RuleIDs:   []int{r1i, r2i},
 		ListIDs:   []int{l1i, l2i, l3i},
 		UserID:    ui,
 	})
 	if err != nil {
 		return -1, err
-	}
-
-	// Add realistic query stats for the last 24 hours
-	d1, err := t.devices.FindByID(d1i)
-	if err != nil {
-		return -1, err
-	}
-
-	d2, err := t.devices.FindByID(d2i)
-	if err != nil {
-		return -1, err
-	}
-
-	// Generate realistic query patterns for last 24 hours
-	now := time.Now()
-	for hoursAgo := 23; hoursAgo >= 0; hoursAgo-- {
-		hour := now.Add(-time.Duration(hoursAgo) * time.Hour)
-
-		// Simulate realistic usage patterns (more queries during daytime)
-		var queriesPerHour, blockedPerHour int
-		hourOfDay := hour.Hour()
-
-		switch {
-		case hourOfDay >= 0 && hourOfDay < 6: // Night (low activity)
-			queriesPerHour = 5 + hoursAgo%3
-			blockedPerHour = 1 + hoursAgo%2
-		case hourOfDay >= 6 && hourOfDay < 9: // Morning (medium activity)
-			queriesPerHour = 30 + hoursAgo%15
-			blockedPerHour = 7 + hoursAgo%4
-		case hourOfDay >= 9 && hourOfDay < 17: // Work hours (high activity)
-			queriesPerHour = 80 + hoursAgo%30
-			blockedPerHour = 18 + hoursAgo%8
-		case hourOfDay >= 17 && hourOfDay < 22: // Evening (medium activity)
-			queriesPerHour = 45 + hoursAgo%20
-			blockedPerHour = 10 + hoursAgo%5
-		default: // Late evening (low-medium activity)
-			queriesPerHour = 20 + hoursAgo%10
-			blockedPerHour = 4 + hoursAgo%3
-		}
-
-		// Add stats for iPhone (more mobile usage)
-		t.statsCache.IncrementAt(d1.Hash, hour, queriesPerHour)
-		t.statsCache.IncrementBlockedAt(d1.Hash, hour, blockedPerHour)
-
-		// Add stats for MacBook (more work-related usage during work hours)
-		macQueriesPerHour := queriesPerHour
-		macBlockedPerHour := blockedPerHour
-		if hourOfDay >= 9 && hourOfDay < 17 {
-			macQueriesPerHour = int(float64(queriesPerHour) * 1.5) // 50% more during work
-			macBlockedPerHour = int(float64(blockedPerHour) * 1.3)
-		}
-		t.statsCache.IncrementAt(d2.Hash, hour, macQueriesPerHour)
-		t.statsCache.IncrementBlockedAt(d2.Hash, hour, macBlockedPerHour)
 	}
 
 	return ui, nil
