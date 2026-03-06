@@ -3,7 +3,7 @@
 # Set secrets before deploying: fly secrets set BLKHOLE_SECRET=<32-byte-hex>
 
 app = "blkhole"
-primary_region = "iad"
+primary_region = "sjc"
 
 [build]
   dockerfile = "Dockerfile"
