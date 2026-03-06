@@ -72,7 +72,7 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 	uuid2 := generateUUID()
 
 	// Build server URL using device hash (required for DNS query endpoint)
-	serverURL := "https://" + mc.domain + "/" + device.Hash + "/dns-query"
+	serverURL := "https://" + device.Hash + "." + mc.domain + "/dns-query"
 
 	// Prepare template data
 	data := struct {

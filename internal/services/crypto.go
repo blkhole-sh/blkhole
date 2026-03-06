@@ -47,9 +47,9 @@ func (cs *cryptoService) RandomHash() (string, error) {
 	// Get the hash (16 bytes)
 	hash := hasher.Sum(nil)
 
-	// Encode the hash in Base64URL
+	// Encode the hash in Base64URL and normalize to lowercase
 	base64UrlEncodedHash := base64.RawURLEncoding.EncodeToString(hash)
-
+	base64UrlEncodedHash = strings.ToLower(base64UrlEncodedHash)
 	return base64UrlEncodedHash, nil
 }
 
