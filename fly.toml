@@ -8,11 +8,6 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile"
 
-[env]
-  BLKHOLE_PORT = "8080"
-  BLKHOLE_UPSTREAM_DNS = "1.1.1.1:53"
-  # BLKHOLE_DOMAIN = "your-app.fly.dev"  # set this if using autocert instead of -p
-
 # HTTP/HTTPS web interface + DoH
 [http_service]
   internal_port = 8080
