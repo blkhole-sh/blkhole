@@ -2,6 +2,7 @@ package services
 
 import (
 	"crypto/rand"
+	"encoding/base32"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -47,10 +48,9 @@ func (cs *cryptoService) RandomHash() (string, error) {
 	// Get the hash (16 bytes)
 	hash := hasher.Sum(nil)
 
-	// Encode the hash in Base64URL and normalize to lowercase
-	base64UrlEncodedHash := base64.RawURLEncoding.EncodeToString(hash)
-	base64UrlEncodedHash = strings.ToLower(base64UrlEncodedHash)
-	return base64UrlEncodedHash, nil
+	// Encode the hash in Base32 (DNS-safe, no special characters) and normalize to lowercase
+	encoded := strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash))
+	return encoded, nil
 }
 
 // HashPassword hashes the given password using Argon2 and returns the hash encoded as a string with salt

@@ -4,15 +4,15 @@
 <plist version="1.0">
 <dict>
     <key>PayloadDisplayName</key>
-    <string>blkhole for {{ .DeviceName }}</string>
+    <string>blkhole for MacBook Pro von Arian</string>
     <key>PayloadDescription</key>
     <string>Adds encrypted DNS configuration to iOS 14 (or newer) based systems</string>
     <key>PayloadIdentifier</key>
-    <string>sh.blkhole.{{ .DeviceHash }}</string>
+    <string>studio.lemon3.dns.upjqccywg5ydtlzapx_jcw</string>
     <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadUUID</key>
-    <string>{{ .UUID }}</string>
+    <string>39ac01af-a12f-47aa-8393-641661fe1c11</string>
     <key>PayloadVersion</key>
     <integer>1</integer>
     <key>PayloadScope</key>
@@ -23,9 +23,9 @@
             <key>PayloadType</key>
             <string>com.apple.dnsSettings.managed</string>
             <key>PayloadIdentifier</key>
-            <string>sh.blkhole.{{ .DeviceHash }}.settings</string>
+            <string>sh.blkhole.upjqccywg5ydtlzapx_jcw.settings</string>
             <key>PayloadUUID</key>
-            <string>{{ .DNSUUID }}</string>
+            <string>355f1bb7-6716-45c9-8488-ce69a96610df</string>
             <key>PayloadVersion</key>
             <integer>1</integer>
             <key>DNSSettings</key>
@@ -35,15 +35,8 @@
                 <key>ServerAddresses</key>
                 <array/>
                 <key>ServerURL</key>
-                <string>{{ .ServerURL }}</string>
+                <string>https://upjqccywg5ydtlzapx_jcw.blkhole.sh/dns-query</string>
             </dict>
-            <key>OnDemandRules</key>
-            <array>
-                <dict>
-                    <key>Action</key>
-                    <string>Connect</string>
-                </dict>
-            </array>
             <key>PayloadDescription</key>
             <string>Configures device to use blkhole Encrypted DNS over HTTPS</string>
             <key>PayloadDisplayName</key>
