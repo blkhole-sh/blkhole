@@ -749,7 +749,7 @@ func TestContentBlocker_RealWorldData(t *testing.T) {
 	}
 
 	device2 := &model.Device{
-		Hash:   "macbook-test-hash", 
+		Hash:   "macbook-test-hash",
 		Name:   "MacBook Pro von Arian",
 		OS:     model.MacOS,
 		UserID: userID,
@@ -794,7 +794,7 @@ func TestContentBlocker_RealWorldData(t *testing.T) {
 		}
 	}
 
-	// List 2: Malware blocking  
+	// List 2: Malware blocking
 	list2 := &model.List{
 		Name:        "Malware Blocker",
 		Description: "Blocks malware and phishing",
@@ -938,7 +938,7 @@ func TestContentBlocker_RealWorldData(t *testing.T) {
 			}
 
 			if blocked != tt.expected {
-				t.Errorf("IsBlocked() = %v, expected %v for domain %s with device %s", 
+				t.Errorf("IsBlocked() = %v, expected %v for domain %s with device %s",
 					blocked, tt.expected, tt.domain, tt.deviceHash)
 			}
 		})
