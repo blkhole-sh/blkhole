@@ -23,7 +23,7 @@
             <key>PayloadType</key>
             <string>com.apple.dnsSettings.managed</string>
             <key>PayloadIdentifier</key>
-            <string>studio.lemon3.dns.{{ .DeviceHash }}.settings</string>
+            <string>sh.blkhole.{{ .DeviceHash }}.settings</string>
             <key>PayloadUUID</key>
             <string>{{ .DNSUUID }}</string>
             <key>PayloadVersion</key>
@@ -37,13 +37,6 @@
                 <key>ServerURL</key>
                 <string>{{ .ServerURL }}</string>
             </dict>
-            <key>OnDemandRules</key>
-            <array>
-                <dict>
-                    <key>Action</key>
-                    <string>Connect</string>
-                </dict>
-            </array>
             <key>PayloadDescription</key>
             <string>Configures device to use blkhole Encrypted DNS over HTTPS</string>
             <key>PayloadDisplayName</key>

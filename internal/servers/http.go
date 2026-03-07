@@ -29,7 +29,7 @@ func StartHTTP(ctx context.Context, handler http.Handler, domain string, port st
 	}()
 
 	// Plain HTTP (local or behind a reverse proxy like Fly.io)
-	if port != "" && tlsConfig == nil {
+	if port != "" && port != "443" && tlsConfig == nil {
 		log.Printf("starting http server on :%s\n", port)
 		return server.ListenAndServe()
 	}
