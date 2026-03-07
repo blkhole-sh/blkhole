@@ -17,16 +17,18 @@ import (
 var mobileConfigTemplateContent string
 
 // generateUUID creates a UUID v4 using standard library
-func generateUUID() string {
+func generateUUID() (string, error) {
 	bytes := make([]byte, 16)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
 
 	// Set version (4) and variant bits
 	bytes[6] = (bytes[6] & 0x0f) | 0x40 // Version 4
 	bytes[8] = (bytes[8] & 0x3f) | 0x80 // Variant bits
 
 	return fmt.Sprintf("%x-%x-%x-%x-%x",
-		bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16])
+		bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16]), nil
 }
 
 var mobileConfigTemplate = template.Must(template.New("mobileconfig").Parse(mobileConfigTemplateContent))
@@ -68,8 +70,19 @@ func (mc *mobileConfigController) GenerateConfig(w http.ResponseWriter, r *http.
 	}
 
 	// Generate UUIDs for mobile config
-	uuid1 := generateUUID()
-	uuid2 := generateUUID()
+	uuid1, err := generateUUID()
+	if err != nil {
+		log.Printf("failed to generate uuid: %v", err)
+		http.Error(w, "Unable to generate uuid", http.StatusInternalServerError)
+		return
+	}
+
+	uuid2, err := generateUUID()
+	if err != nil {
+		log.Printf("failed to generate uuid: %v", err)
+		http.Error(w, "Unable to generate uuid", http.StatusInternalServerError)
+		return
+	}
 
 	// Build server URL using device hash (required for DNS query endpoint)
 	serverURL := "https://" + device.Hash + "." + mc.domain + "/dns-query"
