@@ -55,6 +55,7 @@ type List struct {
 	Rules       []Rule `json:"rules"`
 	ScheduleIDs []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
+	Count       int    `json:"count"`
 }
 
 // Schedule represents a time-based schedule
@@ -134,7 +135,7 @@ func (l List) ToDTO() ListDTO {
 		Description: l.Description,
 		Source:      l.Source,
 		UserID:      l.UserID,
-		Rules:       len(l.Rules),
+		Rules:       l.Count,
 		Schedules:   len(l.ScheduleIDs),
 	}
 }
