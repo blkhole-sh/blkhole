@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
   "regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lemon3studio/blkhole/internal/model"
@@ -30,7 +31,14 @@ func (m *mockDeviceRepo) Update(id int, d *model.Device) error                  
 func (m *mockDeviceRepo) Delete(id int) error                                    { return nil }
 func (m *mockDeviceRepo) LinkSchedule(id int, scheduleID int) error              { return nil }
 func (m *mockDeviceRepo) LoadScheduleIDs(id int) ([]int, error)                  { return nil, nil }
-func (m *mockDeviceRepo) FindByHash(hash string) (*model.Device, error)          { return nil, nil }
+func (m *mockDeviceRepo) FindByHash(hash string) (*model.Device, error) {
+	for _, d := range m.devices {
+		if d.Hash == hash {
+			return d, nil
+		}
+	}
+	return nil, errors.New("device not found")
+}
 func (m *mockDeviceRepo) FindByUser(userID int) ([]*model.Device, error)         { return nil, nil }
 func (m *mockDeviceRepo) FindNamesByScheduleID(scheduleID int) ([]string, error) { return nil, nil }
 func (m *mockDeviceRepo) FindBySchedule(scheduleID int) ([]*model.Device, error) { return nil, nil }
@@ -51,6 +59,9 @@ func (m *mockAuthService) UserFromContext(ctx context.Context) (*model.User, err
 }
 
 func (m *mockAuthService) Login(email, password string) (*services.LoginResult, error) {
+	return nil, nil
+}
+func (m *mockAuthService) Register(email, password string) (*services.LoginResult, error) {
 	return nil, nil
 }
 func (m *mockAuthService) RefreshToken(refreshToken string) (*services.LoginResult, error) {
@@ -137,8 +148,40 @@ func TestGenerateConfig(t *testing.T) {
 			if w.Code != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
+
+			if tt.expectedStatus == http.StatusOK {
+				// Verify response headers
+				if w.Header().Get("Content-Type") != "application/x-apple-aspen-config" {
+					t.Errorf("expected Content-Type application/x-apple-aspen-config, got %s", w.Header().Get("Content-Type"))
+				}
+				if w.Header().Get("Content-Disposition") != `attachment; filename="blkhole.mobileconfig"` {
+					t.Errorf("expected Content-Disposition attachment, got %s", w.Header().Get("Content-Disposition"))
+				}
+
+				// Verify response body contains expected values
+				body := w.Body.String()
+				expectedValues := []string{
+					"hash1",
+					"User's Device",
+					"https://hash1.example.com/dns-query",
+					"<!DOCTYPE plist PUBLIC",
+				}
+
+				for _, expected := range expectedValues {
+					if !strings.Contains(body, expected) {
+						t.Errorf("expected body to contain %q", expected)
+					}
+				}
+
+				// Verify UUIDs are generated
+				uuidRegex := regexp.MustCompile(`(?i)[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}`)
+				matches := uuidRegex.FindAllString(body, -1)
+				if len(matches) < 2 {
+					t.Errorf("expected at least 2 UUIDs in body, found %d", len(matches))
+				}
+			}
 		})
-	}
+  }
 }
 
 

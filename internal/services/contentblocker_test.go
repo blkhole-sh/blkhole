@@ -158,9 +158,20 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	// Create a schedule that is active NOW for testing
 	// This ensures that blocking rules will be applied during the test
 	now := time.Now()
+	startTime := now.Add(-time.Hour)
+	endTime := now.Add(time.Hour)
 
 	startStr := startTime.Format("15:04")
 	endStr := endTime.Format("15:04")
+
+	// Round times to 5-minute boundaries to satisfy SQL constraints
+	startMinute := (startTime.Minute() / 5) * 5
+	endMinute := (endTime.Minute() / 5) * 5
+	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), startTime.Hour(), startMinute, 0, 0, startTime.Location())
+	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), endTime.Hour(), endMinute, 0, 0, endTime.Location())
+
+	startStr = startTime.Format("15:04")
+	endStr = endTime.Format("15:04")
 
 	// Handle midnight wrap-around or invalid range by using full day
 	if startStr >= endStr {
@@ -698,6 +709,48 @@ func TestContentBlocker_SubdomainVsParent(t *testing.T) {
 				t.Errorf("IsBlocked() = %v, expected %v for domain %s", blocked, tt.expected, tt.domain)
 			}
 		})
+	}
+}
+
+// mockDeviceCache implements DeviceCache to test fallback behavior
+type mockDeviceCache struct {
+	cache.DeviceCache // Embed interface to implicitly implement all methods
+	getDeviceIDFunc   func(hash string) (int, bool)
+}
+
+func (m *mockDeviceCache) GetDeviceID(hash string) (int, bool) {
+	if m.getDeviceIDFunc != nil {
+		return m.getDeviceIDFunc(hash)
+	}
+	return 0, false
+}
+
+// TestContentBlocker_IsBlocked_CacheMiss verifies the fallback behavior when a device is not found in the cache.
+// It uses a mock DeviceCache to explicitly simulate a cache miss without needing a full database setup.
+func TestContentBlocker_IsBlocked_CacheMiss(t *testing.T) {
+	// Create a mock cache that explicitly returns a miss (false)
+	mockCache := &mockDeviceCache{
+		getDeviceIDFunc: func(hash string) (int, bool) {
+			return 0, false // Simulate cache miss
+		},
+	}
+
+	// Initialize the content blocker with nil dependencies except for the mock device cache
+	// Since the cache miss returns early, no other dependencies will be accessed.
+	cb := NewContentBlocker(nil, nil, nil, nil, mockCache)
+
+	// Test with a valid domain and an arbitrary device hash
+	domain := "example.com"
+	deviceHash := "unknown-hash"
+
+	blocked, err := cb.IsBlocked(domain, deviceHash)
+
+	if err != nil {
+		t.Errorf("IsBlocked() unexpected error on cache miss: %v", err)
+	}
+
+	if blocked {
+		t.Errorf("IsBlocked() expected false for cache miss, got true")
 	}
 }
 
