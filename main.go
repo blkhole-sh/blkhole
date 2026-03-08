@@ -2,6 +2,8 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"database/sql"
 	"embed"
 	"encoding/hex"
@@ -10,17 +12,20 @@ import (
 	"io/fs"
 	"log"
 	"net"
-	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/controllers"
 	schema "github.com/lemon3studio/blkhole/internal/db"
-	"github.com/lemon3studio/blkhole/internal/middleware"
 	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/routes"
+	"github.com/lemon3studio/blkhole/internal/servers"
 	"github.com/lemon3studio/blkhole/internal/services"
 	"github.com/lemon3studio/blkhole/internal/test"
+	"golang.org/x/sync/errgroup"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -28,7 +33,6 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 var devMode = "false" // Set via ldflags
@@ -39,6 +43,7 @@ type Config struct {
 	Port        string
 	UpstreamDNS string
 	Secret      string
+	TLSConfig   *tls.Config
 }
 
 var (
@@ -56,18 +61,20 @@ var (
 
 	// Services
 	contentBlocker services.ContentBlocker
+	resolver       services.Resolver
 	cryptoService  services.CryptoService
 	listService    services.ListsService
 	authService    services.AuthService
 	tokenAuth      *jwtauth.JWTAuth
 
 	// Caches
-	statsCache cache.StatsCache
+	statsCache  cache.StatsCache
+	deviceCache cache.DeviceCache
 
 	// Controllers
 	deviceController       controllers.DeviceController
 	userController         controllers.UserController
-	dnsController          controllers.DNSController
+	dohController          controllers.DoHController
 	listController         controllers.ListController
 	mobileConfigController controllers.MobileConfigController
 	scheduleController     controllers.ScheduleController
@@ -81,20 +88,24 @@ var (
 	testController controllers.TestController
 )
 
+func envOrDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
 func initConfig() (*Config, error) {
 	var cfg Config
 
-	flag.StringVar(&cfg.Port, "p", "", "HTTP port (local mode only, mutually exclusive with -d)")
-	flag.StringVar(&cfg.Domain, "d", "", "Domain for HTTPS with autocert (production mode, mutually exclusive with -p)")
-	flag.StringVar(&cfg.UpstreamDNS, "u", "1.1.1.1:53", "Upstream DNS server")
-	flag.StringVar(&cfg.Secret, "s", "", "JWT secret (hex)")
+	flag.StringVar(&cfg.Port, "p", envOrDefault("BLKHOLE_PORT", ""), "HTTP port (local mode only, mutually exclusive with -d)")
+	flag.StringVar(&cfg.Domain, "d", envOrDefault("BLKHOLE_DOMAIN", "localhost"), "Domain for HTTPS with autocert (production mode, mutually exclusive with -p)")
+	flag.StringVar(&cfg.UpstreamDNS, "u", envOrDefault("BLKHOLE_UPSTREAM_DNS", "1.1.1.1:53"), "Upstream DNS server")
+	flag.StringVar(&cfg.Secret, "s", envOrDefault("BLKHOLE_SECRET", ""), "JWT secret (hex)")
 
 	flag.Parse()
 
 	// Validate mode flags
-	if cfg.Domain != "" && cfg.Port != "" {
-		return nil, fmt.Errorf("-p has no effect when -d is set")
-	}
 	if cfg.Domain == "" && cfg.Port == "" {
 		return nil, fmt.Errorf("either -p (local mode) or -d (production mode) is required")
 	}
@@ -102,10 +113,10 @@ func initConfig() (*Config, error) {
 	// Validate common required flags
 	var missing []string
 	if cfg.UpstreamDNS == "" {
-		missing = append(missing, "-u (upstream dns server)")
+		missing = append(missing, "-u / BLKHOLE_UPSTREAM_DNS")
 	}
 	if cfg.Secret == "" {
-		missing = append(missing, "-s (secret)")
+		missing = append(missing, "-s / BLKHOLE_SECRET")
 	}
 
 	if len(missing) > 0 {
@@ -171,11 +182,13 @@ func initRepos(db *sql.DB) {
 }
 
 func initCaches() {
-	statsCache = cache.NewStatsCache()
+	deviceCache = cache.NewDeviceCache()
+	statsCache = cache.NewStatsCache(deviceCache)
 }
 
-func initServices(secret []byte) {
-	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains)
+func initServices(secret []byte, upstreamDNS string) {
+  contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
+	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListsService(lists, rules, domains)
 
@@ -186,7 +199,7 @@ func initServices(secret []byte) {
 func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
 	userController = controllers.NewUserController(users, cryptoService)
-	dnsController = controllers.NewDNSController(contentBlocker, upstreamDNS, domain, statsCache)
+	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
@@ -204,7 +217,7 @@ func initWebAndTest(db *sql.DB) {
 	webController = controllers.NewWebController(webSubFS)
 
 	// Initialize test
-	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache)
+	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache, deviceCache)
 	testController = controllers.NewTestController(t)
 }
 
@@ -218,12 +231,12 @@ func initDependencies(cfg *Config) {
 
 	initRepos(db)
 	initCaches()
-	initServices(secret)
+	initServices(secret, upstreamDNS)
 	initControllers(cfg.Domain, upstreamDNS)
 	initWebAndTest(db)
 }
 
-func initRouter() *chi.Mux {
+func initRouter(domain string) *chi.Mux {
 	// Create a new router using chi
 	r := chi.NewRouter()
 
@@ -241,109 +254,12 @@ func initRouter() *chi.Mux {
 		MaxAge:           300, // Max cache time for preflight requests
 	}))
 
-	// Route specifically for /dns-query, handling both GET and POST requests
-	r.Route("/{deviceHash}/dns-query", func(r chi.Router) {
-		r.Get("/", dnsController.DNSQuery)
-		r.Post("/", dnsController.DNSQuery)
-	})
-
-	// API routes group
-	r.Route("/api", func(r chi.Router) {
-		// Apply JSON middleware to all API routes
-		r.Use(middleware.JSONMiddleware)
-
-		// Public routes
-		r.Post("/auth/login", authController.Login)
-		r.Post("/auth/refresh", authController.RefreshToken)
-		r.Post("/auth/logout", authController.Logout)
-		r.Get("/quote", quoteController.Random)
-
-		// Protected routes
-		r.Group(func(r chi.Router) {
-			// Cookie-based JWT authentication middleware
-			r.Use(middleware.CookieAuthenticator(tokenAuth))
-
-			// Auth routes
-			r.Get("/auth/me", authController.GetCurrentUser)
-
-			// User API routes
-			r.Get("/users/{id}", userController.FindByID)
-			r.Put("/users", userController.Create)
-			r.Patch("/users/{id}", userController.Update)
-			r.Delete("/users/{id}", userController.Delete)
-
-			// Device API routes
-			r.Get("/devices/{id}", deviceController.FindByID)
-			r.Get("/devices/{id}/config", mobileConfigController.GenerateConfig)
-			r.Get("/users/{userId}/devices", deviceController.FindByUser)
-			r.Put("/devices", deviceController.Create)
-			r.Patch("/devices/{id}", deviceController.Update)
-			r.Delete("/devices/{id}", deviceController.Delete)
-
-			// List API routes
-			r.Get("/lists/{id}", listController.FindByID)
-			r.Get("/users/{userId}/lists", listController.FindByUser)
-			r.Put("/lists", listController.Create)
-			r.Patch("/lists/{id}", listController.Update)
-			r.Delete("/lists/{id}", listController.Delete)
-
-			// Schedule API routes
-			r.Get("/schedules/{id}", scheduleController.FindByID)
-			r.Get("/users/{userId}/schedules", scheduleController.FindByUser)
-			r.Put("/schedules", scheduleController.Create)
-			r.Patch("/schedules/{id}", scheduleController.Update)
-			r.Delete("/schedules/{id}", scheduleController.Delete)
-			r.Get("/is-blocked", scheduleController.IsBlocked)
-
-			// Stats API routes
-			r.Get("/users/{userId}/stats/queries", statsController.GetQueryStats)
-		})
-	})
-
-	// Serve test route
-	r.Get("/test", testController.RunTest)
-
-	// Serve static files (legacy)
-	r.Get("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))).ServeHTTP)
-
-	if devMode == "true" {
-		log.Printf("dev mode enabled")
-	} else {
-		// Serve frontend - only in production mode
-		// Serve frontend with compression middleware
-		// Must be last to avoid catching API routes
-		webSubFS, _ := fs.Sub(webFS, "static")
-		r.With(middleware.CompressionMiddleware(webSubFS)).Get("/*", webController.Serve)
-	}
+	// Initialize routes
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, testController, webController, tokenAuth)
+	routes.InitWeb(r, webController, &webFS, devMode)
+	routes.InitDoH(r, dohController, domain, devMode)
 
 	return r
-}
-
-func startServer(cfg *Config, handler http.Handler) error {
-	// Local mode — plain HTTP on specified port
-	if cfg.Domain == "" {
-		log.Printf("starting blkhole on :%s", cfg.Port)
-		return http.ListenAndServe(":"+cfg.Port, handler)
-	}
-
-	// Store certs alongside the database in the user config directory
-	configDir, _ := os.UserConfigDir()
-	m := &autocert.Manager{
-		Cache:      autocert.DirCache(filepath.Join(configDir, "blkhole", "certs")),
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(cfg.Domain),
-	}
-
-	// HTTP server on :80 for ACME challenge and redirect to HTTPS
-	go func() {
-		log.Printf("starting HTTP redirect on :80")
-		if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
-			log.Fatalf("HTTP redirect server error: %v", err)
-		}
-	}()
-
-	log.Printf("starting blkhole on :443 (domain: %s)", cfg.Domain)
-	return http.Serve(m.Listener(), handler)
 }
 
 func main() {
@@ -353,6 +269,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+
+	log.Println("inizializing blkhole ...")
 
 	// Initialize dependencies
 	initDependencies(cfg)
@@ -365,11 +283,40 @@ func main() {
 	// Start background tasks
 	statsCache.Start()
 
-	// Initialize router
-	r := initRouter()
+	// Initialize HTTP router
+	r := initRouter(cfg.Domain)
 
-	// Start server
-	if err = startServer(cfg, r); err != nil {
-		log.Fatalf("failed to start server :%v", err)
+	// Initialize context for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Initialize error group
+	g, ctx := errgroup.WithContext(ctx)
+
+	log.Println("supernova detected, collapsing star in progress ...")
+
+	// Start servers
+	g.Go(func() error {
+		err := servers.StartHTTP(ctx, r, cfg.Domain, cfg.Port, cfg.TLSConfig)
+		if err != nil {
+			log.Printf("http server error: %v", err)
+		}
+		return err
+	})
+
+	if cfg.TLSConfig != nil {
+		g.Go(func() error {
+			err := servers.StartDoT(ctx, resolver, cfg.TLSConfig)
+			if err != nil {
+				log.Printf("dot server error: %v", err)
+			}
+
+			return err
+		})
+	}
+
+	// Catch server errors
+	if err := g.Wait(); err != nil && ctx.Err() == nil {
+		log.Fatalf("server error: %v", err)
 	}
 }

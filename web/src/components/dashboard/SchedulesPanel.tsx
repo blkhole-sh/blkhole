@@ -30,11 +30,13 @@ export default function SchedulesPanel(props: Props) {
 					<For each={activeSchedules()}>
 						{(schedule) => (
 							<div
-								class="flex flex-col gap-1 flex-1 cursor-pointer"
+								class="flex flex-col flex-1 cursor-pointer"
 								onclick={() => navigate(`/schedules#schedule-${schedule.id}`)}
 							>
-								<p class="font-display text">{schedule.name}</p>
-								<p class="text-zinc-500 text-sm">
+								<p class="font font-medium text-sm tracking-wider">
+									{schedule.name}
+								</p>
+								<p class="text-zinc-500 text-sm tracking-wider">
 									{formatTime(schedule.startTime)} –{" "}
 									{formatTime(schedule.endTime)}
 								</p>
