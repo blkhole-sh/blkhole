@@ -8,7 +8,7 @@
     <key>PayloadDescription</key>
     <string>Adds encrypted DNS configuration to iOS 14 (or newer) based systems</string>
     <key>PayloadIdentifier</key>
-    <string>studio.lemon3.dns.{{ .DeviceHash }}</string>
+    <string>sh.blkhole.{{ .DeviceHash }}</string>
     <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadUUID</key>
@@ -16,14 +16,14 @@
     <key>PayloadVersion</key>
     <integer>1</integer>
     <key>PayloadScope</key>
-    <string>User</string>
+    <string>System</string>
     <key>PayloadContent</key>
     <array>
         <dict>
             <key>PayloadType</key>
             <string>com.apple.dnsSettings.managed</string>
             <key>PayloadIdentifier</key>
-            <string>studio.lemon3.dns.{{ .DeviceHash }}.settings</string>
+            <string>sh.blkhole.{{ .DeviceHash }}.settings</string>
             <key>PayloadUUID</key>
             <string>{{ .DNSUUID }}</string>
             <key>PayloadVersion</key>

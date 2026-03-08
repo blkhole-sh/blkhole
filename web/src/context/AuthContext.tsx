@@ -5,11 +5,17 @@ import {
 	useContext,
 } from "solid-js";
 import { User } from "~/lib/model";
-import { login as apiLogin, logout as apiLogout, refreshAuth } from "~/lib/api";
+import {
+	login as apiLogin,
+	register as apiRegister,
+	logout as apiLogout,
+	refreshAuth,
+} from "~/lib/api";
 
 type AuthStore = {
 	user: () => User | null;
 	login: (email: string, password: string) => Promise<void>;
+	register: (email: string, password: string) => Promise<void>;
 	logout: () => Promise<void>;
 	isAuthenticated: () => boolean;
 	checkAuth: () => Promise<void>;
@@ -42,6 +48,11 @@ export default function AuthProvider(props: ParentProps) {
 		setUser(userData);
 	};
 
+	const register = async (email: string, password: string) => {
+		const { user: userData } = await apiRegister(email, password);
+		setUser(userData);
+	};
+
 	const logout = async () => {
 		await apiLogout();
 		setUser(null);
@@ -63,6 +74,7 @@ export default function AuthProvider(props: ParentProps) {
 	const store: AuthStore = {
 		user,
 		login,
+		register,
 		logout,
 		isAuthenticated,
 		checkAuth,

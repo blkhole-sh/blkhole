@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/lemon3studio/blkhole/internal/model"
@@ -26,6 +27,7 @@ type LoginResult struct {
 // AuthService defines the interface for authentication operations
 type AuthService interface {
 	Login(email, password string) (*LoginResult, error)
+	Register(email, password string) (*LoginResult, error)
 	RefreshToken(refreshToken string) (*LoginResult, error)
 	UserFromContext(ctx context.Context) (*model.User, error)
 }
@@ -62,6 +64,39 @@ func (as *authService) Login(email, password string) (*LoginResult, error) {
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
+	return as.generateTokens(user)
+}
+
+// Register creates a new user and returns tokens
+func (as *authService) Register(email, password string) (*LoginResult, error) {
+	// Check if user already exists
+	existingUser, err := as.userRepo.FindByEmail(email)
+	if err == nil && existingUser != nil {
+		return nil, fmt.Errorf("email already registered")
+	}
+
+	// Hash password
+	passwordHash, err := as.cryptoService.HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Create user
+	user := &model.User{
+		Name:         email, // Use email as name initially
+		Email:        email,
+		PasswordHash: passwordHash,
+	}
+
+	if err := as.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return as.generateTokens(user)
+}
+
+// generateTokens creates access and refresh tokens for a user
+func (as *authService) generateTokens(user *model.User) (*LoginResult, error) {
 	// Create access token (short-lived)
 	accessClaims := map[string]any{
 		"sub":   fmt.Sprintf("%d", user.ID),
@@ -111,48 +146,22 @@ func (as *authService) RefreshToken(refreshToken string) (*LoginResult, error) {
 		return nil, fmt.Errorf("invalid token type")
 	}
 
-	userID, ok := claims["sub"].(float64) // JSON numbers are float64 in Go
+	sub, ok := claims["sub"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid token subject")
 	}
 
-	user, err := as.userRepo.FindByID(int(userID))
+	userID, err := strconv.Atoi(sub)
+	if err != nil {
+		return nil, fmt.Errorf("invalid token subject format")
+	}
+
+	user, err := as.userRepo.FindByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// Create new access token
-	accessClaims := map[string]any{
-		"sub":   fmt.Sprintf("%d", user.ID),
-		"email": user.Email,
-		"type":  "access",
-		"exp":   time.Now().Add(TokenExpiry).Unix(),
-		"iat":   time.Now().Unix(),
-	}
-
-	_, accessToken, err := as.tokenAuth.Encode(accessClaims)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create access token: %w", err)
-	}
-
-	// Create new refresh token
-	refreshClaims := map[string]any{
-		"sub":  user.ID,
-		"type": "refresh",
-		"exp":  time.Now().Add(RefreshTokenExpiry).Unix(),
-		"iat":  time.Now().Unix(),
-	}
-
-	_, newRefreshToken, err := as.tokenAuth.Encode(refreshClaims)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create refresh token: %w", err)
-	}
-
-	return &LoginResult{
-		User:         user,
-		AccessToken:  accessToken,
-		RefreshToken: newRefreshToken,
-	}, nil
+	return as.generateTokens(user)
 }
 
 // UserFromContext extracts user from JWT context
@@ -168,12 +177,17 @@ func (as *authService) UserFromContext(ctx context.Context) (*model.User, error)
 		return nil, fmt.Errorf("invalid token type")
 	}
 
-	userID, ok := claims["sub"].(float64) // JSON numbers are float64 in Go
+	sub, ok := claims["sub"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid token subject")
 	}
 
-	user, err := as.userRepo.FindByID(int(userID))
+	userID, err := strconv.Atoi(sub)
+	if err != nil {
+		return nil, fmt.Errorf("invalid token subject format")
+	}
+
+	user, err := as.userRepo.FindByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}

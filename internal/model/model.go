@@ -56,6 +56,7 @@ type List struct {
 	RuleCount   int    `json:"-"`
 	ScheduleIDs []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
+	Count       int    `json:"count"`
 }
 
 // Schedule represents a time-based schedule

@@ -60,11 +60,11 @@ export default function ScheduleTile(props: Props) {
 	};
 
 	return (
-		<div id={`schedule-${props.schedule.id}`} class="py-8 flex flex-col gap-7">
+		<div id={`schedule-${props.schedule.id}`} class="py-8 flex flex-col gap-6">
 			<div class="flex flex-col gap-1">
 				<div class="flex flex-row justify-between items-center">
 					<p
-						class="font-display text-xl"
+						class="font-medium tracking-wider"
 						classList={{ "opacity-50": !props.schedule.active }}
 					>
 						{props.schedule.name}

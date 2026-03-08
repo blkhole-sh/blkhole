@@ -1,6 +1,6 @@
 module github.com/lemon3studio/blkhole
 
-go 1.26
+go 1.24.3
 
 require (
 	github.com/armon/go-radix v1.0.0

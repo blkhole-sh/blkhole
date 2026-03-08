@@ -26,10 +26,36 @@ export const login = async (email: string, password: string) => {
 	}
 
 	const responseData = await response.json();
-	console.log("Login response:", responseData);
 	const { user: userData } = responseData;
-	console.log("User data:", userData);
-	console.log("User id:", userData?.id);
+
+	// Store user data in localStorage (not sensitive)
+	localStorage.setItem("user", JSON.stringify(userData));
+
+	return { user: userData };
+};
+
+/**
+ * Register user with email and password
+ * Backend will set secure HttpOnly cookies automatically
+ * @param email - User email
+ * @param password - User password
+ * @returns Promise containing user data
+ * @throws Error on registration failure
+ */
+export const register = async (email: string, password: string) => {
+	const response = await fetch(`${API_BASE}/auth/register`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, password }),
+		credentials: "include", // Include cookies in request
+	});
+
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
+
+	const responseData = await response.json();
+	const { user: userData } = responseData;
 
 	// Store user data in localStorage (not sensitive)
 	localStorage.setItem("user", JSON.stringify(userData));

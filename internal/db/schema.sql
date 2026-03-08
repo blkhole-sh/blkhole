@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS list (
     name TEXT UNIQUE NOT NULL,
     description TEXT,
     source TEXT,
-    user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE
+    user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
+    count INTEGER NOT NULL DEFAULT 0
 );
 
 -- Create schedule table:
