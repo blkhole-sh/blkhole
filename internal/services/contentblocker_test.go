@@ -161,8 +161,8 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	startTime := now.Add(-time.Hour)
 	endTime := now.Add(time.Hour)
 
-	startStr := startTime.Format("15:04")
-	endStr := endTime.Format("15:04")
+	startStr := now.Format("15:04")
+	endStr := now.Add(24 * time.Hour).Format("15:04")
 
 	// Round times to 5-minute boundaries to satisfy SQL constraints
 	startMinute := (startTime.Minute() / 5) * 5
