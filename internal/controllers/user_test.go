@@ -13,18 +13,22 @@ import (
 )
 
 // MockAuthService
-type mockAuthService struct {
+type mockUserAuthService struct {
 	user *model.User
 	err  error
 }
 
-func (m *mockAuthService) Login(email, password string) (*services.LoginResult, error) {
+func (m *mockUserAuthService) Login(email, password string) (*services.LoginResult, error) {
 	return nil, nil
 }
-func (m *mockAuthService) RefreshToken(refreshToken string) (*services.LoginResult, error) {
+func (m *mockUserAuthService) RefreshToken(refreshToken string) (*services.LoginResult, error) {
 	return nil, nil
 }
-func (m *mockAuthService) UserFromContext(ctx context.Context) (*model.User, error) {
+
+func (m *mockUserAuthService) Register(email, password string) (*services.LoginResult, error) {
+	return nil, nil
+}
+func (m *mockUserAuthService) UserFromContext(ctx context.Context) (*model.User, error) {
 	return m.user, m.err
 }
 
@@ -54,7 +58,7 @@ func (m *mockCryptoService) VerifyPassword(password, hash string) (bool, error) 
 func (m *mockCryptoService) RandomHash() (string, error)                        { return "", nil }
 
 func TestUserController_FindByID_IDOR(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{
@@ -79,7 +83,7 @@ func TestUserController_FindByID_IDOR(t *testing.T) {
 }
 
 func TestUserController_FindByID_Success(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{
@@ -104,7 +108,7 @@ func TestUserController_FindByID_Success(t *testing.T) {
 }
 
 func TestUserController_Update_IDOR(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{}
@@ -127,7 +131,7 @@ func TestUserController_Update_IDOR(t *testing.T) {
 }
 
 func TestUserController_Delete_IDOR(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{}
@@ -150,7 +154,7 @@ func TestUserController_Delete_IDOR(t *testing.T) {
 }
 
 func TestUserController_Update_Success(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{}
@@ -173,7 +177,7 @@ func TestUserController_Update_Success(t *testing.T) {
 }
 
 func TestUserController_Delete_Success(t *testing.T) {
-	mockAuth := &mockAuthService{
+	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
 	}
 	mockUserRepo := &mockUserRepo{}
