@@ -1,6 +1,8 @@
 package services
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -307,5 +309,175 @@ func TestLoadList_LocalFile(t *testing.T) {
 
 	if len(rules) != 2 {
 		t.Errorf("expected 2 persisted rules, got %d", len(rules))
+	}
+}
+
+func TestLoadList_EmptySource(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	list := &model.List{
+		Source: "",
+	}
+
+	err := svc.LoadList(list)
+	if err != nil {
+		t.Fatalf("expected nil error for empty source, got: %v", err)
+	}
+}
+
+func TestLoadList_InvalidSourceFormat(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	list := &model.List{
+		Source: "invalid format",
+	}
+
+	err := svc.LoadList(list)
+	if err == nil {
+		t.Fatal("expected error for invalid source format, got nil")
+	}
+}
+
+func TestLoadList_HTTPSFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	userRepo := repos.NewUserRepo(db)
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	// Create user
+	user := &model.User{
+		Name:         "Test User HTTPS",
+		Email:        "testhttps@example.com",
+		PasswordHash: "hash",
+	}
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	content := `
+||https-example.com^
+||https-test.com^
+`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(content))
+	}))
+	defer ts.Close()
+
+	list := &model.List{
+		Name:        "Test HTTPS List",
+		Description: "Test Description HTTPS",
+		Source:      ts.URL,
+		UserID:      user.ID,
+	}
+	listID, err := listRepo.Create(list)
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list.ID = listID
+
+	if err := svc.LoadList(list); err != nil {
+		t.Fatalf("LoadList failed: %v", err)
+	}
+
+	if len(list.Rules) != 2 {
+		t.Errorf("expected 2 rules, got %d", len(list.Rules))
+	}
+}
+
+func TestLoadList_HTTPSFile_Error(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	userRepo := repos.NewUserRepo(db)
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	// Create user
+	user := &model.User{
+		Name:         "Test User HTTPS Err",
+		Email:        "testhttpserr@example.com",
+		PasswordHash: "hash",
+	}
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	list := &model.List{
+		Name:        "Test HTTPS List Err",
+		Description: "Test Description HTTPS Err",
+		Source:      ts.URL,
+		UserID:      user.ID,
+	}
+	listID, err := listRepo.Create(list)
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list.ID = listID
+
+	err = svc.LoadList(list)
+	if err == nil {
+		t.Fatal("expected error for 500 response, got nil")
+	}
+}
+
+func TestLoadList_LocalFile_Error(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	userRepo := repos.NewUserRepo(db)
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	// Create user
+	user := &model.User{
+		Name:         "Test User Local Err",
+		Email:        "testlocalerr@example.com",
+		PasswordHash: "hash",
+	}
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	list := &model.List{
+		Name:        "Test Local List Err",
+		Description: "Test Description Local Err",
+		Source:      "/this/path/does/not/exist.txt",
+		UserID:      user.ID,
+	}
+	listID, err := listRepo.Create(list)
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list.ID = listID
+
+	err = svc.LoadList(list)
+	if err == nil {
+		t.Fatal("expected error for nonexistent file, got nil")
 	}
 }

@@ -158,6 +158,15 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	// Create a schedule that is active NOW for testing
 	// This ensures that blocking rules will be applied during the test
 	now := time.Now()
+	startTime := now.Add(-1 * time.Hour)
+	endTime := now.Add(1 * time.Hour)
+
+	// Round down to nearest 5 minutes
+	startMinute := startTime.Minute()
+	startTime = startTime.Add(time.Duration(-(startMinute % 5)) * time.Minute)
+
+	endMinute := endTime.Minute()
+	endTime = endTime.Add(time.Duration(-(endMinute % 5)) * time.Minute)
 
 	startStr := startTime.Format("15:04")
 	endStr := endTime.Format("15:04")
