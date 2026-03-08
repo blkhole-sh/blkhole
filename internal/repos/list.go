@@ -103,10 +103,6 @@ func (lr *listRepo) LoadScheduleIDs(id int) ([]int, error) {
 func (lr *listRepo) LoadRelations(l *model.List) error {
 	var err error
 
-	if l.Rules, err = lr.LoadRules(l.ID); err != nil {
-		return err
-	}
-
 	if l.ScheduleIDs, err = lr.LoadScheduleIDs(l.ID); err != nil {
 		return err
 	}
@@ -116,7 +112,7 @@ func (lr *listRepo) LoadRelations(l *model.List) error {
 
 // FindByID returns an existing list with given id from the database
 func (lr *listRepo) FindByID(id int) (*model.List, error) {
-	query := "SELECT id, name, description, source, user_id FROM list WHERE id=?"
+	query := "SELECT id, name, description, source, user_id, count FROM list WHERE id=?"
 	var l model.List
 
 	if err := sqlscan.Get(lr.ctx, lr.db, &l, query, id); err != nil {
@@ -132,7 +128,7 @@ func (lr *listRepo) FindByID(id int) (*model.List, error) {
 
 // FindAll returns all existing lists from the database
 func (lr *listRepo) FindAll() ([]*model.List, error) {
-	query := "SELECT id, name, description, source, user_id FROM list"
+	query := "SELECT id, name, description, source, user_id, count FROM list"
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query)
@@ -155,7 +151,7 @@ func (lr *listRepo) FindAll() ([]*model.List, error) {
 
 // FindByUser returns all existing lists with given user ID from the database
 func (lr *listRepo) FindByUser(userID int) ([]*model.List, error) {
-	query := "SELECT id, name, description, source, user_id FROM list WHERE user_id=?"
+	query := "SELECT id, name, description, source, user_id, count FROM list WHERE user_id=?"
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query, userID)
@@ -194,7 +190,7 @@ func (lr *listRepo) FindNamesByScheduleID(scheduleID int) ([]string, error) {
 
 // FindBySchedule returns all existing lists linked to schedule with given id
 func (lr *listRepo) FindBySchedule(scheduleID int) ([]*model.List, error) {
-	query := "SELECT l.id, l.name, l.description, l.source, l.user_id FROM list l JOIN list_schedule ls ON l.id = ls.list_id WHERE ls.schedule_id = ?"
+	query := "SELECT l.id, l.name, l.description, l.source, l.user_id, l.count FROM list l JOIN list_schedule ls ON l.id = ls.list_id WHERE ls.schedule_id = ?"
 	var lists []*model.List
 
 	err := sqlscan.Select(lr.ctx, lr.db, &lists, query, scheduleID)

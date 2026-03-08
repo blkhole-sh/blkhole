@@ -29,8 +29,8 @@ export default function DeleteModal(props: Props) {
 		>
 			<p class="text-sm text-zinc-500">
 				Are you sure you want to delete{" "}
-				<span class="text-black font-medium">{props.name}</span>? This action
-				cannot be undone.
+				<span class="text-black font-medium tracking-wider">{props.name}</span>?
+				This action cannot be undone.
 			</p>
 			{error() && <p class="text-sm text-red-700">{error()}</p>}
 		</Modal>
