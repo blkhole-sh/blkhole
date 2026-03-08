@@ -8,6 +8,19 @@ import (
 )
 
 // CompressionMiddleware handles serving compressed static files
+// serveCompressed tries to serve a compressed version of the file
+func serveCompressed(w http.ResponseWriter, webFS fs.FS, path, encoding, ext string) bool {
+	compressedPath := path + ext
+	if content, err := fs.ReadFile(webFS, compressedPath); err == nil {
+		w.Header().Set("Content-Encoding", encoding)
+		w.Header().Set("Vary", "Accept-Encoding")
+		setContentType(w, path)
+		w.Write(content)
+		return true
+	}
+	return false
+}
+
 func CompressionMiddleware(webFS fs.FS) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -17,31 +30,24 @@ func CompressionMiddleware(webFS fs.FS) func(http.Handler) http.Handler {
 			}
 
 			// Only apply compression to static assets
-			if isStaticAsset(path) {
-				acceptEncoding := r.Header.Get("Accept-Encoding")
-				
-				// Try brotli first
-				if strings.Contains(acceptEncoding, "br") {
-					brotliPath := path + ".br"
-					if content, err := fs.ReadFile(webFS, brotliPath); err == nil {
-						w.Header().Set("Content-Encoding", "br")
-						w.Header().Set("Vary", "Accept-Encoding")
-						setContentType(w, path)
-						w.Write(content)
-						return
-					}
-				}
+			if !isStaticAsset(path) {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-				// Fallback to gzip
-				if strings.Contains(acceptEncoding, "gzip") {
-					gzipPath := path + ".gz"
-					if content, err := fs.ReadFile(webFS, gzipPath); err == nil {
-						w.Header().Set("Content-Encoding", "gzip")
-						w.Header().Set("Vary", "Accept-Encoding")
-						setContentType(w, path)
-						w.Write(content)
-						return
-					}
+			acceptEncoding := r.Header.Get("Accept-Encoding")
+
+			// Try brotli first
+			if strings.Contains(acceptEncoding, "br") {
+				if serveCompressed(w, webFS, path, "br", ".br") {
+					return
+				}
+			}
+
+			// Fallback to gzip
+			if strings.Contains(acceptEncoding, "gzip") {
+				if serveCompressed(w, webFS, path, "gzip", ".gz") {
+					return
 				}
 			}
 
