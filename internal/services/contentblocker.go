@@ -31,14 +31,14 @@ type contentBlocker struct {
 }
 
 // NewContentBlocker creates a new ContentBlocker instance
-func NewContentBlocker(devices repos.DeviceRepo, rules repos.RuleRepo, schedules repos.ScheduleRepo, domains repos.DomainRepo) ContentBlocker {
+func NewContentBlocker(devices repos.DeviceRepo, rules repos.RuleRepo, schedules repos.ScheduleRepo, domains repos.DomainRepo, deviceCache cache.DeviceCache) ContentBlocker {
 	return &contentBlocker{
 		devices:       devices,
 		rules:         rules,
 		schedules:     schedules,
 		domains:       domains,
 		domainCache:   cache.NewDomainCache(),
-		deviceCache:   cache.NewDeviceCache(),
+		deviceCache:   deviceCache,
 		scheduleCache: cache.NewScheduleCache(),
 	}
 }

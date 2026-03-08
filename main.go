@@ -68,7 +68,8 @@ var (
 	tokenAuth      *jwtauth.JWTAuth
 
 	// Caches
-	statsCache cache.StatsCache
+	statsCache  cache.StatsCache
+	deviceCache cache.DeviceCache
 
 	// Controllers
 	deviceController       controllers.DeviceController
@@ -181,11 +182,12 @@ func initRepos(db *sql.DB) {
 }
 
 func initCaches() {
-	statsCache = cache.NewStatsCache()
+	deviceCache = cache.NewDeviceCache()
+	statsCache = cache.NewStatsCache(deviceCache)
 }
 
 func initServices(secret []byte, upstreamDNS string) {
-	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains)
+  contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListsService(lists, rules, domains)
@@ -215,7 +217,7 @@ func initWebAndTest(db *sql.DB) {
 	webController = controllers.NewWebController(webSubFS)
 
 	// Initialize test
-	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache)
+	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache, deviceCache)
 	testController = controllers.NewTestController(t)
 }
 

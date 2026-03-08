@@ -33,6 +33,7 @@ type StatsCache interface {
 // statsCache implements the StatsCache interface
 type statsCache struct {
 	mu                   sync.RWMutex
+	deviceCache          DeviceCache
 	minuteCounts         map[string]map[time.Time]int // deviceHash -> 1-min buckets (24h)
 	fiveMinCounts        map[string]map[time.Time]int // deviceHash -> 5-min buckets (7d)
 	hourCounts           map[string]map[time.Time]int // deviceHash -> 1-hour buckets (30d)
@@ -42,8 +43,9 @@ type statsCache struct {
 }
 
 // NewStatsCache creates a new stats cache instance
-func NewStatsCache() StatsCache {
+func NewStatsCache(deviceCache DeviceCache) StatsCache {
 	return &statsCache{
+		deviceCache:          deviceCache,
 		minuteCounts:         make(map[string]map[time.Time]int),
 		fiveMinCounts:        make(map[string]map[time.Time]int),
 		hourCounts:           make(map[string]map[time.Time]int),
@@ -55,6 +57,11 @@ func NewStatsCache() StatsCache {
 
 // Increment increments the query count for a device across all time buckets
 func (sc *statsCache) Increment(deviceHash string) {
+	// Validate device exists before caching stats
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return
+	}
+
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
@@ -84,6 +91,11 @@ func (sc *statsCache) Increment(deviceHash string) {
 
 // IncrementBlocked increments the blocked query count for a device across all time buckets
 func (sc *statsCache) IncrementBlocked(deviceHash string) {
+	// Validate device exists before caching stats
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return
+	}
+
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
@@ -113,6 +125,11 @@ func (sc *statsCache) IncrementBlocked(deviceHash string) {
 
 // IncrementAt adds query count for a device at a specific timestamp (for testing)
 func (sc *statsCache) IncrementAt(deviceHash string, timestamp time.Time, count int) {
+	// Validate device exists before caching stats
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return
+	}
+
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
@@ -140,6 +157,11 @@ func (sc *statsCache) IncrementAt(deviceHash string, timestamp time.Time, count 
 
 // IncrementBlockedAt adds blocked query count for a device at a specific timestamp (for testing)
 func (sc *statsCache) IncrementBlockedAt(deviceHash string, timestamp time.Time, count int) {
+	// Validate device exists before caching stats
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return
+	}
+
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 

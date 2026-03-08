@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lemon3studio/blkhole/internal/cache"
 	schema "github.com/lemon3studio/blkhole/internal/db"
 	"github.com/lemon3studio/blkhole/internal/model"
 	"github.com/lemon3studio/blkhole/internal/repos"
@@ -262,7 +263,7 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 	domains := repos.NewDomainRepo(db)
 
 	// Create the content blocker instance we're testing
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	// Setup test data hierarchy:
 	// User -> Device -> Schedule -> Lists/Rules -> Blocked Domains
@@ -425,7 +426,7 @@ func TestContentBlocker_TimeBasedBlocking(t *testing.T) {
 	domains := repos.NewDomainRepo(db)
 
 	// Create content blocker
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	// Setup test data
 	userID := createTestUser(t, users)
@@ -505,7 +506,7 @@ func TestContentBlocker_DomainNormalization(t *testing.T) {
 	devices := repos.NewDeviceRepo(db)
 	rules := repos.NewRuleRepo(db)
 	domains := repos.NewDomainRepo(db)
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	tests := []struct {
 		name        string
@@ -572,7 +573,7 @@ func TestContentBlocker_SubdomainBlocking(t *testing.T) {
 	domains := repos.NewDomainRepo(db)
 
 	// Create content blocker
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	// Setup test data
 	userID := createTestUser(t, users)
@@ -648,7 +649,7 @@ func TestContentBlocker_SubdomainVsParent(t *testing.T) {
 	domains := repos.NewDomainRepo(db)
 
 	// Create content blocker
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	// Setup test data
 	userID := createTestUser(t, users)
@@ -724,7 +725,7 @@ func TestContentBlocker_RealWorldData(t *testing.T) {
 	domains := repos.NewDomainRepo(db)
 
 	// Create content blocker
-	contentBlocker := NewContentBlocker(devices, rules, schedules, domains)
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
 
 	// Create user - matching test/test.go
 	user := &model.User{
