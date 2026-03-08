@@ -1,18 +1,31 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import AuthForm from "~/components/layout/AuthForm";
 import TextInput from "~/components/form/TextInput";
+import { useAuth } from "~/context/AuthContext";
 import { compose, email as isEmail, minLength, required } from "~/lib/validate";
 
 export default function SignUp() {
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
 	const [submitted, setSubmitted] = createSignal(false);
+	const [error, setError] = createSignal<string | undefined>(undefined);
 
-	const handleSignUp = (e: Event) => {
+	const auth = useAuth();
+	const navigate = useNavigate();
+
+	const handleSignUp = async (e: Event) => {
 		e.preventDefault();
 		setSubmitted(true);
 		if (!email().trim() || !password() || password().length < 8) return;
-		// TODO: submit
+
+		try {
+			setError(undefined);
+			await auth.register(email(), password());
+			navigate("/");
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Sign up failed");
+		}
 	};
 
 	return (
@@ -39,6 +52,9 @@ export default function SignUp() {
 				validate={compose(required(), minLength(8))}
 				showError={submitted()}
 			/>
+			<Show when={error()}>
+				<p class="text-sm text-red-700 -mt-2 text-center">{error()}</p>
+			</Show>
 		</AuthForm>
 	);
 }
