@@ -18,6 +18,7 @@ import (
 // MockAuthService is a mock implementation of AuthService
 type MockAuthService struct {
 	LoginFunc           func(email, password string) (*services.LoginResult, error)
+	RegisterFunc        func(email, password string) (*services.LoginResult, error)
 	RefreshTokenFunc    func(refreshToken string) (*services.LoginResult, error)
 	UserFromContextFunc func(ctx context.Context) (*model.User, error)
 }
@@ -27,6 +28,13 @@ func (m *MockAuthService) Login(email, password string) (*services.LoginResult, 
 		return m.LoginFunc(email, password)
 	}
 	return nil, fmt.Errorf("LoginFunc not implemented")
+}
+
+func (m *MockAuthService) Register(email, password string) (*services.LoginResult, error) {
+	if m.RegisterFunc != nil {
+		return m.RegisterFunc(email, password)
+	}
+	return nil, fmt.Errorf("RegisterFunc not implemented")
 }
 
 func (m *MockAuthService) RefreshToken(refreshToken string) (*services.LoginResult, error) {
@@ -147,6 +155,128 @@ func TestAuthController_Login(t *testing.T) {
 						foundAccess = true
 					}
 					if c.Name == "refresh_token" && c.Value == "refresh_token" && c.HttpOnly {
+						foundRefresh = true
+					}
+				}
+				if !foundAccess || !foundRefresh {
+					t.Errorf("expected secure cookies to be set")
+				}
+			}
+		})
+	}
+}
+
+func TestAuthController_Register(t *testing.T) {
+	tests := []struct {
+		name           string
+		requestBody    any
+		mockRegister   func(email, password string) (*services.LoginResult, error)
+		expectedStatus int
+		expectedBody   string
+		checkCookies   bool
+	}{
+		{
+			name: "Success",
+			requestBody: map[string]string{
+				"email":    "newuser@example.com",
+				"password": "strongpassword123",
+			},
+			mockRegister: func(email, password string) (*services.LoginResult, error) {
+				return &services.LoginResult{
+					User: &model.User{
+						ID:    2,
+						Name:  "newuser@example.com",
+						Email: "newuser@example.com",
+					},
+					AccessToken:  "new_access_token",
+					RefreshToken: "new_refresh_token",
+				}, nil
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   `"email":"newuser@example.com"`,
+			checkCookies:   true,
+		},
+		{
+			name:           "Invalid JSON",
+			requestBody:    "invalid-json",
+			mockRegister:   nil,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "Invalid JSON",
+			checkCookies:   false,
+		},
+		{
+			name: "Missing Credentials",
+			requestBody: map[string]string{
+				"email":    "",
+				"password": "",
+			},
+			mockRegister:   nil,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "Email and password required",
+			checkCookies:   false,
+		},
+		{
+			name: "Password Too Short",
+			requestBody: map[string]string{
+				"email":    "test@example.com",
+				"password": "short",
+			},
+			mockRegister:   nil,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "Password must be at least 8 characters",
+			checkCookies:   false,
+		},
+		{
+			name: "Email Already Registered",
+			requestBody: map[string]string{
+				"email":    "existing@example.com",
+				"password": "password123",
+			},
+			mockRegister: func(email, password string) (*services.LoginResult, error) {
+				return nil, fmt.Errorf("email already registered")
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "email already registered",
+			checkCookies:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := &MockAuthService{
+				RegisterFunc: tt.mockRegister,
+			}
+			controller := NewAuthController(mockService)
+
+			var body []byte
+			if s, ok := tt.requestBody.(string); ok {
+				body = []byte(s)
+			} else {
+				body, _ = json.Marshal(tt.requestBody)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
+			w := httptest.NewRecorder()
+
+			controller.Register(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+
+			if !strings.Contains(w.Body.String(), tt.expectedBody) {
+				t.Errorf("expected body to contain %q, got %q", tt.expectedBody, w.Body.String())
+			}
+
+			if tt.checkCookies {
+				cookies := w.Result().Cookies()
+				foundAccess := false
+				foundRefresh := false
+				for _, c := range cookies {
+					if c.Name == "access_token" && c.Value == "new_access_token" && c.HttpOnly {
+						foundAccess = true
+					}
+					if c.Name == "refresh_token" && c.Value == "new_refresh_token" && c.HttpOnly {
 						foundRefresh = true
 					}
 				}
