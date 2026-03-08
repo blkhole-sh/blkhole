@@ -77,26 +77,37 @@ func convertToBitmask(schedule *model.Schedule) uint64 {
 	startSlot := timeStringToSlot(schedule.StartTime)
 	endSlot := timeStringToSlot(schedule.EndTime)
 
-	// Create bitmask for each active day (each day gets 8 bits: Monday=0-7, Tuesday=8-15, etc.)
+	// Calculate the bitmask for a single active day
+	dailyMask := calculateDailyMask(startSlot, endSlot)
+
+	// Apply the daily mask to each active day
 	for day := range 7 {
 		if days&(1<<day) != 0 {
-
 			// Calculate starting bit position for this day
 			dayOffset := uint16(day) * bitsPerDay
 
-			// Map 288 time slots (24 hours * 12 slots/hour) to 8 bits per day
-			for slot := startSlot; slot <= endSlot; slot++ {
-
-				// Scale slot number (0-287) to bit position within day (0-7)
-				bitInDay := (slot * bitsPerDay) / (24 * slotsPerHour)
-				if bitInDay < bitsPerDay {
-					mask |= 1 << (dayOffset + bitInDay)
-				}
-			}
+			// Shift the daily mask to the correct day offset and add to total mask
+			mask |= dailyMask << dayOffset
 		}
 	}
 
 	return mask
+}
+
+// calculateDailyMask creates a bitmask (0-255) for a single day based on start and end time slots
+func calculateDailyMask(startSlot, endSlot uint16) uint64 {
+	var dailyMask uint64
+
+	// Map 288 time slots (24 hours * 12 slots/hour) to 8 bits per day
+	for slot := startSlot; slot <= endSlot; slot++ {
+		// Scale slot number (0-287) to bit position within day (0-7)
+		bitInDay := (slot * bitsPerDay) / (24 * slotsPerHour)
+		if bitInDay < bitsPerDay {
+			dailyMask |= 1 << bitInDay
+		}
+	}
+
+	return dailyMask
 }
 
 // timeStringToSlot converts "HH:MM" format to 5-minute slot number (0-287)
