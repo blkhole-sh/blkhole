@@ -68,6 +68,10 @@ func (m *mockAuthService) RefreshToken(refreshToken string) (*services.LoginResu
 	return nil, nil
 }
 
+func (m *mockAuthService) Register(email, password string) (*services.LoginResult, error) {
+	return nil, nil
+}
+
 func TestGenerateConfig(t *testing.T) {
 	// Setup
 	deviceRepo := &mockDeviceRepo{
