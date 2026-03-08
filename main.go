@@ -201,7 +201,7 @@ func initControllers(domain, upstreamDNS string) {
 	userController = controllers.NewUserController(users, cryptoService)
 	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
 	listController = controllers.NewListController(lists)
-	mobileConfigController = controllers.NewMobileConfigController(domain, devices)
+	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
