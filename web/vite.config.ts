@@ -6,7 +6,9 @@ import compression from "vite-plugin-compression";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
 
-const { version } = JSON.parse(readFileSync(resolve(__dirname, "./package.json"), "utf-8"));
+const { version } = JSON.parse(
+	readFileSync(resolve(__dirname, "./package.json"), "utf-8"),
+);
 let hash: string | null = null;
 try {
 	hash = execSync("git rev-parse --short HEAD").toString().trim();

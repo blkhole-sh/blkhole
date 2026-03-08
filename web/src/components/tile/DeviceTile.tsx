@@ -22,8 +22,8 @@ export default function DeviceTile(props: Props) {
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
 	return (
-		<div id={`device-${props.device.id}`} class="py-8 flex flex-col gap-5">
-			<p class="font-display text-xl">{props.device.name}</p>
+		<div id={`device-${props.device.id}`} class="py-8 flex flex-col gap-4">
+			<p class="font-medium tracking-wider">{props.device.name}</p>
 			<div class="flex flex-row">
 				<div class="flex-1 grid grid-cols-3 items-start text-zinc-500">
 					<p class="pb-2 text-sm tracking-wider">STATUS</p>

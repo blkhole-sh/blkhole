@@ -12,6 +12,7 @@ import (
 // AuthController defines the interface for authentication operations
 type AuthController interface {
 	Login(http.ResponseWriter, *http.Request)
+	Register(http.ResponseWriter, *http.Request)
 	RefreshToken(http.ResponseWriter, *http.Request)
 	Logout(http.ResponseWriter, *http.Request)
 	GetCurrentUser(http.ResponseWriter, *http.Request)
@@ -47,6 +48,43 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 	result, err := c.authService.Login(req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Set secure HttpOnly cookies
+	c.setSecureCookie(w, "access_token", result.AccessToken, services.TokenExpiry)
+	c.setSecureCookie(w, "refresh_token", result.RefreshToken, services.RefreshTokenExpiry)
+
+	// Return only user data (tokens are in cookies)
+	json.NewEncoder(w).Encode(map[string]any{"user": result.User.ToDTO()})
+}
+
+// Register handles user registration
+func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
+		http.Error(w, "Email and password required", http.StatusBadRequest)
+		return
+	}
+
+	// Simple validation
+	if len(req.Password) < 8 {
+		http.Error(w, "Password must be at least 8 characters", http.StatusBadRequest)
+		return
+	}
+
+	result, err := c.authService.Register(req.Email, req.Password)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
