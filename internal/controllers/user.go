@@ -25,13 +25,15 @@ type UserController interface {
 // userController implements the UserController interface
 type userController struct {
 	users         repos.UserRepo
+	authService   services.AuthService
 	cryptoService services.CryptoService
 }
 
 // NewUserController creates a new UserController instance
-func NewUserController(userRepo repos.UserRepo, cryptoService services.CryptoService) UserController {
+func NewUserController(userRepo repos.UserRepo, authService services.AuthService, cryptoService services.CryptoService) UserController {
 	return &userController{
 		users:         userRepo,
+		authService:   authService,
 		cryptoService: cryptoService,
 	}
 }
@@ -59,11 +61,23 @@ func (uc *userController) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *userController) FindByID(w http.ResponseWriter, r *http.Request) {
+	// Get current user
+	currentUser, err := uc.authService.UserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	if currentUser.ID != id {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -79,6 +93,13 @@ func (uc *userController) FindByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
+	// Get current user
+	currentUser, err := uc.authService.UserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Initialize user
 	var u model.User
 
@@ -87,6 +108,11 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	if currentUser.ID != id {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -109,11 +135,23 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uc *userController) Delete(w http.ResponseWriter, r *http.Request) {
+	// Get current user
+	currentUser, err := uc.authService.UserFromContext(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	if currentUser.ID != id {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
