@@ -169,6 +169,16 @@ func (sc *scheduleCache) GetRules(scheduleID int) []int {
 	return sc.scheduleToRule[scheduleID]
 }
 
+// hasMatchingRule checks if any rule in domainRules exists in the provided ruleSet
+func hasMatchingRule(ruleSet map[int]struct{}, domainRules []int) bool {
+	for _, ruleID := range domainRules {
+		if _, exists := ruleSet[ruleID]; exists {
+			return true
+		}
+	}
+	return false
+}
+
 // HasRuleIntersection efficiently checks if any schedule rule intersects with domain rules
 func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []int) bool {
 	if len(scheduleIDs) == 0 || len(domainRules) == 0 {
@@ -181,11 +191,8 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 	// Use schedule rule sets for O(1) lookup
 	for _, schedID := range scheduleIDs {
 		if ruleSet := sc.scheduleRuleSet[schedID]; ruleSet != nil {
-			// Check each domain rule against schedule rule set
-			for _, ruleID := range domainRules {
-				if _, exists := ruleSet[ruleID]; exists {
-					return true
-				}
+			if hasMatchingRule(ruleSet, domainRules) {
+				return true
 			}
 		}
 	}
