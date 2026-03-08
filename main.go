@@ -198,7 +198,7 @@ func initServices(secret []byte, upstreamDNS string) {
 
 func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
-	userController = controllers.NewUserController(users, cryptoService)
+	userController = controllers.NewUserController(users, authService, cryptoService)
 	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
 	listController = controllers.NewListController(lists)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
@@ -236,7 +236,7 @@ func initDependencies(cfg *Config) {
 	initWebAndTest(db)
 }
 
-func initRouter(domain string) *chi.Mux {
+func initRouter(cfg *Config) *chi.Mux {
 	// Create a new router using chi
 	r := chi.NewRouter()
 
@@ -244,9 +244,21 @@ func initRouter(domain string) *chi.Mux {
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 
+	// Determine allowed origins based on mode
+	var allowedOrigins []string
+	if devMode == "true" {
+		allowedOrigins = []string{"http://localhost:5173"}
+	} else {
+		if cfg.Domain != "" && cfg.Domain != "localhost" {
+			allowedOrigins = []string{"https://" + cfg.Domain}
+		} else if cfg.Port != "" {
+			allowedOrigins = []string{"http://localhost:" + cfg.Port}
+		}
+	}
+
 	// Configure CORS
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   map[bool][]string{true: {"http://localhost:5173"}, false: {"*"}}[devMode == "true"],
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -257,7 +269,7 @@ func initRouter(domain string) *chi.Mux {
 	// Initialize routes
 	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, testController, webController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
-	routes.InitDoH(r, dohController, domain, devMode)
+	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 
 	return r
 }
@@ -284,7 +296,7 @@ func main() {
 	statsCache.Start()
 
 	// Initialize HTTP router
-	r := initRouter(cfg.Domain)
+	r := initRouter(cfg)
 
 	// Initialize context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
