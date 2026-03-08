@@ -17,6 +17,7 @@ type ListRepo interface {
 	Delete(id int) error
 	LinkSchedule(id int, scheduleID int) error
 	LoadRules(id int) ([]model.Rule, error)
+	GetRuleCount(id int) (int, error)
 	LoadScheduleIDs(id int) ([]int, error)
 	LoadRelations(l *model.List) error
 	FindByID(id int) (*model.List, error)
@@ -82,6 +83,18 @@ func (lr *listRepo) LoadRules(id int) ([]model.Rule, error) {
 	return rules, nil
 }
 
+// GetRuleCount returns the number of rules for a list with given id
+func (lr *listRepo) GetRuleCount(id int) (int, error) {
+	query := "SELECT COUNT(*) FROM list_rule WHERE list_id = ?"
+	var count int
+
+	if err := lr.db.QueryRowContext(lr.ctx, query, id).Scan(&count); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 // LoadScheduleIDs returns ids of all schedules linked to list with given id
 func (lr *listRepo) LoadScheduleIDs(id int) ([]int, error) {
 	query := "SELECT DISTINCT ls.schedule_id from list l JOIN list_schedule ls ON l.id = ls.list_id WHERE l.id = ?"
@@ -99,9 +112,13 @@ func (lr *listRepo) LoadScheduleIDs(id int) ([]int, error) {
 	return scheduleIDs, nil
 }
 
-// LoadRelations loads all relations (rules, schedule ids) for list with given id
+// LoadRelations loads all relations (rules count, schedule ids) for list with given id
 func (lr *listRepo) LoadRelations(l *model.List) error {
 	var err error
+
+	if l.RuleCount, err = lr.GetRuleCount(l.ID); err != nil {
+		return err
+	}
 
 	if l.ScheduleIDs, err = lr.LoadScheduleIDs(l.ID); err != nil {
 		return err

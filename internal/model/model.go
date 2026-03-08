@@ -53,6 +53,7 @@ type List struct {
 	Source      string `json:"source"`
 	UserID      int    `json:"userId"`
 	Rules       []Rule `json:"rules"`
+	RuleCount   int    `json:"-"`
 	ScheduleIDs []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
 	Count       int    `json:"count"`
@@ -129,13 +130,18 @@ func (d Device) ToDTO(scheduleIDs []int, scheduleNames []string) DeviceDTO {
 
 // ToDTO converts a List model to ListDTO with counts
 func (l List) ToDTO() ListDTO {
+	rules := l.RuleCount
+	if len(l.Rules) > 0 {
+		rules = len(l.Rules)
+	}
+
 	return ListDTO{
 		ID:          l.ID,
 		Name:        l.Name,
 		Description: l.Description,
 		Source:      l.Source,
 		UserID:      l.UserID,
-		Rules:       l.Count,
+		Rules:       rules,
 		Schedules:   len(l.ScheduleIDs),
 	}
 }
