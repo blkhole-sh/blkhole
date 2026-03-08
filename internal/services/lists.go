@@ -268,8 +268,9 @@ func detectAndReadFile(r io.Reader, domainRepo repos.DomainRepo) ([]model.Rule, 
 }
 
 // readHTTPSFile reads rules from an HTTPS file.
+// We use http.DefaultClient to allow test overrides via httptest.Client().
 func readHTTPSFile(url string, domainRepo repos.DomainRepo) ([]model.Rule, error) {
-	resp, err := http.Get(url)
+	resp, err := http.DefaultClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to GET url %s: %w", url, err)
 	}

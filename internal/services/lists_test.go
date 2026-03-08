@@ -1,6 +1,8 @@
 package services
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -307,5 +309,169 @@ func TestLoadList_LocalFile(t *testing.T) {
 
 	if len(rules) != 2 {
 		t.Errorf("expected 2 persisted rules, got %d", len(rules))
+	}
+}
+
+func TestNewListsService(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+	if svc == nil {
+		t.Fatal("expected non-nil ListsService")
+	}
+}
+
+func TestLoadList_HTTPSFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+	userRepo := repos.NewUserRepo(db)
+
+	svc := NewListsService(listRepo, ruleRepo, domainRepo)
+
+	user := &model.User{
+		Name:         "Test User",
+		Email:        "test@example.com",
+		PasswordHash: "hash",
+	}
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	// Create test server
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/notfound" {
+			http.NotFound(w, r)
+			return
+		}
+		content := `
+||https-example.com^
+||https-test.com^
+`
+		w.Write([]byte(content))
+	}))
+	defer ts.Close()
+
+	// Temporarily override http.DefaultClient to trust the test server certificate
+	oldClient := http.DefaultClient
+	http.DefaultClient = ts.Client()
+	defer func() { http.DefaultClient = oldClient }()
+
+	// Create list pointing to the test server
+	list := &model.List{
+		Name:        "Test HTTPS List",
+		Description: "Test Description",
+		Source:      ts.URL,
+		UserID:      user.ID,
+	}
+	listID, err := listRepo.Create(list)
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list.ID = listID
+
+	// Load list
+	if err := svc.LoadList(list); err != nil {
+		t.Fatalf("LoadList failed: %v", err)
+	}
+
+	if len(list.Rules) != 2 {
+		t.Errorf("expected 2 rules, got %d", len(list.Rules))
+	}
+
+	rules, err := listRepo.LoadRules(listID)
+	if err != nil {
+		t.Fatalf("failed to load rules: %v", err)
+	}
+	if len(rules) != 2 {
+		t.Errorf("expected 2 persisted rules, got %d", len(rules))
+	}
+}
+
+func TestLoadList_EmptySource(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewListsService(nil, nil, nil) // Repos not needed for this check
+
+	list := &model.List{
+		Source: "",
+	}
+
+	err := svc.LoadList(list)
+	if err != nil {
+		t.Errorf("expected nil error for empty source, got %v", err)
+	}
+}
+
+func TestLoadList_InvalidSourceType(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	svc := NewListsService(nil, nil, nil) // Repos not needed for this check
+
+	list := &model.List{
+		Source: "invalid-source-type://some-path",
+	}
+
+	err := svc.LoadList(list)
+	if err == nil {
+		t.Errorf("expected error for invalid source type, got nil")
+	} else if !strings.Contains(err.Error(), "neither HTTPS file, nor local file") {
+		t.Errorf("expected error containing 'neither HTTPS file, nor local file', got %v", err)
+	}
+}
+
+func TestLoadList_NotFoundHTTPSFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	domainRepo := repos.NewDomainRepo(db)
+	svc := NewListsService(nil, nil, domainRepo) // Only domain repo needed for readFromSource initially
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	// Temporarily override http.DefaultClient to trust the test server certificate
+	oldClient := http.DefaultClient
+	http.DefaultClient = ts.Client()
+	defer func() { http.DefaultClient = oldClient }()
+
+	list := &model.List{
+		Source: ts.URL,
+	}
+
+	err := svc.LoadList(list)
+	if err == nil {
+		t.Errorf("expected error for not found HTTPS file, got nil")
+	} else if !strings.Contains(err.Error(), "bad status: 404 Not Found") {
+		t.Errorf("expected error containing 'bad status: 404', got %v", err)
+	}
+}
+
+func TestLoadList_NotFoundLocalFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	domainRepo := repos.NewDomainRepo(db)
+	svc := NewListsService(nil, nil, domainRepo)
+
+	list := &model.List{
+		Source: "/tmp/this-file-does-not-exist-12345.txt",
+	}
+
+	err := svc.LoadList(list)
+	if err == nil {
+		t.Errorf("expected error for not found local file, got nil")
+	} else if !strings.Contains(err.Error(), "failed to open local file") {
+		t.Errorf("expected error containing 'failed to open local file', got %v", err)
 	}
 }

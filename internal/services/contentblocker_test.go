@@ -159,8 +159,8 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	// This ensures that blocking rules will be applied during the test
 	now := time.Now()
 
-	startStr := startTime.Format("15:04")
-	endStr := endTime.Format("15:04")
+	startStr := now.Format("15:04")
+	endStr := now.Add(24 * time.Hour).Format("15:04")
 
 	// Handle midnight wrap-around or invalid range by using full day
 	if startStr >= endStr {
