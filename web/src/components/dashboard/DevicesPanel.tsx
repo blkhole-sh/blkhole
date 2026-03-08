@@ -27,9 +27,11 @@ export default function DevicesPanel(props: Props) {
 								onclick={() => navigate(`/devices#device-${device.id}`)}
 							>
 								<OSIcon os={device.os} />
-								<div class="flex flex-col gap-1">
-									<p class="font-display text">{device.name}</p>
-									<p class="text-zinc-500 text-sm">Connected</p>
+								<div class="flex flex-col">
+									<p class="font font-medium text-sm tracking-wider">
+										{device.name}
+									</p>
+									<p class="text-zinc-500 text-sm tracking-wider">Connected</p>
 								</div>
 							</div>
 						)}

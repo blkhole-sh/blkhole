@@ -26,10 +26,7 @@ export const login = async (email: string, password: string) => {
 	}
 
 	const responseData = await response.json();
-	console.log("Login response:", responseData);
 	const { user: userData } = responseData;
-	console.log("User data:", userData);
-	console.log("User id:", userData?.id);
 
 	// Store user data in localStorage (not sensitive)
 	localStorage.setItem("user", JSON.stringify(userData));

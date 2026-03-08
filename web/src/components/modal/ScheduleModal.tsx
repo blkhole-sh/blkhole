@@ -1,10 +1,22 @@
-import { createEffect, createResource, createSignal, For, JSX, Show } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	JSX,
+	Show,
+} from "solid-js";
 import MultiStepModal from "./MultiStepModal";
 import TextInput from "../form/TextInput";
 import TimeInput from "../form/TimeInput";
 import CheckboxInput from "../form/CheckboxInput";
 import DaysInput, { Days } from "../form/DaysInput";
-import { createSchedule, updateSchedule, getDevices, getLists } from "~/lib/api";
+import {
+	createSchedule,
+	updateSchedule,
+	getDevices,
+	getLists,
+} from "~/lib/api";
 import { required } from "~/lib/validate";
 import { Schedule } from "~/lib/model";
 import Apple from "../icons/Apple";
@@ -55,7 +67,7 @@ export default function ScheduleModal(props: Props) {
 	const [error, setError] = createSignal("");
 
 	const isEditMode = () => !!props.schedule;
-	const title = () => isEditMode() ? "Edit Schedule" : "Create Schedule";
+	const title = () => (isEditMode() ? "Edit Schedule" : "Create Schedule");
 
 	// Pre-fill form when opening in edit mode
 	createEffect(() => {
@@ -75,14 +87,14 @@ export default function ScheduleModal(props: Props) {
 			// Match list names to list IDs
 			const listArray = lists() || [];
 			const selectedListIds = listArray
-				.filter(l => props.schedule!.listNames.includes(l.name))
-				.map(l => l.id);
+				.filter((l) => props.schedule!.listNames.includes(l.name))
+				.map((l) => l.id);
 			setListIds(selectedListIds);
 			// Match device names to device IDs
 			const deviceList = devices() || [];
 			const selectedDeviceIds = deviceList
-				.filter(d => props.schedule!.deviceNames.includes(d.name))
-				.map(d => d.id);
+				.filter((d) => props.schedule!.deviceNames.includes(d.name))
+				.map((d) => d.id);
 			setDeviceIds(selectedDeviceIds);
 		} else if (!props.open) {
 			// Reset when modal closes
@@ -102,7 +114,9 @@ export default function ScheduleModal(props: Props) {
 
 	const toggleList = (id: number) => {
 		setListIds((prev) => {
-			const next = prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id];
+			const next = prev.includes(id)
+				? prev.filter((l) => l !== id)
+				: [...prev, id];
 			if (next.length > 0) setListsError("");
 			return next;
 		});
@@ -110,7 +124,9 @@ export default function ScheduleModal(props: Props) {
 
 	const toggleDevice = (id: string) => {
 		setDeviceIds((prev) => {
-			const next = prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id];
+			const next = prev.includes(id)
+				? prev.filter((d) => d !== id)
+				: [...prev, id];
 			if (next.length > 0) setDevicesError("");
 			return next;
 		});
@@ -146,9 +162,25 @@ export default function ScheduleModal(props: Props) {
 		try {
 			setError("");
 			if (isEditMode()) {
-				await updateSchedule(props.schedule!.id, name(), startTime(), endTime(), props.schedule!.active, days(), listIds(), deviceIds());
+				await updateSchedule(
+					props.schedule!.id,
+					name(),
+					startTime(),
+					endTime(),
+					props.schedule!.active,
+					days(),
+					listIds(),
+					deviceIds(),
+				);
 			} else {
-				await createSchedule(name(), startTime(), endTime(), days(), listIds(), deviceIds());
+				await createSchedule(
+					name(),
+					startTime(),
+					endTime(),
+					days(),
+					listIds(),
+					deviceIds(),
+				);
 			}
 			setName("");
 			setStartTime("08:00");
@@ -186,7 +218,10 @@ export default function ScheduleModal(props: Props) {
 					<DaysInput
 						label="ACTIVE DAYS"
 						value={days()}
-						onChange={(d) => { setDays(d); if (Object.values(d).some(Boolean)) setDaysError(""); }}
+						onChange={(d) => {
+							setDays(d);
+							if (Object.values(d).some(Boolean)) setDaysError("");
+						}}
 						error={daysError()}
 					/>
 					<div class="flex flex-row gap-8">
@@ -223,7 +258,9 @@ export default function ScheduleModal(props: Props) {
 								)}
 							</For>
 						</div>
-						{listsError() && <p class="text-xs text-red-700 mt-2">{listsError()}</p>}
+						{listsError() && (
+							<p class="text-xs text-red-700 mt-2">{listsError()}</p>
+						)}
 					</div>
 				</MultiStepModal.Step>
 			)}
@@ -238,7 +275,6 @@ export default function ScheduleModal(props: Props) {
 								{(device) => (
 									<CheckboxInput
 										label={device.name}
-										description={device.os}
 										icon={osIcon(device.os)}
 										checked={deviceIds().includes(device.id)}
 										onChange={() => toggleDevice(device.id)}
@@ -246,7 +282,9 @@ export default function ScheduleModal(props: Props) {
 								)}
 							</For>
 						</div>
-						{devicesError() && <p class="text-xs text-red-700 mt-2">{devicesError()}</p>}
+						{devicesError() && (
+							<p class="text-xs text-red-700 mt-2">{devicesError()}</p>
+						)}
 						{error() && <p class="text-xs text-red-700 mt-2">{error()}</p>}
 					</div>
 				</MultiStepModal.Step>

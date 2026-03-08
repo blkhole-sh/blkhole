@@ -17,13 +17,15 @@ export default function ListTile(props: Props) {
 
 	return (
 		<div id={`list-${props.list.id}`} class="py-8 flex flex-col gap-5">
-			<p class="font-display text-xl">{props.list.name}</p>
+			<p class="font-medium tracking-wider">{props.list.name}</p>
 			<div class="flex flex-row">
 				<div class="flex-1 grid grid-cols-[3fr_1fr] text-zinc-500">
 					<p class="pb-2 text-sm tracking-wider">DESCRIPTION</p>
 					<p class="pb-2 text-sm tracking-wider">DOMAINS</p>
 					<p class="max-w-3xl text-sm">{props.list.description || "-"}</p>
-					<p class="max-w-xs text-black">{props.list.rules.toLocaleString()}</p>
+					<p class="max-w-xs text-black tracking-wider">
+						{props.list.rules.toLocaleString()}
+					</p>
 				</div>
 				<div class="flex flex-row gap-6">
 					<ActionButton onclick={() => props.onEdit(props.list)}>

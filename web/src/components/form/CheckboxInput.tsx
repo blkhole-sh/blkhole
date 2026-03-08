@@ -14,11 +14,11 @@ export default function CheckboxInput(props: Props) {
 			<div class="flex flex-row items-center gap-3">
 				{props.icon && <div class="text-zinc-400 shrink-0">{props.icon}</div>}
 				<div class="flex flex-col">
-					<span class="font-medium text-zinc-700 text-sm tracking-wider">
+					<span class="font-medium text-black text-zinc-700 text-sm tracking-wider">
 						{props.label}
 					</span>
 					{props.description && (
-						<span class="text-xs text-zinc-400 max-w-md">
+						<span class="text-xs text-zinc-400 max-w-md ">
 							{props.description}
 						</span>
 					)}
