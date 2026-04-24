@@ -3,17 +3,27 @@ package servers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
-
-	"golang.org/x/crypto/acme/autocert"
 )
 
 func StartHTTP(ctx context.Context, handler http.Handler, domain string, port string, tlsConfig *tls.Config) error {
+	// Determine if we should use TLS
+	// Use TLS only when:
+	// 1. TLS config is provided AND
+	// 2. Port is empty (will default to 443) or explicitly 443
+	// This allows fly.io to use port 8080 without TLS (reverse proxy handles it)
+	useTLS := false
+	if tlsConfig != nil && (port == "" || port == "443") {
+		useTLS = true
+		if port == "" {
+			port = "443"
+		}
+	} else if port == "" {
+		port = "80" // Default to HTTP
+	}
+
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: handler,
@@ -28,40 +38,13 @@ func StartHTTP(ctx context.Context, handler http.Handler, domain string, port st
 		server.Shutdown(shutdownCtx)
 	}()
 
-	// Plain HTTP (local or behind a reverse proxy like Fly.io)
-	if port != "" && port != "443" && tlsConfig == nil {
-		log.Printf("starting http server on :%s\n", port)
-		return server.ListenAndServe()
-	}
-
-	// TLS via provided TLSConfig (Caddy or oldschool)
-	if tlsConfig != nil && domain != "localhost" {
+	if useTLS {
 		server.TLSConfig = tlsConfig
-		log.Printf("starting https server on %s:%s\n", domain, port)
+		log.Printf("starting https server on :%s (domain: %s)\n", port, domain)
 		return server.ListenAndServeTLS("", "")
 	}
 
-	// TLS via Autocert
-	if tlsConfig == nil && domain != "local" {
-		configDir, _ := os.UserConfigDir()
-		m := &autocert.Manager{
-			Cache:      autocert.DirCache(filepath.Join(configDir, "blkhole", "certs")),
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(domain),
-		}
-
-		// ACME HTTP Challenge on :80
-		go func() {
-			log.Println("starting acme http server on :80")
-			if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
-				fmt.Errorf("acme server error: %v", err)
-			}
-		}()
-
-		server.TLSConfig = m.TLSConfig()
-		log.Printf("starting https server on :%s using Autocert for domain %s\n", port, domain)
-		return server.ListenAndServeTLS("", "")
-	}
-
-	return fmt.Errorf("invalid server configuration\n")
+	// Plain HTTP (local mode or behind a reverse proxy like fly.io)
+	log.Printf("starting http server on :%s\n", port)
+	return server.ListenAndServe()
 }

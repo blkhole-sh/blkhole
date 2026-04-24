@@ -15,7 +15,7 @@ export default defineConfig({
 		{
 			getCSS: () => `
 				body {
-					font-family: "Noto Sans", sans-serif;
+					font-family: "Geist", sans-serif;
 				}
 				@keyframes pulse-strong {
 					0%, 100% {
@@ -32,7 +32,7 @@ export default defineConfig({
 		},
 	],
 	shortcuts: {
-		"font-sans": "font-[Noto_Sans,sans-serif]",
+		"font-sans": "font-[Geist,sans-serif]",
 		"font-display": "font-[Hedvig_Letters_Serif,serif]",
 	},
 });

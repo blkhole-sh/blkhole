@@ -1,0 +1,1 @@
+import{P as i}from"./PageShell-DeuCoZrn.js";import{a as t}from"./vendor-CXNpW67u.js";import"./Divider-CpwLl_Cb.js";import"./index-DtHmwWm7.js";function e(){return t(i,{title:"Settings",description:"Fine-tune your singularity."})}export{e as default};

@@ -155,8 +155,7 @@ func (t *test) AddSchedule(schedule model.Schedule) (int, error) {
 	return id, nil
 }
 
-// Test creates a comprehensive test scenario with a user, devices, lists, and schedule.
-// Thursday is left unblocked for testing time-based rules.
+// Test creates a user and loads blocklists. Devices and schedules are configured manually via the dashboard.
 func (t *test) Test() (int, error) {
 	ui, err := t.AddUser(model.User{
 		Name:  "Arian Gohari",
@@ -166,7 +165,7 @@ func (t *test) Test() (int, error) {
 		return 0, err
 	}
 
-	l1i, err := t.AddList(model.List{
+	_, err = t.AddList(model.List{
 		Name:        "Hagezi Multi ULTIMATE",
 		Description: "Ultimate Sweeper - Strictly cleans the Internet and protects your privacy! Blocks Ads, Affiliate, Tracking, Metrics, Telemetry, Phishing, Malware, Scam, Free Hoster, Fake, Cryptojacking and other Crap.",
 		Source:      "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.plus.mini.txt",
@@ -176,7 +175,7 @@ func (t *test) Test() (int, error) {
 		return 0, err
 	}
 
-	l2i, err := t.AddList(model.List{
+	_, err = t.AddList(model.List{
 		Name:        "OISD Big",
 		Description: "Blocks Ads, (Mobile) App Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Telemetry/Analytics/Tracking (where not needed for proper functionality).",
 		Source:      "https://big.oisd.nl",
@@ -186,7 +185,7 @@ func (t *test) Test() (int, error) {
 		return 0, err
 	}
 
-	l3i, err := t.AddList(model.List{
+	_, err = t.AddList(model.List{
 		Name:        "Anti Axel Springer",
 		Description: "This list blocks all connections to sites which are from Axel Springer Verlag or have a connection with them.",
 		Source:      "https://raw.githubusercontent.com/autinerd/anti-axelspringer-hosts/master/axelspringer-hosts",
@@ -194,55 +193,6 @@ func (t *test) Test() (int, error) {
 	}, []string{})
 	if err != nil {
 		return 0, err
-	}
-
-	// Create domains first
-	exampleDomain := &model.Domain{Name: "example.com"}
-	exampleDomainID, err := t.domains.CreateOrGet(exampleDomain)
-	if err != nil {
-		return 0, err
-	}
-
-	testDomain := &model.Domain{Name: "test.com"}
-	testDomainID, err := t.domains.CreateOrGet(testDomain)
-	if err != nil {
-		return 0, err
-	}
-
-	r1i, err := t.AddRule(model.Rule{
-		DomainID: exampleDomainID,
-		Allowed:  false,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	r2i, err := t.AddRule(model.Rule{
-		DomainID: testDomainID,
-		Allowed:  false,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = t.AddSchedule(model.Schedule{
-		Name:      "Malicious Content",
-		StartTime: "00:00",
-		EndTime:   "23:55",
-		Monday:    true,
-		Tuesday:   true,
-		Wednesday: true,
-		Thursday:  true,
-		Friday:    true,
-		Saturday:  false,
-		Sunday:    true,
-		DeviceIDs: []int{},
-		RuleIDs:   []int{r1i, r2i},
-		ListIDs:   []int{l1i, l2i, l3i},
-		UserID:    ui,
-	})
-	if err != nil {
-		return -1, err
 	}
 
 	return ui, nil

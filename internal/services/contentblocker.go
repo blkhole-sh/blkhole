@@ -16,6 +16,7 @@ var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-
 // ContentBlocker defines the interface for content blocking operations
 type ContentBlocker interface {
 	Init() error
+	Reload() error
 	IsBlocked(domain string, deviceHash string) (bool, error)
 }
 
@@ -102,6 +103,14 @@ func (cb *contentBlocker) initDeviceSchedules() error {
 	}
 	cb.deviceCache.LoadDeviceSchedules(deviceSchedules)
 	return nil
+}
+
+// Reload clears and rebuilds the content blocker cache from the database
+func (cb *contentBlocker) Reload() error {
+	cb.domainCache = cache.NewDomainCache()
+	cb.deviceCache = cache.NewDeviceCache()
+	cb.scheduleCache = cache.NewScheduleCache()
+	return cb.Init()
 }
 
 // Init initializes the content blocker by loading data from database into cache modules

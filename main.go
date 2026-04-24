@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"github.com/lemon3studio/blkhole/internal/servers"
 	"github.com/lemon3studio/blkhole/internal/services"
 	"github.com/lemon3studio/blkhole/internal/test"
+	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/sync/errgroup"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -190,7 +192,7 @@ func initServices(secret []byte, upstreamDNS string) {
   contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
-	listService = services.NewListsService(lists, rules, domains)
+	listService = services.NewListsService(lists, rules, domains, contentBlocker)
 
 	tokenAuth = jwtauth.New("HS256", secret, nil)
 	authService = services.NewAuthService(users, cryptoService, tokenAuth)
@@ -219,6 +221,48 @@ func initWebAndTest(db *sql.DB) {
 	// Initialize test
 	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache, deviceCache)
 	testController = controllers.NewTestController(t)
+}
+
+func initTLS(domain string) *tls.Config {
+	// Only initialize TLS for production mode (when domain is set and not localhost)
+	if domain == "" || domain == "localhost" {
+		return nil
+	}
+
+	configDir, _ := os.UserConfigDir()
+	certDir := filepath.Join(configDir, "blkhole", "certs")
+	log.Printf("TLS: using certificate cache directory: %s", certDir)
+	log.Printf("TLS: allowing domain in HostWhitelist: %s", domain)
+	
+	m := &autocert.Manager{
+		Cache:      autocert.DirCache(certDir),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(domain),
+	}
+
+	// Start ACME HTTP Challenge server on :80 for Let's Encrypt certificate verification
+	go func() {
+		log.Println("starting acme http server on :80")
+		if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
+			log.Printf("acme http server error: %v", err)
+		}
+	}()
+
+	// Wrap TLS config to log certificate errors
+	tlsConfig := m.TLSConfig()
+	originalGetCert := tlsConfig.GetCertificate
+	tlsConfig.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		log.Printf("TLS: GetCertificate called for domain: %s", hello.ServerName)
+		cert, err := originalGetCert(hello)
+		if err != nil {
+			log.Printf("TLS: GetCertificate error for %s: %v", hello.ServerName, err)
+			return nil, err
+		}
+		log.Printf("TLS: GetCertificate success for %s", hello.ServerName)
+		return cert, nil
+	}
+
+	return tlsConfig
 }
 
 func initDependencies(cfg *Config) {
@@ -286,6 +330,9 @@ func main() {
 
 	// Initialize dependencies
 	initDependencies(cfg)
+
+	// Initialize TLS configuration (for production mode with domain)
+	cfg.TLSConfig = initTLS(cfg.Domain)
 
 	// Initialize content blocker
 	if err = contentBlocker.Init(); err != nil {

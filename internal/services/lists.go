@@ -33,17 +33,19 @@ type ListsService interface {
 
 // listsService implements the ListsService interface
 type listsService struct {
-	lists      repos.ListRepo
-	ruleRepo   repos.RuleRepo
-	domainRepo repos.DomainRepo
+	lists          repos.ListRepo
+	ruleRepo       repos.RuleRepo
+	domainRepo     repos.DomainRepo
+	contentBlocker ContentBlocker
 }
 
 // NewListsService creates a new ListsService instance
-func NewListsService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo) ListsService {
+func NewListsService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListsService {
 	return &listsService{
-		lists:      lists,
-		ruleRepo:   ruleRepo,
-		domainRepo: domainRepo,
+		lists:          lists,
+		ruleRepo:       ruleRepo,
+		domainRepo:     domainRepo,
+		contentBlocker: contentBlocker,
 	}
 }
 
@@ -346,6 +348,11 @@ func (ls *listsService) LoadList(l *model.List) error {
 	}
 
 	l.Count = len(l.Rules)
+
+	// Reload the content blocker cache to pick up the new domains
+	if err := ls.contentBlocker.Reload(); err != nil {
+		return fmt.Errorf("failed to reload content blocker after loading list %d: %w", l.ID, err)
+	}
 
 	return nil
 }

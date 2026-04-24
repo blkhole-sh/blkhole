@@ -138,23 +138,21 @@ func (as *authService) RefreshToken(refreshToken string) (*LoginResult, error) {
 		return nil, fmt.Errorf("invalid refresh token")
 	}
 
-	claims := token.PrivateClaims()
-
 	// Verify it's a refresh token
-	tokenType, ok := claims["type"].(string)
-	if !ok || tokenType != "refresh" {
+	var tokenType string
+	if err := token.Get("type", &tokenType); err != nil || tokenType != "refresh" {
 		return nil, fmt.Errorf("invalid token type")
 	}
 
-	sub, ok := claims["sub"].(string)
+	sub, ok := token.Subject()
 	if !ok {
 		return nil, fmt.Errorf("invalid token subject")
 	}
-
 	userID, err := strconv.Atoi(sub)
 	if err != nil {
-		return nil, fmt.Errorf("invalid token subject format")
+		return nil, fmt.Errorf("invalid token subject")
 	}
+
 
 	user, err := as.userRepo.FindByID(userID)
 	if err != nil {

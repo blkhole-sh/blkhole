@@ -1,1 +1,0 @@
-import{t as c,e as s,i,f as t,d as r}from"./vendor-DGywBkJX.js";var a=c('<div class="px-2 py-1 font-medium bg-zinc-100 text-black text-sm">');function o(c){return r=a(),s(r,"click",c.onclick,!0),i(r,()=>c.children),t(()=>r.classList.toggle("cursor-pointer",!!c.onclick)),r;var r}r(["click"]);export{o as T};

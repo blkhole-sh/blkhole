@@ -41,7 +41,7 @@ FROM gcr.io/distroless/base-debian13
 
 COPY --from=builder /app/blkhole /blkhole
 
-EXPOSE 8080 853
+EXPOSE 80 8080 853
 VOLUME /root/.config/blkhole  # Persistent config and database
 
 ENTRYPOINT ["/blkhole"]

@@ -8,15 +8,28 @@ primary_region = "sjc"
 [build]
   dockerfile = "Dockerfile"
 
-# HTTP/HTTPS web interface + DoH
-[http_service]
-  internal_port = 8080
-  force_https = true
-  auto_stop_machines = "stop"
-  auto_start_machines = true
-  min_machines_running = 1
+[env]
+  BLKHOLE_DOMAIN = "blkhole.fly.dev"
 
-  [http_service.concurrency]
+# ACME HTTP Challenge server (port 80) - for Let's Encrypt
+[[services]]
+  protocol = "tcp"
+  internal_port = 80
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+# Main HTTP/HTTPS web interface + DoH
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
     type = "requests"
     hard_limit = 200
     soft_limit = 150
