@@ -1,7 +1,7 @@
 package services
 
 import (
-	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -71,7 +71,7 @@ func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
 	// Forward the DNS query to the upstream server
 	res, _, err := r.dnsClient.Exchange(msg, r.upstreamDNS)
 	if err != nil {
-		fmt.Errorf("failed to forward dns query to upstream server: %v", err)
+		log.Printf("failed to forward dns query to upstream server: %v", err)
 
 		// Set SERVFAIL in case of an upstream failure
 		response.SetRcode(msg, dns.RcodeServerFailure)
