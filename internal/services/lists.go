@@ -20,7 +20,7 @@ var (
 	adblockPattern     = regexp.MustCompile(`^\|\|([a-zA-Z0-9.-]+\.[a-zA-Z0-9-]{2,})\^`)
 	whitelistPattern   = regexp.MustCompile(`^@@\|\|([a-zA-Z0-9.-]+\.[a-zA-Z0-9-]{2,})\^`)
 	hostsPattern       = regexp.MustCompile(`^(?:0\.0\.0\.0|127\.0\.0\.1)\s+([a-zA-Z0-9.-]+\.[a-zA-Z0-9-]{2,})`)
-	httpsPattern       = regexp.MustCompile(`^https://[^\s]+$`)
+	httpsPattern       = regexp.MustCompile(`^https?://[^\s]+$`)
 	localFilePattern   = regexp.MustCompile(`^(\.?\.?/|/)[^\s]*$`)
 	whitespacePattern  = regexp.MustCompile(`\s+`)
 	trimPattern        = regexp.MustCompile(`^\s+|\s+$`)

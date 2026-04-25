@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/miekg/dns"
@@ -18,6 +19,7 @@ type resolver struct {
 	contentBlocker ContentBlocker
 	statsCache     cache.StatsCache
 	upstreamDNS    string
+	dnsClient      *dns.Client
 }
 
 // NewResolver creates a new Resolver instance
@@ -26,6 +28,10 @@ func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, ups
 		contentBlocker: contentBlocker,
 		statsCache:     statsCache,
 		upstreamDNS:    upstreamDNS,
+		dnsClient: &dns.Client{
+			Timeout:        1 * time.Second,
+			SingleInflight: true,
+		},
 	}
 }
 
@@ -63,8 +69,7 @@ func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
 	}
 
 	// Forward the DNS query to the upstream server
-	client := new(dns.Client)
-	res, _, err := client.Exchange(msg, r.upstreamDNS)
+	res, _, err := r.dnsClient.Exchange(msg, r.upstreamDNS)
 	if err != nil {
 		fmt.Errorf("failed to forward dns query to upstream server: %v", err)
 
