@@ -38,13 +38,13 @@ type mockUserRepo struct {
 	findByIdErr  error
 }
 
-func (m *mockUserRepo) Create(u *model.User) error                 { return nil }
-func (m *mockUserRepo) Update(id int, u *model.User) error         { return nil }
-func (m *mockUserRepo) Delete(id int) error                        { return nil }
-func (m *mockUserRepo) LoadDeviceIDs(id int) ([]int, error)        { return nil, nil }
-func (m *mockUserRepo) LoadListIDs(id int) ([]int, error)          { return nil, nil }
-func (m *mockUserRepo) LoadScheduleIDs(id int) ([]int, error)      { return nil, nil }
-func (m *mockUserRepo) LoadRelations(u *model.User) error          { return nil }
+func (m *mockUserRepo) Create(u *model.User) error                    { return nil }
+func (m *mockUserRepo) Update(id int, u *model.User) error            { return nil }
+func (m *mockUserRepo) Delete(id int) error                           { return nil }
+func (m *mockUserRepo) LoadDeviceIDs(id int) ([]int, error)           { return nil, nil }
+func (m *mockUserRepo) LoadListIDs(id int) ([]int, error)             { return nil, nil }
+func (m *mockUserRepo) LoadScheduleIDs(id int) ([]int, error)         { return nil, nil }
+func (m *mockUserRepo) LoadRelations(u *model.User) error             { return nil }
 func (m *mockUserRepo) FindByEmail(email string) (*model.User, error) { return nil, nil }
 func (m *mockUserRepo) FindByID(id int) (*model.User, error) {
 	return m.findByIdUser, m.findByIdErr

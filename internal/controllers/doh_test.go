@@ -28,7 +28,7 @@ func (m *MockResolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error
 
 // MockStatsCache is a mock implementation of cache.StatsCache
 type MockStatsCache struct {
-	cache.StatsCache // Embed the interface to satisfy the compiler
+	cache.StatsCache     // Embed the interface to satisfy the compiler
 	IncrementFunc        func(deviceHash string)
 	IncrementBlockedFunc func(deviceHash string)
 }

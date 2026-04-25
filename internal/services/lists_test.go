@@ -15,9 +15,9 @@ import (
 
 type noopContentBlocker struct{}
 
-func (n *noopContentBlocker) Init() error                                  { return nil }
-func (n *noopContentBlocker) Reload() error                                { return nil }
-func (n *noopContentBlocker) IsBlocked(string, string) (bool, error)       { return false, nil }
+func (n *noopContentBlocker) Init() error                            { return nil }
+func (n *noopContentBlocker) Reload() error                          { return nil }
+func (n *noopContentBlocker) IsBlocked(string, string) (bool, error) { return false, nil }
 
 func TestReadAdblockFile(t *testing.T) {
 	db := setupTestDB(t)
@@ -223,8 +223,8 @@ test.com
 			expected: 2,
 		},
 		{
-			name: "Empty file",
-			content: "",
+			name:     "Empty file",
+			content:  "",
 			expected: 0,
 		},
 	}

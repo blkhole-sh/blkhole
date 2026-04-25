@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"encoding/json"
+	"github.com/lemon3studio/blkhole/internal/model"
 	"math/rand"
 	"net/http"
-	"github.com/lemon3studio/blkhole/internal/model"
 )
 
 // QuoteController defines the interface for quote operations

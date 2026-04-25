@@ -28,14 +28,14 @@ func TestCompressionMiddleware(t *testing.T) {
 	middleware := CompressionMiddleware(mockFS)(nextHandler)
 
 	tests := []struct {
-		name                 string
-		path                 string
-		acceptEncoding       string
-		expectedStatus       int
-		expectedBody         string
-		expectedEncoding     string
-		expectedContentType  string
-		expectNextHandler    bool
+		name                string
+		path                string
+		acceptEncoding      string
+		expectedStatus      int
+		expectedBody        string
+		expectedEncoding    string
+		expectedContentType string
+		expectNextHandler   bool
 	}{
 		{
 			name:                "Brotli preferred when both supported and available",

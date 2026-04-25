@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-  "regexp"
+	"regexp"
 	"strings"
+	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lemon3studio/blkhole/internal/model"
@@ -26,11 +26,11 @@ func (m *mockDeviceRepo) FindByID(id int) (*model.Device, error) {
 	return nil, errors.New("device not found")
 }
 
-func (m *mockDeviceRepo) Create(d *model.Device) error                           { return nil }
-func (m *mockDeviceRepo) Update(id int, d *model.Device) error                   { return nil }
-func (m *mockDeviceRepo) Delete(id int) error                                    { return nil }
-func (m *mockDeviceRepo) LinkSchedule(id int, scheduleID int) error              { return nil }
-func (m *mockDeviceRepo) LoadScheduleIDs(id int) ([]int, error)                  { return nil, nil }
+func (m *mockDeviceRepo) Create(d *model.Device) error              { return nil }
+func (m *mockDeviceRepo) Update(id int, d *model.Device) error      { return nil }
+func (m *mockDeviceRepo) Delete(id int) error                       { return nil }
+func (m *mockDeviceRepo) LinkSchedule(id int, scheduleID int) error { return nil }
+func (m *mockDeviceRepo) LoadScheduleIDs(id int) ([]int, error)     { return nil, nil }
 func (m *mockDeviceRepo) FindByHash(hash string) (*model.Device, error) {
 	for _, d := range m.devices {
 		if d.Hash == hash {
@@ -177,9 +177,8 @@ func TestGenerateConfig(t *testing.T) {
 				}
 			}
 		})
-  }
+	}
 }
-
 
 func TestGenerateUUID(t *testing.T) {
 	// regex for UUID v4

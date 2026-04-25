@@ -189,7 +189,7 @@ func initCaches() {
 }
 
 func initServices(secret []byte, upstreamDNS string) {
-  contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
+	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListsService(lists, rules, domains, contentBlocker)
@@ -233,7 +233,7 @@ func initTLS(domain string) *tls.Config {
 	certDir := filepath.Join(configDir, "blkhole", "certs")
 	log.Printf("TLS: using certificate cache directory: %s", certDir)
 	log.Printf("TLS: allowing domain in HostWhitelist: %s", domain)
-	
+
 	m := &autocert.Manager{
 		Cache:      autocert.DirCache(certDir),
 		Prompt:     autocert.AcceptTOS,
