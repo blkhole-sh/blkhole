@@ -108,7 +108,7 @@ func (cb *contentBlocker) initDeviceSchedules() error {
 // Reload clears and rebuilds the content blocker cache from the database
 func (cb *contentBlocker) Reload() error {
 	cb.domainCache = cache.NewDomainCache()
-	cb.deviceCache = cache.NewDeviceCache()
+	cb.deviceCache.Reset()
 	cb.scheduleCache = cache.NewScheduleCache()
 	return cb.Init()
 }

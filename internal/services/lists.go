@@ -26,22 +26,22 @@ var (
 	trimPattern        = regexp.MustCompile(`^\s+|\s+$`)
 )
 
-// ListsService defines the interface for list service operations
-type ListsService interface {
+// ListService defines the interface for list service operations
+type ListService interface {
 	LoadList(*model.List) error
 }
 
-// listsService implements the ListsService interface
-type listsService struct {
+// listService implements the ListService interface
+type listService struct {
 	lists          repos.ListRepo
 	ruleRepo       repos.RuleRepo
 	domainRepo     repos.DomainRepo
 	contentBlocker ContentBlocker
 }
 
-// NewListsService creates a new ListsService instance
-func NewListsService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListsService {
-	return &listsService{
+// NewListService creates a new ListService instance
+func NewListService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListService {
+	return &listService{
 		lists:          lists,
 		ruleRepo:       ruleRepo,
 		domainRepo:     domainRepo,
@@ -307,7 +307,7 @@ func readFromSource(source string, domainRepo repos.DomainRepo) ([]model.Rule, e
 	}
 }
 
-func (ls *listsService) LoadList(l *model.List) error {
+func (ls *listService) LoadList(l *model.List) error {
 	// Check if no source to load from
 	if l.Source == "" {
 		return nil

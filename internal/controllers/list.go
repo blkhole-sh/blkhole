@@ -8,6 +8,7 @@ import (
 
 	"github.com/lemon3studio/blkhole/internal/model"
 	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -23,13 +24,15 @@ type ListController interface {
 
 // listController implements the ListController interface
 type listController struct {
-	lists repos.ListRepo
+	lists       repos.ListRepo
+	listService services.ListService
 }
 
 // NewListController creates a new ListController instance
-func NewListController(listRepo repos.ListRepo) ListController {
+func NewListController(listRepo repos.ListRepo, listService services.ListService) ListController {
 	return &listController{
-		lists: listRepo,
+		lists:       listRepo,
+		listService: listService,
 	}
 }
 
@@ -46,6 +49,13 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Store list into db
 	lc.lists.Create(&l)
+
+	// Load domains from source if set
+	if l.Source != "" {
+		if err := lc.listService.LoadList(&l); err != nil {
+			log.Printf("failed to load list %d from source: %v", l.ID, err)
+		}
+	}
 
 	// Respond with JSON encoded list DTO
 	json.NewEncoder(w).Encode(l.ToDTO())
@@ -136,6 +146,13 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 		log.Printf("failed to fetch updated list with id %d: %v", id, err)
 		http.Error(w, "Unable to fetch updated list", http.StatusInternalServerError)
 		return
+	}
+
+	// Load domains from source if set
+	if updatedList.Source != "" {
+		if err := lc.listService.LoadList(updatedList); err != nil {
+			log.Printf("failed to load list %d from source: %v", id, err)
+		}
 	}
 
 	// Respond with JSON encoded list DTO
