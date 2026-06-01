@@ -303,7 +303,8 @@ func readFromSource(source string, domainRepo repos.DomainRepo) ([]model.Rule, e
 	case localFilePattern.MatchString(source):
 		return readLocalFile(source, domainRepo)
 	default:
-		return nil, fmt.Errorf("neither HTTPS file, nor local file")
+		// Treat as inline domain text (manual entry)
+		return detectAndReadFile(strings.NewReader(source), domainRepo)
 	}
 }
 
