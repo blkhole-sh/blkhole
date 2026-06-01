@@ -1,0 +1,1 @@
+const t=(t="Required")=>i=>i.trim()?void 0:t,i=(t="Invalid email")=>i=>i.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(i.trim())?t:void 0,s=(t,i)=>s=>s.length<t?i??`At least ${t} characters`:void 0,e=(t="Invalid URL")=>i=>i.trim()&&!/^https?:\/\/.+/.test(i.trim())?t:void 0,a=(...t)=>i=>t.reduce((t,s)=>t??s(i),void 0);export{a as c,i as e,s as m,t as r,e as u};

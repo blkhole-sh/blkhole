@@ -66,6 +66,11 @@ export interface Quote {
 	author: string;
 }
 
+// Define Settings interface
+export interface Settings {
+	upstreamDns: string;
+}
+
 // Define StatCount interface for time-series data points
 export interface StatCount {
 	timestamp: string; // ISO 8601 timestamp

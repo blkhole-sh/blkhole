@@ -83,6 +83,7 @@ var (
 	quoteController        controllers.QuoteController
 	authController         controllers.AuthController
 	statsController        controllers.StatsController
+	settingsController     controllers.SettingsController
 	webController          controllers.WebController
 
 	// Test
@@ -208,6 +209,7 @@ func initControllers(domain, upstreamDNS string) {
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
 	statsController = controllers.NewStatsController(statsCache, devices)
+	settingsController = controllers.NewSettingsController(upstreamDNS)
 }
 
 func initWebAndTest(db *sql.DB) {
@@ -311,7 +313,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	}))
 
 	// Initialize routes
-	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, testController, webController, tokenAuth)
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, testController, webController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
 	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 

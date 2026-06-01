@@ -100,9 +100,6 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize user
-	var u model.User
-
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -116,15 +113,60 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encode user from request body
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+	// Decode request body into a flexible map to detect password change request
+	var body struct {
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+		Name            string `json:"name"`
+		Email           string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
 		return
 	}
 
+	// Fetch the current user from db to get the stored password hash
+	u, err := uc.users.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find user with id %d: %v", id, err)
+		http.Error(w, "Unable to find user", http.StatusNotFound)
+		return
+	}
+
+	// If a password change is requested, verify the current password first
+	if body.CurrentPassword != "" || body.NewPassword != "" {
+		if body.CurrentPassword == "" || body.NewPassword == "" {
+			http.Error(w, "Both currentPassword and newPassword are required", http.StatusBadRequest)
+			return
+		}
+
+		valid, err := uc.cryptoService.VerifyPassword(body.CurrentPassword, u.PasswordHash)
+		if err != nil || !valid {
+			http.Error(w, "Current password is incorrect", http.StatusBadRequest)
+			return
+		}
+
+		newHash, err := uc.cryptoService.HashPassword(body.NewPassword)
+		if err != nil {
+			log.Printf("failed to hash new password for user %d: %v", id, err)
+			http.Error(w, "Unable to update password", http.StatusInternalServerError)
+			return
+		}
+		u.PasswordHash = newHash
+	}
+
+	// Apply any other field updates
+	if body.Name != "" {
+		u.Name = body.Name
+	}
+	if body.Email != "" {
+		u.Email = body.Email
+	}
+
 	// Update user in db
-	if err := uc.users.Update(id, &u); err != nil {
+	if err := uc.users.Update(id, u); err != nil {
 		log.Printf("failed to update user with id %d: %v", id, err)
 		http.Error(w, "Unable to update user", http.StatusInternalServerError)
 		return
