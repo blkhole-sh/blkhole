@@ -45,5 +45,49 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
+	// Migration: change list.name unique constraint from global to per-user UNIQUE(name, user_id).
+	// SQLite can't drop constraints, so we recreate the table when the old definition is detected.
+	var listSQL string
+	err = db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='list'`).Scan(&listSQL)
+	if err != nil {
+		return err
+	}
+	if strings.Contains(listSQL, "name TEXT UNIQUE") {
+		_, err = db.Exec(`PRAGMA foreign_keys = OFF`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`
+			CREATE TABLE list_new (
+				id INTEGER PRIMARY KEY,
+				name TEXT NOT NULL,
+				description TEXT,
+				source TEXT,
+				user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
+				count INTEGER NOT NULL DEFAULT 0,
+				UNIQUE(name, user_id)
+			)
+		`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`INSERT INTO list_new SELECT id, name, description, source, user_id, count FROM list`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`DROP TABLE list`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`ALTER TABLE list_new RENAME TO list`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`PRAGMA foreign_keys = ON`)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
