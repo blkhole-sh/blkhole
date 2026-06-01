@@ -24,7 +24,7 @@ type test struct {
 	devices       repos.DeviceRepo
 	rules         repos.RuleRepo
 	lists         repos.ListRepo
-	listService   services.ListsService
+	listService   services.ListService
 	schedules     repos.ScheduleRepo
 	cryptoService services.CryptoService
 	domains       repos.DomainRepo
@@ -33,7 +33,7 @@ type test struct {
 }
 
 // NewTest creates a new test instance.
-func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRepo, lists repos.ListRepo, listService services.ListsService, schedules repos.ScheduleRepo, cryptoService services.CryptoService, domains repos.DomainRepo, statsCache cache.StatsCache, deviceCache cache.DeviceCache) Test {
+func NewTest(users repos.UserRepo, devices repos.DeviceRepo, rules repos.RuleRepo, lists repos.ListRepo, listService services.ListService, schedules repos.ScheduleRepo, cryptoService services.CryptoService, domains repos.DomainRepo, statsCache cache.StatsCache, deviceCache cache.DeviceCache) Test {
 	return &test{
 		users:         users,
 		devices:       devices,
