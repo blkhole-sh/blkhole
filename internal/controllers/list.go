@@ -48,7 +48,11 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store list into db
-	lc.lists.Create(&l)
+	if _, err := lc.lists.Create(&l); err != nil {
+		log.Printf("failed to create list: %v", err)
+		http.Error(w, "Unable to create list", http.StatusInternalServerError)
+		return
+	}
 
 	// Load domains from source if set
 	if l.Source != "" {
