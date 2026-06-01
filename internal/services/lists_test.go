@@ -253,7 +253,7 @@ func TestLoadList_LocalFile(t *testing.T) {
 	domainRepo := repos.NewDomainRepo(db)
 	userRepo := repos.NewUserRepo(db)
 
-	svc := NewListsService(listRepo, ruleRepo, domainRepo, &noopContentBlocker{})
+	svc := NewListService(listRepo, ruleRepo, domainRepo, &noopContentBlocker{})
 
 	// Create user
 	user := &model.User{
@@ -318,7 +318,7 @@ func TestLoadList_LocalFile(t *testing.T) {
 	}
 }
 
-func TestNewListsService(t *testing.T) {
+func TestNewListService(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
@@ -326,7 +326,7 @@ func TestNewListsService(t *testing.T) {
 	ruleRepo := repos.NewRuleRepo(db)
 	domainRepo := repos.NewDomainRepo(db)
 
-	svc := NewListsService(listRepo, ruleRepo, domainRepo, nil)
+	svc := NewListService(listRepo, ruleRepo, domainRepo, nil)
 	if svc == nil {
 		t.Fatal("expected non-nil ListsService")
 	}
@@ -341,7 +341,7 @@ func TestLoadList_HTTPSFile(t *testing.T) {
 	domainRepo := repos.NewDomainRepo(db)
 	userRepo := repos.NewUserRepo(db)
 
-	svc := NewListsService(listRepo, ruleRepo, domainRepo, &noopContentBlocker{})
+	svc := NewListService(listRepo, ruleRepo, domainRepo, &noopContentBlocker{})
 
 	user := &model.User{
 		Name:         "Test User",
@@ -405,7 +405,7 @@ func TestLoadList_HTTPSFile(t *testing.T) {
 func TestLoadList_EmptySource(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	svc := NewListsService(nil, nil, nil, nil) // Repos not needed for this check
+	svc := NewListService(nil, nil, nil, nil) // Repos not needed for this check
 
 	list := &model.List{
 		Source: "",
@@ -417,20 +417,34 @@ func TestLoadList_EmptySource(t *testing.T) {
 	}
 }
 
-func TestLoadList_InvalidSourceType(t *testing.T) {
+func TestLoadList_InlineDomainsSource(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	svc := NewListsService(nil, nil, nil, nil) // Repos not needed for this check
 
-	list := &model.List{
-		Source: "invalid-source-type://some-path",
+	userRepo := repos.NewUserRepo(db)
+	listRepo := repos.NewListRepo(db)
+	ruleRepo := repos.NewRuleRepo(db)
+	domainRepo := repos.NewDomainRepo(db)
+
+	svc := NewListService(listRepo, ruleRepo, domainRepo, &noopContentBlocker{})
+
+	user := &model.User{Name: "Test User", Email: "test@example.com", PasswordHash: "hash"}
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("failed to create user: %v", err)
 	}
 
-	err := svc.LoadList(list)
-	if err == nil {
-		t.Errorf("expected error for invalid source type, got nil")
-	} else if !strings.Contains(err.Error(), "neither HTTPS file, nor local file") {
-		t.Errorf("expected error containing 'neither HTTPS file, nor local file', got %v", err)
+	list := &model.List{Name: "Manual", Source: "example.com\nads.tracker.com", UserID: user.ID}
+	listID, err := listRepo.Create(list)
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list.ID = listID
+
+	if err := svc.LoadList(list); err != nil {
+		t.Errorf("expected no error for inline domain source, got %v", err)
+	}
+	if list.Count == 0 {
+		t.Errorf("expected domains to be loaded from inline text, got count 0")
 	}
 }
 
@@ -439,7 +453,7 @@ func TestLoadList_NotFoundHTTPSFile(t *testing.T) {
 	defer db.Close()
 
 	domainRepo := repos.NewDomainRepo(db)
-	svc := NewListsService(nil, nil, domainRepo, nil) // Only domain repo needed for readFromSource initially
+	svc := NewListService(nil, nil, domainRepo, nil) // Only domain repo needed for readFromSource initially
 
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
@@ -468,7 +482,7 @@ func TestLoadList_NotFoundLocalFile(t *testing.T) {
 	defer db.Close()
 
 	domainRepo := repos.NewDomainRepo(db)
-	svc := NewListsService(nil, nil, domainRepo, nil)
+	svc := NewListService(nil, nil, domainRepo, nil)
 
 	list := &model.List{
 		Source: "/tmp/this-file-does-not-exist-12345.txt",
