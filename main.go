@@ -65,7 +65,7 @@ var (
 	contentBlocker services.ContentBlocker
 	resolver       services.Resolver
 	cryptoService  services.CryptoService
-	listService    services.ListsService
+	listService    services.ListService
 	authService    services.AuthService
 	tokenAuth      *jwtauth.JWTAuth
 
@@ -192,7 +192,7 @@ func initServices(secret []byte, upstreamDNS string) {
 	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
-	listService = services.NewListsService(lists, rules, domains, contentBlocker)
+	listService = services.NewListService(lists, rules, domains, contentBlocker)
 
 	tokenAuth = jwtauth.New("HS256", secret, nil)
 	authService = services.NewAuthService(users, cryptoService, tokenAuth)
@@ -202,7 +202,7 @@ func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
 	userController = controllers.NewUserController(users, authService, cryptoService)
 	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
-	listController = controllers.NewListController(lists)
+	listController = controllers.NewListController(lists, listService)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
@@ -210,7 +210,7 @@ func initControllers(domain, upstreamDNS string) {
 	statsController = controllers.NewStatsController(statsCache, devices)
 }
 
-func initWebAndTest(db *sql.DB) {
+func initWebAndTest() {
 	// Initialize frontend controller with embedded assets
 	webSubFS, err := fs.Sub(webFS, "static")
 	if err != nil {
@@ -277,7 +277,7 @@ func initDependencies(cfg *Config) {
 	initCaches()
 	initServices(secret, upstreamDNS)
 	initControllers(cfg.Domain, upstreamDNS)
-	initWebAndTest(db)
+	initWebAndTest()
 }
 
 func initRouter(cfg *Config) *chi.Mux {

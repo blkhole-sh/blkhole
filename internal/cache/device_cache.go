@@ -9,6 +9,7 @@ import (
 
 // DeviceCache provides fast device hash to ID lookups and device-schedule mappings
 type DeviceCache interface {
+	Reset()
 	LoadDevices(devices []*model.Device)
 	LoadDeviceSchedules(deviceSchedules []*model.DeviceSchedule)
 	GetDeviceID(hash string) (int, bool)
@@ -28,6 +29,14 @@ func NewDeviceCache() DeviceCache {
 		deviceHashToID:   make(map[string]int),
 		deviceToSchedule: make(map[int][]int),
 	}
+}
+
+// Reset clears all cached data so the cache can be reloaded in-place
+func (dc *deviceCache) Reset() {
+	dc.mu.Lock()
+	defer dc.mu.Unlock()
+	dc.deviceHashToID = make(map[string]int)
+	dc.deviceToSchedule = make(map[int][]int)
 }
 
 // LoadDevices populates the hash-to-ID mapping
