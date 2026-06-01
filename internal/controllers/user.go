@@ -100,9 +100,6 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize user
-	var u model.User
-
 	// Get id from url params
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
@@ -116,11 +113,53 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encode user from request body
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+	// Decode request body — supports optional password change fields
+	var req struct {
+		model.User
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("unable to decode user from request body: %v", err)
 		http.Error(w, "Unable to decode user from request body", http.StatusBadRequest)
 		return
+	}
+
+	u := req.User
+
+	// If a password change is requested, verify current password first
+	if req.CurrentPassword != "" || req.NewPassword != "" {
+		if req.CurrentPassword == "" || req.NewPassword == "" {
+			http.Error(w, "Both currentPassword and newPassword are required", http.StatusBadRequest)
+			return
+		}
+
+		valid, err := uc.cryptoService.VerifyPassword(req.CurrentPassword, currentUser.PasswordHash)
+		if err != nil || !valid {
+			http.Error(w, "Current password is incorrect", http.StatusBadRequest)
+			return
+		}
+
+		newHash, err := uc.cryptoService.HashPassword(req.NewPassword)
+		if err != nil {
+			log.Printf("failed to hash new password for user %d: %v", id, err)
+			http.Error(w, "Unable to update password", http.StatusInternalServerError)
+			return
+		}
+
+		u.PasswordHash = newHash
+	} else {
+		// Preserve existing password hash when not changing password
+		u.PasswordHash = currentUser.PasswordHash
+	}
+
+	// Preserve name and email from current user if not provided
+	if u.Name == "" {
+		u.Name = currentUser.Name
+	}
+	if u.Email == "" {
+		u.Email = currentUser.Email
 	}
 
 	// Update user in db
@@ -129,6 +168,12 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to update user", http.StatusInternalServerError)
 		return
 	}
+
+	// Load relations for the DTO
+	if err := uc.users.LoadRelations(&u); err != nil {
+		log.Printf("failed to load relations for user %d: %v", id, err)
+	}
+	u.ID = id
 
 	// Respond with JSON encoded user
 	json.NewEncoder(w).Encode(u.ToDTO())
