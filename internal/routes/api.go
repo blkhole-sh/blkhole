@@ -29,6 +29,7 @@ func InitAPI(
 		r.Use(middleware.JSONMiddleware)
 
 		// Public routes
+		r.Post("/auth/register", authController.Register)
 		r.Post("/auth/login", authController.Login)
 		r.Post("/auth/refresh", authController.RefreshToken)
 		r.Post("/auth/logout", authController.Logout)

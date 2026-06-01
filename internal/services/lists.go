@@ -26,12 +26,12 @@ var (
 	trimPattern        = regexp.MustCompile(`^\s+|\s+$`)
 )
 
-// ListsService defines the interface for list service operations
-type ListsService interface {
+// ListService defines the interface for list service operations
+type ListService interface {
 	LoadList(*model.List) error
 }
 
-// listsService implements the ListsService interface
+// listsService implements the ListService interface
 type listsService struct {
 	lists          repos.ListRepo
 	ruleRepo       repos.RuleRepo
@@ -39,8 +39,8 @@ type listsService struct {
 	contentBlocker ContentBlocker
 }
 
-// NewListsService creates a new ListsService instance
-func NewListsService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListsService {
+// NewListService creates a new ListService instance
+func NewListService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListService {
 	return &listsService{
 		lists:          lists,
 		ruleRepo:       ruleRepo,

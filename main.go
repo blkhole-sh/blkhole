@@ -65,7 +65,7 @@ var (
 	contentBlocker services.ContentBlocker
 	resolver       services.Resolver
 	cryptoService  services.CryptoService
-	listService    services.ListsService
+	listService    services.ListService
 	authService    services.AuthService
 	tokenAuth      *jwtauth.JWTAuth
 
@@ -192,7 +192,7 @@ func initServices(secret []byte, upstreamDNS string) {
 	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
 	cryptoService = services.NewCryptoService(secret)
-	listService = services.NewListsService(lists, rules, domains, contentBlocker)
+	listService = services.NewListService(lists, rules, domains, contentBlocker)
 
 	tokenAuth = jwtauth.New("HS256", secret, nil)
 	authService = services.NewAuthService(users, cryptoService, tokenAuth)
