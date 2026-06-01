@@ -32,11 +32,12 @@ CREATE TABLE IF NOT EXISTS rule (
 -- Create list table:
 CREATE TABLE IF NOT EXISTS list (
     id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
     description TEXT,
     source TEXT,
     user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
-    count INTEGER NOT NULL DEFAULT 0
+    count INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(name, user_id)
 );
 
 -- Create schedule table:
