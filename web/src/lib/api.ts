@@ -1,7 +1,7 @@
 /**
  * API client for authenticated requests to the blkhole server backend
  */
-import { Device, List, Quote, QueryStats, Schedule } from "./model";
+import { Device, List, Quote, QueryStats, Schedule, Settings } from "./model";
 
 const API_BASE = "/api";
 
@@ -315,4 +315,34 @@ export const getQueryStats = (
 ): Promise<QueryStats> => {
 	const user = getCurrentUser();
 	return api(`/users/${user.id}/stats/queries?range=${range}`);
+};
+
+/** Get server settings (upstream DNS, etc.) — no auth required */
+export const getSettings = (): Promise<Settings> => {
+	return fetch(`${API_BASE}/settings`).then((r) => {
+		if (!r.ok) throw new Error(`Failed to fetch settings: ${r.status}`);
+		return r.json();
+	});
+};
+
+/**
+ * Change the current user's password
+ * @param currentPassword - The user's current password for verification
+ * @param newPassword - The new password to set
+ */
+export const changePassword = (
+	currentPassword: string,
+	newPassword: string,
+): Promise<void> => {
+	const user = getCurrentUser();
+	return api(`/users/${user.id}`, {
+		method: "PATCH",
+		body: JSON.stringify({ currentPassword, newPassword }),
+	});
+};
+
+/** Delete the current user's account */
+export const deleteAccount = (): Promise<void> => {
+	const user = getCurrentUser();
+	return api(`/users/${user.id}`, { method: "DELETE" });
 };
