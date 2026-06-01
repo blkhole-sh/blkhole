@@ -19,6 +19,7 @@ func InitAPI(
 	statsController controllers.StatsController,
 	quoteController controllers.QuoteController,
 	mobileConfigController controllers.MobileConfigController,
+	settingsController controllers.SettingsController,
 	testController controllers.TestController,
 	webController controllers.WebController,
 	tokenAuth *jwtauth.JWTAuth,
@@ -34,6 +35,7 @@ func InitAPI(
 		r.Post("/auth/refresh", authController.RefreshToken)
 		r.Post("/auth/logout", authController.Logout)
 		r.Get("/quote", quoteController.Random)
+		r.Get("/settings", settingsController.GetSettings)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {

@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
@@ -83,6 +84,7 @@ var (
 	quoteController        controllers.QuoteController
 	authController         controllers.AuthController
 	statsController        controllers.StatsController
+	settingsController     controllers.SettingsController
 	webController          controllers.WebController
 
 	// Test
@@ -202,15 +204,16 @@ func initControllers(domain, upstreamDNS string) {
 	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
 	userController = controllers.NewUserController(users, authService, cryptoService)
 	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
-	listController = controllers.NewListController(lists)
+	listController = controllers.NewListController(lists, listService)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService)
 	statsController = controllers.NewStatsController(statsCache, devices)
+	settingsController = controllers.NewSettingsController(upstreamDNS)
 }
 
-func initWebAndTest(db *sql.DB) {
+func initWebAndTest() {
 	// Initialize frontend controller with embedded assets
 	webSubFS, err := fs.Sub(webFS, "static")
 	if err != nil {
@@ -232,12 +235,26 @@ func initTLS(domain string) *tls.Config {
 	configDir, _ := os.UserConfigDir()
 	certDir := filepath.Join(configDir, "blkhole", "certs")
 	log.Printf("TLS: using certificate cache directory: %s", certDir)
-	log.Printf("TLS: allowing domain in HostWhitelist: %s", domain)
+	log.Printf("TLS: allowing root domain and single-level subdomains for: %s", domain)
+
+	hostPolicy := func(ctx context.Context, host string) error {
+		if host == domain {
+			return nil
+		}
+		suffix := "." + domain
+		if strings.HasSuffix(host, suffix) {
+			prefix := host[:len(host)-len(suffix)]
+			if !strings.Contains(prefix, ".") {
+				return nil
+			}
+		}
+		return fmt.Errorf("host %q not authorized for TLS certificate", host)
+	}
 
 	m := &autocert.Manager{
 		Cache:      autocert.DirCache(certDir),
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(domain),
+		HostPolicy: hostPolicy,
 	}
 
 	// Start ACME HTTP Challenge server on :80 for Let's Encrypt certificate verification
@@ -277,7 +294,7 @@ func initDependencies(cfg *Config) {
 	initCaches()
 	initServices(secret, upstreamDNS)
 	initControllers(cfg.Domain, upstreamDNS)
-	initWebAndTest(db)
+	initWebAndTest()
 }
 
 func initRouter(cfg *Config) *chi.Mux {
@@ -311,7 +328,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	}))
 
 	// Initialize routes
-	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, testController, webController, tokenAuth)
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, testController, webController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
 	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 

@@ -31,8 +31,8 @@ type ListService interface {
 	LoadList(*model.List) error
 }
 
-// listsService implements the ListService interface
-type listsService struct {
+// listService implements the ListService interface
+type listService struct {
 	lists          repos.ListRepo
 	ruleRepo       repos.RuleRepo
 	domainRepo     repos.DomainRepo
@@ -41,7 +41,7 @@ type listsService struct {
 
 // NewListService creates a new ListService instance
 func NewListService(lists repos.ListRepo, ruleRepo repos.RuleRepo, domainRepo repos.DomainRepo, contentBlocker ContentBlocker) ListService {
-	return &listsService{
+	return &listService{
 		lists:          lists,
 		ruleRepo:       ruleRepo,
 		domainRepo:     domainRepo,
@@ -307,7 +307,7 @@ func readFromSource(source string, domainRepo repos.DomainRepo) ([]model.Rule, e
 	}
 }
 
-func (ls *listsService) LoadList(l *model.List) error {
+func (ls *listService) LoadList(l *model.List) error {
 	// Check if no source to load from
 	if l.Source == "" {
 		return nil
