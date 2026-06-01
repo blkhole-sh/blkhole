@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
@@ -232,12 +233,26 @@ func initTLS(domain string) *tls.Config {
 	configDir, _ := os.UserConfigDir()
 	certDir := filepath.Join(configDir, "blkhole", "certs")
 	log.Printf("TLS: using certificate cache directory: %s", certDir)
-	log.Printf("TLS: allowing domain in HostWhitelist: %s", domain)
+	log.Printf("TLS: allowing root domain and single-level subdomains for: %s", domain)
+
+	hostPolicy := func(ctx context.Context, host string) error {
+		if host == domain {
+			return nil
+		}
+		suffix := "." + domain
+		if strings.HasSuffix(host, suffix) {
+			prefix := host[:len(host)-len(suffix)]
+			if !strings.Contains(prefix, ".") {
+				return nil
+			}
+		}
+		return fmt.Errorf("host %q not authorized for TLS certificate", host)
+	}
 
 	m := &autocert.Manager{
 		Cache:      autocert.DirCache(certDir),
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(domain),
+		HostPolicy: hostPolicy,
 	}
 
 	// Start ACME HTTP Challenge server on :80 for Let's Encrypt certificate verification
