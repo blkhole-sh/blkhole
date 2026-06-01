@@ -51,10 +51,6 @@ func (m *MockAuthService) UserFromContext(ctx context.Context) (*model.User, err
 	return nil, fmt.Errorf("UserFromContextFunc not implemented")
 }
 
-func (m *MockAuthService) Register(email, password string) (*services.LoginResult, error) {
-	return nil, fmt.Errorf("Register not implemented")
-}
-
 func TestAuthController_Login(t *testing.T) {
 	tests := []struct {
 		name           string

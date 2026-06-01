@@ -44,14 +44,14 @@ func TestListToDTO(t *testing.T) {
 		t.Errorf("Expected 1 rule, got %d", dto4.Rules)
 	}
 
-    // Case 5: Rules populated with DIFFERENT count than RuleCount (inconsistent state)
-    // The code `if len(l.Rules) > 0 { rules = len(l.Rules) }` prefers actual rules.
-    l5 := List{
-        Rules: []Rule{{ID: 1}, {ID: 2}},
-        RuleCount: 10,
-    }
-    dto5 := l5.ToDTO()
-    if dto5.Rules != 2 {
-        t.Errorf("Expected 2 rules (from slice), got %d", dto5.Rules)
-    }
+	// Case 5: Rules populated with DIFFERENT count than RuleCount (inconsistent state)
+	// The code `if len(l.Rules) > 0 { rules = len(l.Rules) }` prefers actual rules.
+	l5 := List{
+		Rules:     []Rule{{ID: 1}, {ID: 2}},
+		RuleCount: 10,
+	}
+	dto5 := l5.ToDTO()
+	if dto5.Rules != 2 {
+		t.Errorf("Expected 2 rules (from slice), got %d", dto5.Rules)
+	}
 }
