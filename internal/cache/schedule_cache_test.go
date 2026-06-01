@@ -13,13 +13,13 @@ func TestTimeStringToSlot(t *testing.T) {
 	}{
 		{"00:00", 0},
 		{"00:05", 1},
-		{"01:00", 12},   // 1 * 12 + 0
-		{"12:30", 150},  // 12 * 12 + 30/5 = 144 + 6 = 150
-		{"23:55", 287},  // 23 * 12 + 55/5 = 276 + 11 = 287
-		{"24:00", 0},    // invalid hour
-		{"12:60", 0},    // invalid minute
-		{"invalid", 0},  // invalid format
-		{"12", 0},       // missing minute
+		{"01:00", 12},  // 1 * 12 + 0
+		{"12:30", 150}, // 12 * 12 + 30/5 = 144 + 6 = 150
+		{"23:55", 287}, // 23 * 12 + 55/5 = 276 + 11 = 287
+		{"24:00", 0},   // invalid hour
+		{"12:60", 0},   // invalid minute
+		{"invalid", 0}, // invalid format
+		{"12", 0},      // missing minute
 	}
 
 	for _, tc := range tests {

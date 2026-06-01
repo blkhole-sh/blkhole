@@ -34,7 +34,6 @@ func TestStatsCache_IgnoreUnknownDevice(t *testing.T) {
 	}
 }
 
-
 // setupTestCache is already defined above...
 
 func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
@@ -62,11 +61,11 @@ func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
 	sc.IncrementBlockedAt(deviceHash, t2, 1)
 
 	tests := []struct {
-		name              string
-		timeRange         string
-		expectedTotal     int
-		expectedBuckets   int
-		expectedBlocked   int
+		name               string
+		timeRange          string
+		expectedTotal      int
+		expectedBuckets    int
+		expectedBlocked    int
 		expectedBlockedBks int
 	}{
 		{"Range24h (1-min buckets)", Range24h, 20, 4, 2, 2},
@@ -191,16 +190,16 @@ func TestStatsCache_Cleanup(t *testing.T) {
 	now := time.Now()
 
 	// Old timestamps beyond cleanup threshold
-	old1Min := now.Add(-25 * time.Hour).Truncate(time.Minute)    // > 24h
+	old1Min := now.Add(-25 * time.Hour).Truncate(time.Minute)         // > 24h
 	old5Min := now.Add(-8 * 24 * time.Hour).Truncate(5 * time.Minute) // > 7d
-	old1Hour := now.Add(-31 * 24 * time.Hour).Truncate(time.Hour) // > 30d
+	old1Hour := now.Add(-31 * 24 * time.Hour).Truncate(time.Hour)     // > 30d
 
 	// Valid timestamps within cleanup threshold
 	// Note: Cleanup thresholds use time.Now() exactly.
 	// So 23h, 6d, 29d.
-	valid1Min := now.Add(-23 * time.Hour).Truncate(time.Minute)    // < 24h
+	valid1Min := now.Add(-23 * time.Hour).Truncate(time.Minute)         // < 24h
 	valid5Min := now.Add(-6 * 24 * time.Hour).Truncate(5 * time.Minute) // < 7d
-	valid1Hour := now.Add(-29 * 24 * time.Hour).Truncate(time.Hour) // < 30d
+	valid1Hour := now.Add(-29 * 24 * time.Hour).Truncate(time.Hour)     // < 30d
 
 	// Add old stats
 	sc.IncrementAt(deviceHash, old1Min, 1)

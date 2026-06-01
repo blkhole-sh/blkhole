@@ -153,7 +153,6 @@ func (as *authService) RefreshToken(refreshToken string) (*LoginResult, error) {
 		return nil, fmt.Errorf("invalid token subject")
 	}
 
-
 	user, err := as.userRepo.FindByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)

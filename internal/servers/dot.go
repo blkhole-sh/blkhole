@@ -3,7 +3,6 @@ package servers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 
 	"github.com/lemon3studio/blkhole/internal/middleware"
@@ -23,7 +22,7 @@ func StartDoT(ctx context.Context, resolver services.Resolver, tlsConfig *tls.Co
 			// Resolve DNS query
 			resp, err := resolver.Resolve(msg, deviceHash)
 			if err != nil {
-				fmt.Errorf("error resolving dns query: %v", err)
+				log.Printf("error resolving dns query: %v", err)
 
 				// If failed to resolve, return original message
 				w.WriteMsg(msg)

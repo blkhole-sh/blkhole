@@ -22,4 +22,3 @@ func CookieAuthenticator(ja *jwtauth.JWTAuth) func(http.Handler) http.Handler {
 		})
 	}
 }
-
