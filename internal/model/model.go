@@ -79,6 +79,15 @@ type Schedule struct {
 	ID        int    `json:"id"`
 }
 
+// QueryLog represents a single logged DNS query
+type QueryLog struct {
+	ID         int    `json:"id"`
+	DeviceHash string `json:"deviceHash"`
+	Domain     string `json:"domain"`
+	Blocked    bool   `json:"blocked"`
+	Timestamp  int64  `json:"timestamp"`
+}
+
 // DeviceSchedule represents the many-to-many relationship between devices and schedules
 type DeviceSchedule struct {
 	DeviceID   int `json:"deviceId"`

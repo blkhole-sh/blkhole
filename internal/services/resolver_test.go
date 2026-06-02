@@ -54,7 +54,7 @@ func TestResolver_BlockedDomain_ReturnsNXDOMAIN(t *testing.T) {
 		},
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "8.8.8.8:53")
+	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
 
 	msg := newTestDNSMsg("blocked.com")
 	resp, err := r.Resolve(msg, "device-hash")
@@ -75,7 +75,7 @@ func TestResolver_BlockedDomain_IncrementsBlockedStat(t *testing.T) {
 		isBlockedFunc: func(_, _ string) (bool, error) { return true, nil },
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "8.8.8.8:53")
+	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("blocked.com"), "dev-hash")
 
@@ -87,8 +87,7 @@ func TestResolver_BlockedDomain_IncrementsBlockedStat(t *testing.T) {
 func TestResolver_EmptyDeviceHash_SkipsStatIncrement(t *testing.T) {
 	blocker := &mockContentBlocker{}
 	stats := &mockStatsCache{}
-	// Use a non-existent upstream so the query fails quickly; we only care about stats
-	r := NewResolver(blocker, stats, "127.0.0.1:1")
+	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("example.com"), "")
 
@@ -102,8 +101,7 @@ func TestResolver_NonBlockedDomain_IncrementsQueryStat(t *testing.T) {
 		isBlockedFunc: func(_, _ string) (bool, error) { return false, nil },
 	}
 	stats := &mockStatsCache{}
-	// Non-existent upstream; we only test that Increment is called before forwarding
-	r := NewResolver(blocker, stats, "127.0.0.1:1")
+	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("example.com"), "my-device")
 
@@ -117,7 +115,7 @@ func TestResolver_UpstreamFailure_ReturnsSERVFAIL(t *testing.T) {
 		isBlockedFunc: func(_, _ string) (bool, error) { return false, nil },
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:1") // unreachable upstream
+	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil) // unreachable upstream
 
 	msg := newTestDNSMsg("example.com")
 	resp, err := r.Resolve(msg, "")
