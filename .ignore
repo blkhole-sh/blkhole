@@ -1,0 +1,51 @@
+# Makefile
+Makefile
+
+# Air configuration
+.air.toml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Binaries
+blkhole
+tmp/
+
+# Go specific
+*.test
+*.out
+*.prof
+__debug_bin*
+go.work
+go.work.sum
+
+# Testing
+coverage.out
+coverage.html
+*.cover
+
+# Database files (blkhole uses SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+
+.aider*
