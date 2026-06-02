@@ -49,3 +49,7 @@ coverage.html
 *.backup
 
 .aider*
+
+# Claude
+CLAUDE.md
+.claude
