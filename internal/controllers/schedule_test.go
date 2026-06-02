@@ -153,7 +153,12 @@ func TestScheduleController_FindByID_NotFound(t *testing.T) {
 }
 
 func TestScheduleController_Delete_Success(t *testing.T) {
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	repo := &MockScheduleRepoFull{
+		FindByIDFn: func(id int) (*model.Schedule, error) {
+			return &model.Schedule{ID: id, IsDefault: false}, nil
+		},
+	}
+	controller := NewScheduleController(repo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/schedules/1", nil), "id", "1")
 	rr := httptest.NewRecorder()
