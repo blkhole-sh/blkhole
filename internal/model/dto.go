@@ -45,6 +45,7 @@ type ListDTO struct {
 	UserID      int    `json:"userId"`
 	Rules       int    `json:"rules"`
 	Schedules   int    `json:"schedules"`
+	IsDefault   bool   `json:"isDefault"`
 }
 
 // ScheduleDTO represents a schedule data transfer object

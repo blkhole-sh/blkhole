@@ -208,7 +208,7 @@ func initControllers(domain, upstreamDNS string) {
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
-	authController = controllers.NewAuthController(authService)
+	authController = controllers.NewAuthController(authService, listService)
 	statsController = controllers.NewStatsController(statsCache, devices)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
 }
@@ -355,6 +355,20 @@ func main() {
 	if err = contentBlocker.Init(); err != nil {
 		log.Fatalf("failed to initialize content blocker: %v", err)
 	}
+
+	// Seed default lists for existing users in the background
+	go func() {
+		ids, err := users.FindAllIDs()
+		if err != nil {
+			log.Printf("failed to load user IDs for default list seeding: %v", err)
+			return
+		}
+		for _, id := range ids {
+			if err := listService.SeedDefaults(id); err != nil {
+				log.Printf("failed to seed default lists for user %d: %v", id, err)
+			}
+		}
+	}()
 
 	// Start background tasks
 	statsCache.Start()
