@@ -18,9 +18,7 @@ export default function AuthLayout(props: ParentProps) {
 		<Show when={auth.isAuthenticated()}>
 			<div class="min-h-screen flex flex-col">
 				<Navbar />
-				<div class="flex-1 flex flex-col">
-					{props.children}
-				</div>
+				<div class="flex-1 flex flex-col">{props.children}</div>
 				<Footer />
 			</div>
 		</Show>
