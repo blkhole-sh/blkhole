@@ -22,6 +22,7 @@ type UserRepo interface {
 	LoadRelations(u *model.User) error
 	FindByEmail(email string) (*model.User, error)
 	FindByID(id int) (*model.User, error)
+	FindAllIDs() ([]int, error)
 }
 
 // userRepo implements the Userur interface
@@ -152,6 +153,18 @@ func (ur *userRepo) FindByEmail(email string) (*model.User, error) {
 	}
 
 	return &u, nil
+}
+
+// FindAllIDs returns the IDs of all users in the database.
+func (ur *userRepo) FindAllIDs() ([]int, error) {
+	var ids []int
+	if err := sqlscan.Select(ur.ctx, ur.db, &ids, "SELECT id FROM user"); err != nil {
+		return nil, err
+	}
+	if ids == nil {
+		return []int{}, nil
+	}
+	return ids, nil
 }
 
 // FindByID returns an existing user with given id from the database
