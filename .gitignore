@@ -49,3 +49,9 @@ coverage.html
 *.backup
 
 .aider*
+
+# AI agent instruction files (symlink locally to AGENTS.md)
+CLAUDE.md
+GEMINI.md
+.cursorrules
+.github/copilot-instructions.md
