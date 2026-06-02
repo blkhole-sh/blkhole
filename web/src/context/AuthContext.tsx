@@ -1,9 +1,4 @@
-import {
-	createContext,
-	createSignal,
-	ParentProps,
-	useContext,
-} from "solid-js";
+import { createContext, createSignal, ParentProps, useContext } from "solid-js";
 import { User } from "~/lib/model";
 import {
 	login as apiLogin,

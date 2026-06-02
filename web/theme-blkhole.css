@@ -1,0 +1,441 @@
+/*
+ * Gitea theme — blkhole
+ *
+ * Place this file at:
+ *   $GITEA_CUSTOM/public/assets/css/theme-blkhole.css
+ *
+ * Then add to app.ini:
+ *   [ui]
+ *   THEMES = auto,gitea,arc-green,blkhole
+ *   DEFAULT_THEME = blkhole
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&display=swap");
+
+/* ─── Base ─────────────────────────────────────────────────────── */
+
+body {
+	font-family:
+		"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+	font-size: 14px;
+	line-height: 1.5;
+	color: #18181b;
+	background-color: #ffffff;
+}
+
+a {
+	color: #18181b;
+}
+
+a:hover {
+	color: #000000;
+	text-decoration: underline;
+}
+
+.ui.menu,
+.ui.button,
+.ui.header,
+.markdown:not(code) {
+	font-family:
+		"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ─── Top navbar ───────────────────────────────────────────────── */
+
+.following.bar.light {
+	background-color: #ffffff;
+	color: #52525b;
+	border-bottom: 1px solid #e4e4e7;
+	box-shadow: none;
+}
+
+.ui.main.menu {
+	font-size: 13px;
+}
+
+.ui.main.menu .item {
+	color: #52525b;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+}
+
+.ui.secondary.main.menu .active.item {
+	color: #000000;
+	font-weight: 600;
+}
+
+.ui.secondary.main.menu .active.item:hover {
+	color: #000000;
+}
+
+.ui.secondary.main.menu a.item:hover {
+	color: #000000;
+}
+
+.ui.secondary.main.menu .dropdown.item:hover {
+	color: #000000;
+}
+
+/* ─── Repo sub-navigation tabs ─────────────────────────────────── */
+
+.ui.tabular.stackable.menu.navbar a.item {
+	color: #71717a;
+	letter-spacing: 0.03em;
+}
+
+.ui.tabular.stackable.menu.navbar a.item:hover {
+	color: #18181b;
+}
+
+.ui.tabular.stackable.menu.navbar a.active.item {
+	font-weight: 600;
+	color: #000000;
+	border-bottom: 2px solid #000000;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────── */
+
+.ui.button {
+	border: 1px solid #d4d4d8;
+	border-radius: 0;
+	background-color: #f4f4f5;
+	background-image: none;
+	font-size: 12px;
+	font-weight: 600;
+	color: #18181b;
+	box-shadow: none;
+	letter-spacing: 0.04em;
+}
+
+.ui.button:hover {
+	border-color: #a1a1aa;
+	background-color: #e4e4e7;
+	background-image: none;
+	color: #000000;
+}
+
+.ui.buttons .button:first-child {
+	border-left: 1px solid #d4d4d8;
+}
+
+.ui.buttons .button:first-child:hover {
+	border-left-color: #a1a1aa;
+}
+
+.ui.green.button,
+.ui.positive.button {
+	background-color: #000000;
+	background-image: none;
+	color: #ffffff;
+	border: none;
+	border-radius: 0;
+}
+
+.ui.green.button:hover,
+.ui.positive.button:hover {
+	background-color: #27272a;
+	background-image: none;
+}
+
+.ui.blue.button,
+.ui.primary.button,
+.ui.tiny.blue.buttons .button,
+.ui.tiny.blue.buttons a.ui.button {
+	background-color: #000000;
+	background-image: none;
+	color: #ffffff;
+	border: none;
+	border-radius: 0;
+}
+
+.ui.blue.button:hover,
+.ui.primary.button:hover,
+.ui.tiny.blue.buttons .button:hover,
+.ui.tiny.blue.buttons a.ui.button:hover {
+	background-color: #27272a;
+	background-image: none;
+}
+
+.ui.red.button,
+.ui.negative.button {
+	background-color: #18181b;
+	background-image: none;
+	color: #ffffff;
+	border: none;
+	border-radius: 0;
+}
+
+.ui.red.button:hover,
+.ui.negative.button:hover {
+	background-color: #3f3f46;
+	background-image: none;
+}
+
+/* ─── Labels ───────────────────────────────────────────────────── */
+
+.ui.label {
+	font-size: 11px;
+	font-weight: 600;
+	border-radius: 0;
+	background-color: #f4f4f5;
+	color: #18181b;
+	letter-spacing: 0.04em;
+}
+
+/* ─── Segments / panels ────────────────────────────────────────── */
+
+.ui.segment {
+	border-radius: 0;
+	box-shadow: none;
+	border: 1px solid #e4e4e7;
+}
+
+.ui.top.attached.header {
+	background-color: #f4f4f5;
+	font-size: 13px;
+	border-radius: 0;
+	border: 1px solid #e4e4e7;
+}
+
+.ui.top.attached.header strong {
+	font-weight: 600;
+}
+
+/* ─── Repo file list ────────────────────────────────────────────── */
+
+#repo-files-table.ui.fixed.single.line.table thead tr.commit-list {
+	background-color: #f4f4f5;
+	border: 1px solid #e4e4e7;
+}
+
+#repo-files-table.ui.fixed.single.line.table thead tr.commit-list th {
+	background-color: #f4f4f5;
+	border-bottom: 1px solid #e4e4e7;
+	font-size: 12px;
+	color: #71717a;
+}
+
+.repository.file.list #repo-files-table tr:hover {
+	background-color: #f9f9f9;
+}
+
+/* ─── Tables ───────────────────────────────────────────────────── */
+
+.ui.table {
+	border-radius: 0;
+	border: 1px solid #e4e4e7;
+	font-size: 13px;
+}
+
+.ui.table thead th {
+	background-color: #f4f4f5;
+	color: #71717a;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	border-bottom: 1px solid #e4e4e7;
+}
+
+.ui.table tr:hover td {
+	background-color: #f9f9f9;
+}
+
+.ui.table td.message a {
+	color: #71717a;
+}
+
+.ui.table td.name a:hover,
+.ui.table td.message a:hover {
+	text-decoration: underline;
+	color: #000000;
+}
+
+/* ─── Breadcrumbs ──────────────────────────────────────────────── */
+
+.ui.breadcrumb a {
+	color: #18181b;
+}
+
+.repository .header-grid .ui.huge.breadcrumb {
+	font-size: 18px;
+	font-weight: 600;
+	font-family: "Hedvig Letters Serif", serif;
+}
+
+.repository .header-grid .mega-octicon {
+	font-size: 18px;
+	width: 20px;
+}
+
+/* ─── Issue / PR title ─────────────────────────────────────────── */
+
+.repository.view.issue .title h1 {
+	font-size: 28px;
+	font-weight: 400;
+	font-family: "Hedvig Letters Serif", serif;
+	word-wrap: break-word;
+}
+
+/* ─── Compact labeled buttons (star / watch / fork) ───────────── */
+
+.ui.compact.labeled.button,
+.ui.compact.button a {
+	color: #18181b;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+/* ─── Code & diff ───────────────────────────────────────────────── */
+
+pre,
+code,
+.ui.codeblock {
+	font-family:
+		"Geist Mono", ui-monospace, "SFMono-Regular", Consolas, monospace !important;
+	background-color: #f4f4f5;
+	border-radius: 0;
+	border: 1px solid #e4e4e7;
+}
+
+pre code {
+	border: none;
+}
+
+/* ─── Inputs & forms ────────────────────────────────────────────── */
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+input[type="number"],
+input[type="url"],
+textarea,
+select,
+.ui.input > input {
+	border-radius: 0 !important;
+	border: 1px solid #a1a1aa !important;
+	background-color: #ffffff !important;
+	color: #18181b !important;
+	font-family: "Geist", sans-serif !important;
+	box-shadow: none !important;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+.ui.input > input:focus {
+	border-color: #000000 !important;
+	box-shadow: none !important;
+	outline: none !important;
+}
+
+input[type="checkbox"] {
+	appearance: none;
+	width: 1rem;
+	height: 1rem;
+	border: 1px solid #a1a1aa;
+	border-radius: 0;
+	cursor: pointer;
+	background-color: #ffffff;
+	flex-shrink: 0;
+	vertical-align: middle;
+}
+
+input[type="checkbox"]:checked {
+	background-color: #000000;
+	border-color: #000000;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 100%;
+}
+
+/* ─── Menus / dropdowns ─────────────────────────────────────────── */
+
+.ui.menu {
+	border-radius: 0;
+	box-shadow: none;
+	border: 1px solid #e4e4e7;
+}
+
+.ui.dropdown .menu {
+	border-radius: 0;
+	border: 1px solid #e4e4e7;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ui.dropdown .menu .item:hover {
+	background-color: #f4f4f5;
+	color: #000000;
+}
+
+/* ─── Modals ────────────────────────────────────────────────────── */
+
+.ui.modal {
+	border-radius: 0;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+}
+
+.ui.modal > .header {
+	border-radius: 0;
+	background-color: #f4f4f5;
+	border-bottom: 1px solid #e4e4e7;
+	font-family: "Hedvig Letters Serif", serif;
+	font-size: 20px;
+	font-weight: 400;
+}
+
+/* ─── Pagination ────────────────────────────────────────────────── */
+
+.ui.pagination.menu .item {
+	border-radius: 0 !important;
+	font-size: 12px;
+}
+
+.ui.pagination.menu .active.item {
+	background-color: #000000;
+	color: #ffffff;
+	font-weight: 600;
+}
+
+/* ─── Footer ────────────────────────────────────────────────────── */
+
+#footer,
+.footer {
+	background-color: #f4f4f5;
+	border-top: 1px solid #e4e4e7;
+	color: #71717a;
+	font-size: 12px;
+	letter-spacing: 0.05em;
+}
+
+/* ─── Progress bars ─────────────────────────────────────────────── */
+
+.ui.progress {
+	border-radius: 0;
+	background-color: #e4e4e7;
+}
+
+.ui.progress .bar {
+	border-radius: 0;
+	background-color: #000000;
+}
+
+/* ─── Cards ─────────────────────────────────────────────────────── */
+
+.ui.card {
+	border-radius: 0;
+	box-shadow: none;
+	border: 1px solid #e4e4e7;
+}
+
+/* ─── Popups ─────────────────────────────────────────────────────── */
+
+.ui.popup {
+	border-radius: 0;
+	border: 1px solid #e4e4e7;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}

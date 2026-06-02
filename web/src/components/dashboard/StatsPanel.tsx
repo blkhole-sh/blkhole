@@ -25,7 +25,9 @@ export default function StatsCards(props: Props) {
 	return (
 		<div class="pb-8 grid grid-cols-2 items-start gap-4">
 			<div>
-				<p class="pb-4 font-medium text-zinc-500 text-sm tracking-wider">TOTAL QUERIES</p>
+				<p class="pb-4 font-medium text-zinc-500 text-sm tracking-wider">
+					TOTAL QUERIES
+				</p>
 				<p class="font-display text-5xl">{totalQueries()}</p>
 			</div>
 			<div>

@@ -18,11 +18,6 @@ interface Props {
 export default function TextInput(props: Props) {
 	const [showPassword, setShowPassword] = createSignal(false);
 
-	const inputType = () =>
-		props.type === "password" && showPassword()
-			? "text"
-			: (props.type ?? "text");
-
 	const activeError = () =>
 		props.error ??
 		(props.showError ? props.validate?.(props.value) : undefined);
@@ -38,15 +33,29 @@ export default function TextInput(props: Props) {
 				{props.label}
 			</label>
 			<div class="relative w-full">
-				<input
-					id={props.label}
-					type={inputType()}
-					placeholder={props.placeholder ?? ""}
-					value={props.value}
-					onInput={props.onInput}
-					class="w-full py-2 text-sm leading-snug tracking-wider outline-none"
-					classList={{ "pr-8": props.type === "password" }}
-				/>
+				<Show
+					when={props.type === "password" && showPassword()}
+					fallback={
+						<input
+							id={props.label}
+							type={props.type ?? "text"}
+							placeholder={props.placeholder ?? ""}
+							value={props.value}
+							onInput={props.onInput}
+							class="w-full py-2 text-sm leading-snug tracking-wider outline-none"
+							classList={{ "pr-8": props.type === "password" }}
+						/>
+					}
+				>
+					<input
+						id={props.label}
+						type="text"
+						placeholder={props.placeholder ?? ""}
+						value={props.value}
+						onInput={props.onInput}
+						class="w-full py-2 text-sm leading-snug tracking-wider outline-none pr-8"
+					/>
+				</Show>
 				<Show when={props.type === "password"}>
 					<button
 						type="button"
