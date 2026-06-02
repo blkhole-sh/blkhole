@@ -57,6 +57,7 @@ type List struct {
 	ScheduleIDs []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
 	Count       int    `json:"count"`
+	IsDefault   bool   `json:"isDefault"`
 }
 
 // Schedule represents a time-based schedule
@@ -143,6 +144,7 @@ func (l List) ToDTO() ListDTO {
 		UserID:      l.UserID,
 		Rules:       rules,
 		Schedules:   len(l.ScheduleIDs),
+		IsDefault:   l.IsDefault,
 	}
 }
 

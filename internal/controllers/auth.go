@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -21,11 +22,12 @@ type AuthController interface {
 // authController implements the AuthController interface
 type authController struct {
 	authService services.AuthService
+	listService services.ListService
 }
 
 // NewAuthController creates a new authentication controller
-func NewAuthController(authService services.AuthService) AuthController {
-	return &authController{authService: authService}
+func NewAuthController(authService services.AuthService, listService services.ListService) AuthController {
+	return &authController{authService: authService, listService: listService}
 }
 
 // Login handles user authentication
@@ -87,6 +89,12 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	go func() {
+		if err := c.listService.SeedDefaults(result.User.ID); err != nil {
+			log.Printf("failed to seed default lists for user %d: %v", result.User.ID, err)
+		}
+	}()
 
 	// Set secure HttpOnly cookies
 	c.setSecureCookie(w, "access_token", result.AccessToken, services.TokenExpiry)
