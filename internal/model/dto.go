@@ -69,4 +69,5 @@ type ScheduleDTO struct {
 	Friday      bool     `json:"friday"`
 	Saturday    bool     `json:"saturday"`
 	Sunday      bool     `json:"sunday"`
+	IsDefault   bool     `json:"isDefault"`
 }

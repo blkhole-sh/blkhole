@@ -30,6 +30,8 @@ type ScheduleRepo interface {
 	FindByList(listID int) ([]*model.Schedule, error)
 	FindAll() ([]*model.Schedule, error)
 	FindScheduleRule() ([]*model.ScheduleRule, error)
+	HasDefaultsForUser(userID int) (bool, error)
+	SeedDefaults(userID int) error
 }
 
 // scheduleRepo implements the Schedulesr interface
@@ -91,6 +93,7 @@ type dbSchedule struct {
 	Days      int    `db:"days"`
 	Active    bool   `db:"active"`
 	UserID    int    `db:"user_id"`
+	IsDefault bool   `db:"is_default"`
 }
 
 // toSchedule converts a scheduleDbRow to a model.Schedule
@@ -102,6 +105,7 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 		EndTime:   row.EndTime,
 		Active:    row.Active,
 		UserID:    row.UserID,
+		IsDefault: row.IsDefault,
 	}
 	decodeDaysFromInt(row.Days, s)
 	return s
@@ -110,8 +114,12 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 // Create stores a new schedule into the database
 func (sr *scheduleRepo) Create(s *model.Schedule) (int, error) {
 	days := encodeDaysToInt(s)
-	query := "INSERT INTO schedule (name, start_time, end_time, days, active, user_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
-	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, s.UserID).Scan(&s.ID)
+	isDefault := 0
+	if s.IsDefault {
+		isDefault = 1
+	}
+	query := "INSERT INTO schedule (name, start_time, end_time, days, active, user_id, is_default) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id"
+	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, s.UserID, isDefault).Scan(&s.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -271,15 +279,17 @@ func (sr *scheduleRepo) LoadRelations(s *model.Schedule) error {
 
 // FindByID returns an existing schedule with given id from the database
 func (sr *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, active, user_id FROM schedule WHERE id=?"
+	query := "SELECT id, name, start_time, end_time, days, active, user_id, is_default FROM schedule WHERE id=?"
 	var s model.Schedule
 	var days int
+	var isDefault int
 
 	row := sr.db.QueryRowContext(sr.ctx, query, id)
-	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.Active, &s.UserID); err != nil {
+	if err := row.Scan(&s.ID, &s.Name, &s.StartTime, &s.EndTime, &days, &s.Active, &s.UserID, &isDefault); err != nil {
 		return nil, err
 	}
 
+	s.IsDefault = isDefault == 1
 	decodeDaysFromInt(days, &s)
 
 	if err := sr.LoadRelations(&s); err != nil {
@@ -289,9 +299,44 @@ func (sr *scheduleRepo) FindByID(id int) (*model.Schedule, error) {
 	return &s, nil
 }
 
+// HasDefaultsForUser returns true if the user already has any default schedules.
+func (sr *scheduleRepo) HasDefaultsForUser(userID int) (bool, error) {
+	var count int
+	err := sr.db.QueryRowContext(sr.ctx, "SELECT COUNT(*) FROM schedule WHERE user_id=? AND is_default=1", userID).Scan(&count)
+	return count > 0, err
+}
+
+// SeedDefaults creates the default "Base Protection" schedule for a user if they don't already have one.
+func (sr *scheduleRepo) SeedDefaults(userID int) error {
+	has, err := sr.HasDefaultsForUser(userID)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+	s := &model.Schedule{
+		Name:      "Base Protection",
+		StartTime: "00:00",
+		EndTime:   "23:55",
+		Active:    true,
+		UserID:    userID,
+		IsDefault: true,
+		Monday:    true,
+		Tuesday:   true,
+		Wednesday: true,
+		Thursday:  true,
+		Friday:    true,
+		Saturday:  true,
+		Sunday:    true,
+	}
+	_, err = sr.Create(s)
+	return err
+}
+
 // FindByUser returns all existing schedules with given user ID from the database
 func (sr *scheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, active, user_id FROM schedule WHERE user_id=?"
+	query := "SELECT id, name, start_time, end_time, days, active, user_id, is_default FROM schedule WHERE user_id=?"
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query, userID); err != nil {

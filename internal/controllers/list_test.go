@@ -11,6 +11,12 @@ import (
 	"github.com/lemon3studio/blkhole/internal/model"
 )
 
+// MockListService satisfies services.ListService
+type MockListService struct{}
+
+func (m *MockListService) LoadList(l *model.List) error  { return nil }
+func (m *MockListService) SeedDefaults(userID int) error { return nil }
+
 // MockListRepo satisfies repos.ListRepo
 type MockListRepo struct {
 	CreateFunc    func(l *model.List) (int, error)
