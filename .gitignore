@@ -48,8 +48,12 @@ coverage.html
 *.bak
 *.backup
 
-.aider*
 
-# Claude
+# AI agents
 CLAUDE.md
 .claude
+GEMINI.md
+.cursorrules
+.github/copilot-instructions.md
+.aider*
+
