@@ -172,6 +172,18 @@ func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	l, err := lc.lists.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find list with id %d: %v", id, err)
+		http.Error(w, "Unable to find list", http.StatusNotFound)
+		return
+	}
+
+	if l.IsDefault {
+		http.Error(w, "Default lists cannot be deleted", http.StatusForbidden)
+		return
+	}
+
 	// Delete blocklist from db
 	lc.lists.Delete(id)
 

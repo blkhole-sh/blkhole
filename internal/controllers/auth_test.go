@@ -51,6 +51,11 @@ func (m *MockAuthService) UserFromContext(ctx context.Context) (*model.User, err
 	return nil, fmt.Errorf("UserFromContextFunc not implemented")
 }
 
+type MockListService struct{}
+
+func (m *MockListService) LoadList(l *model.List) error  { return nil }
+func (m *MockListService) SeedDefaults(userID int) error { return nil }
+
 func TestAuthController_Login(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -120,7 +125,7 @@ func TestAuthController_Login(t *testing.T) {
 			mockService := &MockAuthService{
 				LoginFunc: tt.mockLogin,
 			}
-			controller := NewAuthController(mockService)
+			controller := NewAuthController(mockService, &MockListService{})
 
 			var body []byte
 			if s, ok := tt.requestBody.(string); ok {
@@ -242,7 +247,7 @@ func TestAuthController_Register(t *testing.T) {
 			mockService := &MockAuthService{
 				RegisterFunc: tt.mockRegister,
 			}
-			controller := NewAuthController(mockService)
+			controller := NewAuthController(mockService, &MockListService{})
 
 			var body []byte
 			if s, ok := tt.requestBody.(string); ok {
@@ -338,7 +343,7 @@ func TestAuthController_RefreshToken(t *testing.T) {
 			mockService := &MockAuthService{
 				RefreshTokenFunc: tt.mockRefresh,
 			}
-			controller := NewAuthController(mockService)
+			controller := NewAuthController(mockService, &MockListService{})
 
 			req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
 			if tt.cookieValue != "" {
@@ -390,7 +395,7 @@ func TestAuthController_RefreshToken(t *testing.T) {
 }
 
 func TestAuthController_Logout(t *testing.T) {
-	controller := NewAuthController(&MockAuthService{})
+	controller := NewAuthController(&MockAuthService{}, &MockListService{})
 
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	w := httptest.NewRecorder()
@@ -453,7 +458,7 @@ func TestAuthController_GetCurrentUser(t *testing.T) {
 			mockService := &MockAuthService{
 				UserFromContextFunc: tt.mockUser,
 			}
-			controller := NewAuthController(mockService)
+			controller := NewAuthController(mockService, &MockListService{})
 
 			req := httptest.NewRequest(http.MethodGet, "/me", nil)
 			w := httptest.NewRecorder()

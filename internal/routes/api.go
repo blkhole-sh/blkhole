@@ -22,6 +22,7 @@ func InitAPI(
 	settingsController controllers.SettingsController,
 	testController controllers.TestController,
 	webController controllers.WebController,
+	queryLogController controllers.QueryLogController,
 	tokenAuth *jwtauth.JWTAuth,
 ) {
 	// API routes group
@@ -76,6 +77,10 @@ func InitAPI(
 
 			// Stats API routes
 			r.Get("/users/{userId}/stats/queries", statsController.GetQueryStats)
+
+			// Query log routes
+			r.Get("/users/{userId}/logs", queryLogController.GetLogs)
+			r.Get("/users/{userId}/logs/export", queryLogController.ExportLogs)
 		})
 	})
 

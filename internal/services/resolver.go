@@ -20,14 +20,16 @@ type resolver struct {
 	statsCache     cache.StatsCache
 	upstreamDNS    string
 	dnsClient      *dns.Client
+	queryLog       *QueryLogBuffer
 }
 
 // NewResolver creates a new Resolver instance
-func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, upstreamDNS string) Resolver {
+func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, upstreamDNS string, queryLog *QueryLogBuffer) Resolver {
 	return &resolver{
 		contentBlocker: contentBlocker,
 		statsCache:     statsCache,
 		upstreamDNS:    upstreamDNS,
+		queryLog:       queryLog,
 		dnsClient: &dns.Client{
 			Timeout:        1 * time.Second,
 			SingleInflight: true,
@@ -63,9 +65,18 @@ func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
 		if deviceHash != "" {
 			r.statsCache.IncrementBlocked(deviceHash)
 		}
+		if r.queryLog != nil && deviceHash != "" && len(msg.Question) > 0 {
+			domain := strings.TrimSuffix(msg.Question[0].Name, ".")
+			r.queryLog.Enqueue(deviceHash, domain, true)
+		}
 		response.SetRcode(msg, dns.RcodeNameError)
 		response.Answer = nil
 		return response, nil
+	}
+
+	if r.queryLog != nil && deviceHash != "" && len(msg.Question) > 0 {
+		domain := strings.TrimSuffix(msg.Question[0].Name, ".")
+		r.queryLog.Enqueue(deviceHash, domain, false)
 	}
 
 	// Forward the DNS query to the upstream server
