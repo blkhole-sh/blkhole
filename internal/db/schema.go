@@ -45,6 +45,11 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
+	_, err = db.Exec("ALTER TABLE list ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0;")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
 	_, err = db.Exec("ALTER TABLE schedule ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0;")
 	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
