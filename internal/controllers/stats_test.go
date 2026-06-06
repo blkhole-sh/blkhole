@@ -7,9 +7,22 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lemon3studio/blkhole/internal/model"
 )
+
+// MockQueryLogRepo is a no-op QueryLogRepo for tests that don't need DB stats.
+type MockQueryLogRepo struct{}
+
+func (m *MockQueryLogRepo) Insert(_, _ string, _ bool) error { return nil }
+func (m *MockQueryLogRepo) FindByUser(_ int, _ int) ([]*model.QueryLog, error) {
+	return nil, nil
+}
+func (m *MockQueryLogRepo) DeleteOlderThan(_ int) error { return nil }
+func (m *MockQueryLogRepo) GetAggregatedStats(_ []string, _, _ time.Time, _ int64) (map[time.Time]int, map[time.Time]int, error) {
+	return nil, nil, nil
+}
 
 // fullStatsCache extends MockStatsCache with configurable GetUserCounts/GetUserBlockedCounts
 type fullStatsCache struct {
@@ -45,7 +58,7 @@ func TestStatsController_GetQueryStats_Success(t *testing.T) {
 			return []model.StatCount{{Count: 3}}
 		},
 	}
-	controller := NewStatsController(statsCache, deviceRepo)
+	controller := NewStatsController(statsCache, deviceRepo, &MockQueryLogRepo{})
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats", nil), "userId", "1")
 	rr := httptest.NewRecorder()
@@ -65,7 +78,7 @@ func TestStatsController_GetQueryStats_Success(t *testing.T) {
 }
 
 func TestStatsController_GetQueryStats_BadUserID(t *testing.T) {
-	controller := NewStatsController(&fullStatsCache{}, &MockDeviceRepo{})
+	controller := NewStatsController(&fullStatsCache{}, &MockDeviceRepo{}, &MockQueryLogRepo{})
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/abc/stats", nil), "userId", "abc")
 	rr := httptest.NewRecorder()
@@ -82,7 +95,7 @@ func TestStatsController_GetQueryStats_InvalidRange(t *testing.T) {
 			return []*model.Device{}, nil
 		},
 	}
-	controller := NewStatsController(&fullStatsCache{}, deviceRepo)
+	controller := NewStatsController(&fullStatsCache{}, deviceRepo, &MockQueryLogRepo{})
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats?range=invalid", nil), "userId", "1")
 	rr := httptest.NewRecorder()
@@ -109,7 +122,7 @@ func TestStatsController_GetQueryStats_DefaultRange(t *testing.T) {
 			return []model.StatCount{}
 		},
 	}
-	controller := NewStatsController(statsCache, deviceRepo)
+	controller := NewStatsController(statsCache, deviceRepo, &MockQueryLogRepo{})
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats", nil), "userId", "1")
 	rr := httptest.NewRecorder()
@@ -126,7 +139,7 @@ func TestStatsController_GetQueryStats_DeviceRepoError(t *testing.T) {
 			return nil, fmt.Errorf("db error")
 		},
 	}
-	controller := NewStatsController(&fullStatsCache{}, deviceRepo)
+	controller := NewStatsController(&fullStatsCache{}, deviceRepo, &MockQueryLogRepo{})
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats", nil), "userId", "1")
 	rr := httptest.NewRecorder()
