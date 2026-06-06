@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS schedule (
     active INTEGER NOT NULL DEFAULT 1,
     is_default INTEGER NOT NULL DEFAULT 0,
     user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
-    CHECK (start_time < end_time),
     -- Validate that times follow HH:MM format
     CHECK (start_time GLOB '[0-2][0-9]:[0-5][0-9]'),
     CHECK (end_time GLOB '[0-2][0-9]:[0-5][0-9]'),

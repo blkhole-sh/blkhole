@@ -99,5 +99,56 @@ func Init(db *sql.DB) error {
 		}
 	}
 
+	// Migration: remove CHECK (start_time < end_time) constraint to allow all-day schedules (00:00–00:00).
+	// SQLite can't drop constraints, so we detect the old definition and recreate the table.
+	var schedSQL string
+	err = db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='schedule'`).Scan(&schedSQL)
+	if err != nil {
+		return err
+	}
+	if strings.Contains(schedSQL, "start_time < end_time") {
+		_, err = db.Exec(`PRAGMA foreign_keys = OFF`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`
+			CREATE TABLE schedule_new (
+				id INTEGER PRIMARY KEY,
+				name TEXT NOT NULL,
+				start_time TEXT NOT NULL,
+				end_time TEXT NOT NULL,
+				days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
+				active INTEGER NOT NULL DEFAULT 1,
+				is_default INTEGER NOT NULL DEFAULT 0,
+				user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
+				CHECK (start_time GLOB '[0-2][0-9]:[0-5][0-9]'),
+				CHECK (end_time GLOB '[0-2][0-9]:[0-5][0-9]'),
+				CHECK (CAST(SUBSTR(start_time, 4, 2) AS INTEGER) % 5 = 0),
+				CHECK (CAST(SUBSTR(end_time, 4, 2) AS INTEGER) % 5 = 0),
+				CHECK (CAST(SUBSTR(start_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(start_time, 1, 2) AS INTEGER) <= 23),
+				CHECK (CAST(SUBSTR(end_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(end_time, 1, 2) AS INTEGER) <= 23)
+			)
+		`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`INSERT INTO schedule_new SELECT id, name, start_time, end_time, days, active, is_default, user_id FROM schedule`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`DROP TABLE schedule`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`ALTER TABLE schedule_new RENAME TO schedule`)
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`PRAGMA foreign_keys = ON`)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

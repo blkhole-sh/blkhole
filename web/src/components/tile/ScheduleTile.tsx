@@ -69,10 +69,12 @@ export default function ScheduleTile(props: Props) {
 					>
 						{props.schedule.name}
 					</p>
-					<Switch
-						checked={props.schedule.active}
-						onChange={handleToggleActive}
-					/>
+					<Show when={!props.schedule.isDefault}>
+						<Switch
+							checked={props.schedule.active}
+							onChange={handleToggleActive}
+						/>
+					</Show>
 				</div>
 				<p
 					class="text-zinc-500 text-sm"
@@ -91,8 +93,9 @@ export default function ScheduleTile(props: Props) {
 					<p class="pb-2 text-sm tracking-wider">BLOCKLISTS</p>
 					<div class="max-w-md">
 						<p class="pb-4 text-black">
-							{formatTime(props.schedule.startTime)} –{" "}
-							{formatTime(props.schedule.endTime)}
+							{props.schedule.startTime === props.schedule.endTime
+								? "All Day"
+								: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
 						</p>
 						<div class="flex flex-row gap-3 text-zinc-300">
 							<For each={days}>
@@ -145,9 +148,11 @@ export default function ScheduleTile(props: Props) {
 					<ActionButton onclick={() => props.onEdit(props.schedule)}>
 						EDIT
 					</ActionButton>
-					<ActionButton onclick={() => setDeleteOpen(true)}>
-						DELETE
-					</ActionButton>
+					<Show when={!props.schedule.isDefault}>
+						<ActionButton onclick={() => setDeleteOpen(true)}>
+							DELETE
+						</ActionButton>
+					</Show>
 				</div>
 			</div>
 			<DeleteModal
