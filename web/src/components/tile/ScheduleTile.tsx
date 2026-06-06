@@ -144,16 +144,16 @@ export default function ScheduleTile(props: Props) {
 						</Show>
 					</div>
 				</div>
-				<div class="flex flex-row gap-6">
-					<ActionButton onclick={() => props.onEdit(props.schedule)}>
-						EDIT
-					</ActionButton>
-					<Show when={!props.schedule.isDefault}>
+				<Show when={!props.schedule.isDefault}>
+					<div class="flex flex-row gap-6">
+						<ActionButton onclick={() => props.onEdit(props.schedule)}>
+							EDIT
+						</ActionButton>
 						<ActionButton onclick={() => setDeleteOpen(true)}>
 							DELETE
 						</ActionButton>
-					</Show>
-				</div>
+					</div>
+				</Show>
 			</div>
 			<DeleteModal
 				open={deleteOpen()}
