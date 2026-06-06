@@ -214,7 +214,7 @@ func initControllers(domain, upstreamDNS string) {
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService, listService)
-	statsController = controllers.NewStatsController(statsCache, devices)
+	statsController = controllers.NewStatsController(statsCache, devices, queryLogs)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
 	queryLogController = controllers.NewQueryLogController(queryLogs)
 }
