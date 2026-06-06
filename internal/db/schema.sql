@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS schedule (
     end_time TEXT NOT NULL,
     days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
     active INTEGER NOT NULL DEFAULT 1,
+    is_default INTEGER NOT NULL DEFAULT 0,
     user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
     CHECK (start_time < end_time),
     -- Validate that times follow HH:MM format
@@ -89,6 +90,15 @@ CREATE TABLE IF NOT EXISTS schedule_rule (
     PRIMARY KEY (schedule_id, rule_id)
 );
 
+-- Create query log table:
+CREATE TABLE IF NOT EXISTS query_log (
+    id          INTEGER PRIMARY KEY,
+    device_hash TEXT NOT NULL,
+    domain      TEXT NOT NULL,
+    blocked     INTEGER NOT NULL DEFAULT 0,
+    timestamp   INTEGER NOT NULL
+);
+
 -- Create indexes for performance optimization:
 CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
 CREATE INDEX IF NOT EXISTS idx_device_user_id ON device(user_id);
@@ -100,3 +110,4 @@ CREATE INDEX IF NOT EXISTS idx_list_schedule_list_id ON list_schedule(list_id);
 CREATE INDEX IF NOT EXISTS idx_list_schedule_schedule_id ON list_schedule(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_list_rule_rule_id ON list_rule(rule_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_rule_rule_id ON schedule_rule(rule_id);
+CREATE INDEX IF NOT EXISTS idx_query_log_device ON query_log(device_hash, timestamp);

@@ -13,9 +13,10 @@ func TestAuthService_Register(t *testing.T) {
 	defer db.Close()
 
 	userRepo := repos.NewUserRepo(db)
+	scheduleRepo := repos.NewScheduleRepo(db)
 	cryptoService := NewCryptoService([]byte("secret"))
 	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
-	authService := NewAuthService(userRepo, cryptoService, tokenAuth)
+	authService := NewAuthService(userRepo, scheduleRepo, cryptoService, tokenAuth)
 
 	// Test Case 1: Successful Registration
 	email := "test@example.com"
@@ -61,9 +62,10 @@ func TestAuthService_Login(t *testing.T) {
 	defer db.Close()
 
 	userRepo := repos.NewUserRepo(db)
+	scheduleRepo := repos.NewScheduleRepo(db)
 	cryptoService := NewCryptoService([]byte("secret"))
 	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
-	authService := NewAuthService(userRepo, cryptoService, tokenAuth)
+	authService := NewAuthService(userRepo, scheduleRepo, cryptoService, tokenAuth)
 
 	// Create user
 	email := "login@example.com"
