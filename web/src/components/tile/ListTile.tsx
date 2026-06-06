@@ -27,14 +27,16 @@ export default function ListTile(props: Props) {
 						{props.list.rules.toLocaleString()}
 					</p>
 				</div>
-				<div class="flex flex-row gap-6">
-					<ActionButton onclick={() => props.onEdit(props.list)}>
-						EDIT
-					</ActionButton>
-					<ActionButton onclick={() => setDeleteOpen(true)}>
-						DELETE
-					</ActionButton>
-				</div>
+				{!props.list.isDefault && (
+					<div class="flex flex-row gap-6">
+						<ActionButton onclick={() => props.onEdit(props.list)}>
+							EDIT
+						</ActionButton>
+						<ActionButton onclick={() => setDeleteOpen(true)}>
+							DELETE
+						</ActionButton>
+					</div>
+				)}
 			</div>
 			<DeleteModal
 				open={deleteOpen()}

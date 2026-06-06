@@ -34,6 +34,7 @@ export interface List {
 	description: string;
 	source: string;
 	userId: string;
+	isDefault: boolean;
 	rules: number; // Count of rules in this list
 	schedules: number; // Count of schedules using this list
 }
