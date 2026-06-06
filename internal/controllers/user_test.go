@@ -46,6 +46,7 @@ func (m *mockUserRepo) LoadListIDs(id int) ([]int, error)             { return n
 func (m *mockUserRepo) LoadScheduleIDs(id int) ([]int, error)         { return nil, nil }
 func (m *mockUserRepo) LoadRelations(u *model.User) error             { return nil }
 func (m *mockUserRepo) FindByEmail(email string) (*model.User, error) { return nil, nil }
+func (m *mockUserRepo) FindAllIDs() ([]int, error)                    { return []int{}, nil }
 func (m *mockUserRepo) FindByID(id int) (*model.User, error) {
 	return m.findByIdUser, m.findByIdErr
 }

@@ -198,6 +198,18 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s, err := sc.schedules.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find schedule with id %d: %v", id, err)
+		http.Error(w, "Unable to find schedule", http.StatusNotFound)
+		return
+	}
+
+	if s.IsDefault {
+		http.Error(w, "Default schedules cannot be deleted", http.StatusForbidden)
+		return
+	}
+
 	// Delete schedule from db
 	sc.schedules.Delete(id)
 

@@ -197,7 +197,7 @@ func initServices(secret []byte, upstreamDNS string) {
 	listService = services.NewListService(lists, rules, domains, contentBlocker)
 
 	tokenAuth = jwtauth.New("HS256", secret, nil)
-	authService = services.NewAuthService(users, cryptoService, tokenAuth)
+	authService = services.NewAuthService(users, schedules, cryptoService, tokenAuth)
 }
 
 func initControllers(domain, upstreamDNS string) {
@@ -355,6 +355,20 @@ func main() {
 	if err = contentBlocker.Init(); err != nil {
 		log.Fatalf("failed to initialize content blocker: %v", err)
 	}
+
+	// Seed default schedules for all existing users in the background
+	go func() {
+		ids, err := users.FindAllIDs()
+		if err != nil {
+			log.Printf("failed to load user IDs for default schedule seeding: %v", err)
+			return
+		}
+		for _, id := range ids {
+			if err := schedules.SeedDefaults(id); err != nil {
+				log.Printf("failed to seed default schedule for user %d: %v", id, err)
+			}
+		}
+	}()
 
 	// Start background tasks
 	statsCache.Start()

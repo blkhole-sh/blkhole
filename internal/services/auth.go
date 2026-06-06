@@ -35,14 +35,16 @@ type AuthService interface {
 // authService implements the AuthService interface
 type authService struct {
 	userRepo      repos.UserRepo
+	scheduleRepo  repos.ScheduleRepo
 	cryptoService CryptoService
 	tokenAuth     *jwtauth.JWTAuth
 }
 
 // NewAuthService creates a new authentication service
-func NewAuthService(userRepo repos.UserRepo, cryptoService CryptoService, tokenAuth *jwtauth.JWTAuth) AuthService {
+func NewAuthService(userRepo repos.UserRepo, scheduleRepo repos.ScheduleRepo, cryptoService CryptoService, tokenAuth *jwtauth.JWTAuth) AuthService {
 	return &authService{
 		userRepo:      userRepo,
+		scheduleRepo:  scheduleRepo,
 		cryptoService: cryptoService,
 		tokenAuth:     tokenAuth,
 	}
@@ -90,6 +92,10 @@ func (as *authService) Register(email, password string) (*LoginResult, error) {
 
 	if err := as.userRepo.Create(user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	if err := as.scheduleRepo.SeedDefaults(user.ID); err != nil {
+		return nil, fmt.Errorf("failed to seed default schedule: %w", err)
 	}
 
 	return as.generateTokens(user)
