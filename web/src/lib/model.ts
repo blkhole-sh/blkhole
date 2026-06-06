@@ -45,6 +45,7 @@ export interface Schedule {
 	startTime: string; // Backend sends as string, not Date
 	endTime: string; // Backend sends as string, not Date
 	active: boolean;
+	isDefault: boolean;
 	userId: string;
 	deviceIds: string[];
 	deviceNames: string[];
