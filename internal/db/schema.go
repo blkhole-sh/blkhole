@@ -150,6 +150,12 @@ func Init(db *sql.DB) error {
 		}
 	}
 
+	// Migration: mark existing default lists as is_default=1 by their known names.
+	_, err = db.Exec(`UPDATE list SET is_default = 1 WHERE name IN ('Ads & Trackers', 'Social Media', 'Gambling', 'Fake News', 'Adult Content')`)
+	if err != nil {
+		return err
+	}
+
 	// Migration: rename existing "Base Protection" default schedules to "Always" and set end_time to 00:00.
 	_, err = db.Exec(`UPDATE schedule SET name = 'Always', end_time = '00:00' WHERE is_default = 1 AND name = 'Base Protection'`)
 	if err != nil {
