@@ -171,7 +171,12 @@ func TestListController_FindByUser_Success(t *testing.T) {
 }
 
 func TestListController_Delete_Success(t *testing.T) {
-	controller := NewListController(&MockListRepo{}, &MockListService{})
+	repo := &MockListRepo{
+		FindByIDFunc: func(id int) (*model.List, error) {
+			return &model.List{ID: id, IsDefault: false}, nil
+		},
+	}
+	controller := NewListController(repo, &MockListService{})
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/lists/1", nil), "id", "1")
 	rr := httptest.NewRecorder()

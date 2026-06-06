@@ -213,7 +213,7 @@ func initControllers(domain, upstreamDNS string) {
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
-	authController = controllers.NewAuthController(authService)
+	authController = controllers.NewAuthController(authService, listService)
 	statsController = controllers.NewStatsController(statsCache, devices)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
 	queryLogController = controllers.NewQueryLogController(queryLogs)
@@ -362,14 +362,17 @@ func main() {
 		log.Fatalf("failed to initialize content blocker: %v", err)
 	}
 
-	// Seed default schedules for all existing users in the background
+	// Seed default lists and schedules for existing users in the background
 	go func() {
 		ids, err := users.FindAllIDs()
 		if err != nil {
-			log.Printf("failed to load user IDs for default schedule seeding: %v", err)
+			log.Printf("failed to load user IDs for default seeding: %v", err)
 			return
 		}
 		for _, id := range ids {
+			if err := listService.SeedDefaults(id); err != nil {
+				log.Printf("failed to seed default lists for user %d: %v", id, err)
+			}
 			if err := schedules.SeedDefaults(id); err != nil {
 				log.Printf("failed to seed default schedule for user %d: %v", id, err)
 			}
