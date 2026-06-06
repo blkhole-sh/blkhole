@@ -16,5 +16,5 @@ jobs:
             export HOME=/home/arian
             export GOBIN=/home/arian/go/bin
             export GOPRIVATE=github.com/lemon3studio/*
-            GOPROXY=direct CGO_ENABLED=1 /usr/local/bin/go install github.com/lemon3studio/blkhole@main
+            GOPROXY=direct CGO_ENABLED=1 /usr/local/go/bin/go install github.com/lemon3studio/blkhole@main
             sudo service blkhole restart
