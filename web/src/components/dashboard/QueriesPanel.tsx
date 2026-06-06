@@ -27,6 +27,9 @@ export default function QueriesPanel(props: Props) {
 		}));
 	};
 
+	const hasData = () =>
+		data().some((point) => point.total > 0 || point.blocked > 0);
+
 	// Generate parameterized x-axis ticks without rounding
 	const getXAxisTicks = (count: number = 4) => {
 		const d = data();
@@ -50,7 +53,7 @@ export default function QueriesPanel(props: Props) {
 			</p>
 			<div class="flex-1">
 				<Show
-					when={data().length > 0}
+					when={hasData()}
 					fallback={
 						<div class="flex items-center justify-center h-full">
 							<p class="text-zinc-400 text-sm">No queries recorded</p>
