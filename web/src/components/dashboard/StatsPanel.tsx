@@ -18,8 +18,7 @@ export default function StatsCards(props: Props) {
 		const total = props.stats.total.reduce((sum, s) => sum + s.count, 0);
 		const blocked = props.stats.blocked.reduce((sum, s) => sum + s.count, 0);
 		if (total === 0) return "-";
-		const rate = Math.round((blocked / total) * 100);
-		return rate === 0 ? "-" : `${rate}%`;
+		return `${Math.round((blocked / total) * 100)}%`;
 	};
 
 	return (
