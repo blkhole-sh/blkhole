@@ -26,9 +26,19 @@ var (
 	trimPattern        = regexp.MustCompile(`^\s+|\s+$`)
 )
 
+// defaultLists are the curated blocklists seeded for every new user.
+var defaultLists = []struct{ name, description, source string }{
+	{"Ads & Trackers", "Blocks advertising and tracking domains", "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"},
+	{"Social Media", "Blocks social media domains", "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social/hosts"},
+	{"Gambling", "Blocks gambling domains", "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/gambling/hosts"},
+	{"Fake News", "Blocks fake news domains", "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews/hosts"},
+	{"Adult Content", "Blocks adult content domains", "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts"},
+}
+
 // ListService defines the interface for list service operations
 type ListService interface {
 	LoadList(*model.List) error
+	SeedDefaults(userID int) error
 }
 
 // listService implements the ListService interface
@@ -306,6 +316,35 @@ func readFromSource(source string, domainRepo repos.DomainRepo) ([]model.Rule, e
 		// Treat as inline domain text (manual entry)
 		return detectAndReadFile(strings.NewReader(source), domainRepo)
 	}
+}
+
+// SeedDefaults creates the default blocklists for a user if they don't already have them.
+func (ls *listService) SeedDefaults(userID int) error {
+	has, err := ls.lists.HasDefaultsForUser(userID)
+	if err != nil {
+		return fmt.Errorf("failed to check default lists for user %d: %w", userID, err)
+	}
+	if has {
+		return nil
+	}
+
+	for _, d := range defaultLists {
+		l := &model.List{
+			Name:        d.name,
+			Description: d.description,
+			Source:      d.source,
+			UserID:      userID,
+			IsDefault:   true,
+		}
+		if _, err := ls.lists.Create(l); err != nil {
+			log.Printf("failed to create default list %q for user %d: %v", d.name, userID, err)
+			continue
+		}
+		if err := ls.LoadList(l); err != nil {
+			log.Printf("failed to load default list %q for user %d: %v", d.name, userID, err)
+		}
+	}
+	return nil
 }
 
 func (ls *listService) LoadList(l *model.List) error {

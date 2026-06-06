@@ -120,6 +120,8 @@ func (m *MockScheduleRepo) FindAll() ([]*model.Schedule, error) { return []*mode
 func (m *MockScheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
 	return []*model.ScheduleRule{}, nil
 }
+func (m *MockScheduleRepo) HasDefaultsForUser(userID int) (bool, error) { return false, nil }
+func (m *MockScheduleRepo) SeedDefaults(userID int) error                { return nil }
 
 // MockCryptoService satisfies services.CryptoService
 type MockCryptoService struct {
