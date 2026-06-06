@@ -69,8 +69,19 @@ func convertToBitmask(schedule *model.Schedule) uint64 {
 	var days uint8
 	for i, active := range activeDays {
 		if active {
-			days |= 1 << i // Set bit position i for active day
+			days |= 1 << i
 		}
+	}
+
+	// Equal start and end time means all day — set all 8 bits for each active day
+	if schedule.StartTime == schedule.EndTime {
+		for day := range 7 {
+			if days&(1<<day) != 0 {
+				dayOffset := uint64(day) * bitsPerDay
+				mask |= uint64(0xFF) << dayOffset
+			}
+		}
+		return mask
 	}
 
 	// Convert time strings to slots (0-287, where each slot = 5 minutes)

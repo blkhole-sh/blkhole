@@ -34,6 +34,7 @@ export interface List {
 	description: string;
 	source: string;
 	userId: string;
+	isDefault: boolean;
 	rules: number; // Count of rules in this list
 	schedules: number; // Count of schedules using this list
 }
@@ -45,6 +46,7 @@ export interface Schedule {
 	startTime: string; // Backend sends as string, not Date
 	endTime: string; // Backend sends as string, not Date
 	active: boolean;
+	isDefault: boolean;
 	userId: string;
 	deviceIds: string[];
 	deviceNames: string[];

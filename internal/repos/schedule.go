@@ -316,9 +316,9 @@ func (sr *scheduleRepo) SeedDefaults(userID int) error {
 		return nil
 	}
 	s := &model.Schedule{
-		Name:      "Base Protection",
+		Name:      "Always",
 		StartTime: "00:00",
-		EndTime:   "23:55",
+		EndTime:   "00:00",
 		Active:    true,
 		UserID:    userID,
 		IsDefault: true,

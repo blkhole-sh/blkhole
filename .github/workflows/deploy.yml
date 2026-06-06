@@ -1,0 +1,20 @@
+name: Deploy blkhole
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            export HOME=/home/arian
+            export GOBIN=/home/arian/go/bin
+            export GOPRIVATE=github.com/lemon3studio/*
+            GOPROXY=direct CGO_ENABLED=1 /usr/local/go/bin/go install github.com/lemon3studio/blkhole@main
+            sudo service blkhole restart

@@ -64,10 +64,12 @@ export default function ScheduleTile(props: Props) {
 					>
 						{props.schedule.name}
 					</p>
-					<Switch
-						checked={props.schedule.active}
-						onChange={handleToggleActive}
-					/>
+					<Show when={!props.schedule.isDefault}>
+						<Switch
+							checked={props.schedule.active}
+							onChange={handleToggleActive}
+						/>
+					</Show>
 				</div>
 				<p
 					class="text-zinc-500 text-sm"
@@ -137,13 +139,15 @@ export default function ScheduleTile(props: Props) {
 						</Show>
 					</div>
 				</div>
-				<div class="flex flex-row gap-6">
+					<div class="flex flex-row gap-6">
 					<ActionButton onclick={() => props.onEdit(props.schedule)}>
 						EDIT
 					</ActionButton>
-					<ActionButton onclick={() => setDeleteOpen(true)}>
-						DELETE
-					</ActionButton>
+					<Show when={!props.schedule.isDefault}>
+						<ActionButton onclick={() => setDeleteOpen(true)}>
+							DELETE
+						</ActionButton>
+					</Show>
 				</div>
 			</div>
 			<DeleteModal

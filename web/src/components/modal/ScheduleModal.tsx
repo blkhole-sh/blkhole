@@ -205,41 +205,43 @@ export default function ScheduleModal(props: Props) {
 			onConfirm={handleSubmit}
 			onBeforeNext={handleBeforeNext}
 		>
-			<MultiStepModal.Step>
-				<div class="flex flex-col gap-8">
-					<TextInput
-						label="SCHEDULE NAME"
-						placeholder="School Hours"
-						value={name()}
-						onInput={(e) => setName(e.currentTarget.value)}
-						validate={required()}
-						showError={step1Submitted()}
-					/>
-					<DaysInput
-						label="ACTIVE DAYS"
-						value={days()}
-						onChange={(d) => {
-							setDays(d);
-							if (Object.values(d).some(Boolean)) setDaysError("");
-						}}
-						error={daysError()}
-					/>
-					<div class="flex flex-row gap-8">
-						<TimeInput
-							class="flex-1"
-							label="TIME START"
-							value={startTime()}
-							onInput={(e) => setStartTime(e.currentTarget.value)}
+			{!props.schedule?.isDefault && (
+				<MultiStepModal.Step>
+					<div class="flex flex-col gap-8">
+						<TextInput
+							label="SCHEDULE NAME"
+							placeholder="School Hours"
+							value={name()}
+							onInput={(e) => setName(e.currentTarget.value)}
+							validate={required()}
+							showError={step1Submitted()}
 						/>
-						<TimeInput
-							class="flex-1"
-							label="TIME END"
-							value={endTime()}
-							onInput={(e) => setEndTime(e.currentTarget.value)}
+						<DaysInput
+							label="ACTIVE DAYS"
+							value={days()}
+							onChange={(d) => {
+								setDays(d);
+								if (Object.values(d).some(Boolean)) setDaysError("");
+							}}
+							error={daysError()}
 						/>
+						<div class="flex flex-row gap-8">
+							<TimeInput
+								class="flex-1"
+								label="TIME START"
+								value={startTime()}
+								onInput={(e) => setStartTime(e.currentTarget.value)}
+							/>
+							<TimeInput
+								class="flex-1"
+								label="TIME END"
+								value={endTime()}
+								onInput={(e) => setEndTime(e.currentTarget.value)}
+							/>
+						</div>
 					</div>
-				</div>
-			</MultiStepModal.Step>
+				</MultiStepModal.Step>
+			)}
 			{lists() && lists()!.length > 0 && (
 				<MultiStepModal.Step>
 					<div class="flex flex-col gap-1">
