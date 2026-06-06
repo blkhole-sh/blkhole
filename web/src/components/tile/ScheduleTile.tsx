@@ -5,6 +5,7 @@ import ActionButton from "~/components/ui/ActionButton";
 import Tag from "~/components/ui/Tag";
 import Switch from "~/components/ui/Switch";
 import { deleteSchedule, updateSchedule } from "~/lib/api";
+import { formatTime, isAllDay } from "~/lib/utils";
 import DeleteModal from "~/components/modal/DeleteModal";
 import { useScrollToHash } from "~/lib/hooks";
 
@@ -25,12 +26,6 @@ const days = [
 	{ label: "S", key: "sunday" },
 ] as const;
 
-const formatTime = (t: string) => {
-	const [hours, minutes] = t.split(":");
-	const d = new Date();
-	d.setHours(Number(hours), Number(minutes), 0, 0);
-	return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-};
 
 export default function ScheduleTile(props: Props) {
 	const navigate = useNavigate();
@@ -91,8 +86,9 @@ export default function ScheduleTile(props: Props) {
 					<p class="pb-2 text-sm tracking-wider">BLOCKLISTS</p>
 					<div class="max-w-md">
 						<p class="pb-4 text-black">
-							{formatTime(props.schedule.startTime)} –{" "}
-							{formatTime(props.schedule.endTime)}
+							{isAllDay(props.schedule.startTime, props.schedule.endTime)
+								? "All Day"
+								: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
 						</p>
 						<div class="flex flex-row gap-3 text-zinc-300">
 							<For each={days}>
