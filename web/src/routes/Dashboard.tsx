@@ -1,15 +1,21 @@
-import { createResource } from "solid-js";
-import PageShell from "~/components/layout/PageShell";
-import StatsPanel from "~/components/dashboard/StatsPanel";
+import { createResource, createSignal, onCleanup, onMount } from "solid-js";
+import DevicesPanel from "~/components/dashboard/DevicesPanel";
 import QueriesPanel from "~/components/dashboard/QueriesPanel";
 import SchedulesPanel from "~/components/dashboard/SchedulesPanel";
-import DevicesPanel from "~/components/dashboard/DevicesPanel";
-import { getQueryStats, getSchedules, getDevices } from "~/lib/api";
+import StatsPanel from "~/components/dashboard/StatsPanel";
+import PageShell from "~/components/layout/PageShell";
+import { getDevices, getQueryStats, getSchedules } from "~/lib/api";
 
 export default function Dashboard() {
-	const [stats] = createResource(() => getQueryStats("24h"));
+	const [tick, setTick] = createSignal(0);
+	const [stats] = createResource(tick, () => getQueryStats("24h"));
 	const [schedules] = createResource(getSchedules);
 	const [devices] = createResource(getDevices);
+
+	onMount(() => {
+		const id = setInterval(() => setTick((t) => t + 1), 10_000);
+		onCleanup(() => clearInterval(id));
+	});
 
 	const formatDate = () => {
 		return new Date().toLocaleDateString(undefined, {
