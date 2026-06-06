@@ -150,5 +150,11 @@ func Init(db *sql.DB) error {
 		}
 	}
 
+	// Migration: rename existing "Base Protection" default schedules to "Always" and set end_time to 00:00.
+	_, err = db.Exec(`UPDATE schedule SET name = 'Always', end_time = '00:00' WHERE is_default = 1 AND name = 'Base Protection'`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
