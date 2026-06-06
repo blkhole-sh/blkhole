@@ -158,6 +158,17 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existing, err := sc.schedules.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find schedule with id %d: %v", id, err)
+		http.Error(w, "Unable to find schedule", http.StatusNotFound)
+		return
+	}
+	if existing.IsDefault && !s.Active {
+		http.Error(w, "Default schedules cannot be deactivated", http.StatusForbidden)
+		return
+	}
+
 	// Update schedule in db
 	if err := sc.schedules.Update(id, &s); err != nil {
 		log.Printf("failed to update schedule with id %d: %v", id, err)
