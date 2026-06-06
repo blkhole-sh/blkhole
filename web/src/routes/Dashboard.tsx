@@ -13,7 +13,7 @@ export default function Dashboard() {
 	const [devices] = createResource(getDevices);
 
 	onMount(() => {
-		const id = setInterval(() => setTick((t) => t + 1), 10_000);
+		const id = setInterval(() => setTick((t) => t + 1), 1_000);
 		onCleanup(() => clearInterval(id));
 	});
 
