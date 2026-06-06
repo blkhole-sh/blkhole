@@ -1,17 +1,12 @@
 import { For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import type { Schedule } from "~/lib/model";
+import { formatTime, isAllDay } from "~/lib/utils";
 
 interface Props {
 	schedules: Schedule[] | undefined;
 }
 
-const formatTime = (t: string) => {
-	const [hours, minutes] = t.split(":");
-	const d = new Date();
-	d.setHours(Number(hours), Number(minutes), 0, 0);
-	return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-};
 
 export default function SchedulesPanel(props: Props) {
 	const navigate = useNavigate();
@@ -37,8 +32,9 @@ export default function SchedulesPanel(props: Props) {
 									{schedule.name}
 								</p>
 								<p class="text-zinc-500 text-sm tracking-wider">
-									{formatTime(schedule.startTime)} –{" "}
-									{formatTime(schedule.endTime)}
+									{isAllDay(schedule.startTime, schedule.endTime)
+										? "All Day"
+										: `${formatTime(schedule.startTime)} – ${formatTime(schedule.endTime)}`}
 								</p>
 							</div>
 						)}
