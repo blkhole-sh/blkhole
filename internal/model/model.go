@@ -57,6 +57,7 @@ type List struct {
 	ScheduleIDs []int  `json:"scheduleIds"`
 	ID          int    `json:"id"`
 	Count       int    `json:"count"`
+	IsDefault   bool   `json:"isDefault"`
 }
 
 // Schedule represents a time-based schedule
@@ -78,6 +79,15 @@ type Schedule struct {
 	Sunday    bool   `json:"sunday"`
 	ID        int    `json:"id"`
 	IsDefault bool   `json:"isDefault"`
+}
+
+// QueryLog represents a single logged DNS query
+type QueryLog struct {
+	ID         int    `json:"id"`
+	DeviceHash string `json:"deviceHash"`
+	Domain     string `json:"domain"`
+	Blocked    bool   `json:"blocked"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 // DeviceSchedule represents the many-to-many relationship between devices and schedules
@@ -144,6 +154,7 @@ func (l List) ToDTO() ListDTO {
 		UserID:      l.UserID,
 		Rules:       rules,
 		Schedules:   len(l.ScheduleIDs),
+		IsDefault:   l.IsDefault,
 	}
 }
 

@@ -61,14 +61,16 @@ var (
 	lists     repos.ListRepo
 	schedules repos.ScheduleRepo
 	domains   repos.DomainRepo
+	queryLogs repos.QueryLogRepo
 
 	// Services
-	contentBlocker services.ContentBlocker
-	resolver       services.Resolver
-	cryptoService  services.CryptoService
-	listService    services.ListService
-	authService    services.AuthService
-	tokenAuth      *jwtauth.JWTAuth
+	contentBlocker  services.ContentBlocker
+	resolver        services.Resolver
+	cryptoService   services.CryptoService
+	listService     services.ListService
+	authService     services.AuthService
+	queryLogBuffer  *services.QueryLogBuffer
+	tokenAuth       *jwtauth.JWTAuth
 
 	// Caches
 	statsCache  cache.StatsCache
@@ -86,6 +88,7 @@ var (
 	statsController        controllers.StatsController
 	settingsController     controllers.SettingsController
 	webController          controllers.WebController
+	queryLogController     controllers.QueryLogController
 
 	// Test
 	t              test.Test
@@ -183,6 +186,7 @@ func initRepos(db *sql.DB) {
 	schedules = repos.NewScheduleRepo(db)
 	users = repos.NewUserRepo(db)
 	domains = repos.NewDomainRepo(db)
+	queryLogs = repos.NewQueryLogRepo(db)
 }
 
 func initCaches() {
@@ -192,7 +196,8 @@ func initCaches() {
 
 func initServices(secret []byte, upstreamDNS string) {
 	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
-	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS)
+	queryLogBuffer = services.NewQueryLogBuffer(queryLogs)
+	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS, queryLogBuffer)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListService(lists, rules, domains, contentBlocker)
 
@@ -208,9 +213,10 @@ func initControllers(domain, upstreamDNS string) {
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
 	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
 	quoteController = controllers.NewQuoteController()
-	authController = controllers.NewAuthController(authService)
+	authController = controllers.NewAuthController(authService, listService)
 	statsController = controllers.NewStatsController(statsCache, devices)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
+	queryLogController = controllers.NewQueryLogController(queryLogs)
 }
 
 func initWebAndTest() {
@@ -328,7 +334,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	}))
 
 	// Initialize routes
-	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, testController, webController, tokenAuth)
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, testController, webController, queryLogController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
 	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 
@@ -356,14 +362,17 @@ func main() {
 		log.Fatalf("failed to initialize content blocker: %v", err)
 	}
 
-	// Seed default schedules for all existing users in the background
+	// Seed default lists and schedules for existing users in the background
 	go func() {
 		ids, err := users.FindAllIDs()
 		if err != nil {
-			log.Printf("failed to load user IDs for default schedule seeding: %v", err)
+			log.Printf("failed to load user IDs for default seeding: %v", err)
 			return
 		}
 		for _, id := range ids {
+			if err := listService.SeedDefaults(id); err != nil {
+				log.Printf("failed to seed default lists for user %d: %v", id, err)
+			}
 			if err := schedules.SeedDefaults(id); err != nil {
 				log.Printf("failed to seed default schedule for user %d: %v", id, err)
 			}
@@ -373,12 +382,19 @@ func main() {
 	// Start background tasks
 	statsCache.Start()
 
+	// Prune query logs older than 90 days
+	if err := queryLogs.DeleteOlderThan(90); err != nil {
+		log.Printf("failed to prune old query logs: %v", err)
+	}
+
 	// Initialize HTTP router
 	r := initRouter(cfg)
 
 	// Initialize context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	queryLogBuffer.Start(ctx)
 
 	// Initialize error group
 	g, ctx := errgroup.WithContext(ctx)
