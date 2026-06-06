@@ -1,7 +1,11 @@
 package controllers
 
 import (
+	"bufio"
+	"crypto/sha1"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -21,11 +25,12 @@ type AuthController interface {
 // authController implements the AuthController interface
 type authController struct {
 	authService services.AuthService
+	listService services.ListService
 }
 
 // NewAuthController creates a new authentication controller
-func NewAuthController(authService services.AuthService) AuthController {
-	return &authController{authService: authService}
+func NewAuthController(authService services.AuthService, listService services.ListService) AuthController {
+	return &authController{authService: authService, listService: listService}
 }
 
 // Login handles user authentication
@@ -76,9 +81,13 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple validation
-	if len(req.Password) < 8 {
-		http.Error(w, "Password must be at least 8 characters", http.StatusBadRequest)
+	if len(req.Password) < 12 {
+		http.Error(w, "Password must be at least 12 characters", http.StatusBadRequest)
+		return
+	}
+
+	if pwned, err := isPasswordPwned(req.Password); err == nil && pwned {
+		http.Error(w, "Password has appeared in known data breaches, please choose a different one", http.StatusBadRequest)
 		return
 	}
 
@@ -87,6 +96,12 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	go func() {
+		if err := c.listService.SeedDefaults(result.User.ID); err != nil {
+			log.Printf("failed to seed default lists for user %d: %v", result.User.ID, err)
+		}
+	}()
 
 	// Set secure HttpOnly cookies
 	c.setSecureCookie(w, "access_token", result.AccessToken, services.TokenExpiry)
@@ -150,6 +165,41 @@ func (c *authController) setSecureCookie(w http.ResponseWriter, name, value stri
 		SameSite: http.SameSiteLaxMode, // CSRF protection but allows same-site navigation
 	}
 	http.SetCookie(w, cookie)
+}
+
+// isPasswordPwned checks the HIBP Pwned Passwords API using k-anonymity.
+// Returns (true, nil) if the password appears in known breaches.
+// Returns (false, nil) if it does not, or (false, err) if the API is unreachable (fail open).
+func isPasswordPwned(password string) (bool, error) {
+	sum := sha1.Sum([]byte(password))
+	hash := strings.ToUpper(fmt.Sprintf("%x", sum))
+	prefix, suffix := hash[:5], hash[5:]
+
+	req, err := http.NewRequest(http.MethodGet, "https://api.pwnedpasswords.com/range/"+prefix, nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Add-Padding", "true")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("hibp returned %d", resp.StatusCode)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 && strings.EqualFold(parts[0], suffix) && parts[1] != "0" {
+			return true, nil
+		}
+	}
+	return false, scanner.Err()
 }
 
 // clearAuthCookies clears authentication cookies

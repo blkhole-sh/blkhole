@@ -25,6 +25,7 @@ func setupScheduleTestDB(t *testing.T) *sql.DB {
 			end_time TEXT NOT NULL,
 			days INTEGER NOT NULL DEFAULT 127,
 			active INTEGER NOT NULL DEFAULT 1,
+			is_default INTEGER NOT NULL DEFAULT 0,
 			user_id INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 			CHECK (start_time < end_time)
 		)`,
