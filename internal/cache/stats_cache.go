@@ -2,7 +2,6 @@
 package cache
 
 import (
-	"sort"
 	"sync"
 	"time"
 
@@ -15,6 +14,14 @@ const (
 	Range7d  = "7d"
 	Range30d = "30d"
 )
+
+// timeNow is overridden in tests so fixed-window chart buckets stay deterministic.
+var timeNow = time.Now
+
+type timeRangeConfig struct {
+	step time.Duration
+	span time.Duration
+}
 
 // StatsCache provides in-memory query counting per device
 type StatsCache interface {
@@ -55,6 +62,40 @@ func NewStatsCache(deviceCache DeviceCache) StatsCache {
 	}
 }
 
+func getTimeRangeConfig(timeRange string) (timeRangeConfig, bool) {
+	switch timeRange {
+	case Range24h:
+		return timeRangeConfig{step: time.Minute, span: 24 * time.Hour}, true
+	case Range7d:
+		return timeRangeConfig{step: 5 * time.Minute, span: 7 * 24 * time.Hour}, true
+	case Range30d:
+		return timeRangeConfig{step: time.Hour, span: 30 * 24 * time.Hour}, true
+	default:
+		return timeRangeConfig{}, false
+	}
+}
+
+// fillSeries pads a fixed window so the dashboard chart keeps the full x-range.
+func fillSeries(counts map[time.Time]int, timeRange string) []model.StatCount {
+	config, ok := getTimeRangeConfig(timeRange)
+	if !ok {
+		return []model.StatCount{}
+	}
+
+	end := timeNow().Truncate(config.step).Add(config.step)
+	start := end.Add(-config.span)
+
+	result := make([]model.StatCount, 0, int(config.span/config.step))
+	for timestamp := start; timestamp.Before(end); timestamp = timestamp.Add(config.step) {
+		result = append(result, model.StatCount{
+			Timestamp: timestamp,
+			Count:     counts[timestamp],
+		})
+	}
+
+	return result
+}
+
 // Increment increments the query count for a device across all time buckets
 func (sc *statsCache) Increment(deviceHash string) {
 	// Validate device exists before caching stats
@@ -65,7 +106,7 @@ func (sc *statsCache) Increment(deviceHash string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	now := time.Now()
+	now := timeNow()
 
 	// Increment 1-minute bucket
 	minuteBucket := now.Truncate(time.Minute)
@@ -99,7 +140,7 @@ func (sc *statsCache) IncrementBlocked(deviceHash string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	now := time.Now()
+	now := timeNow()
 
 	// Increment 1-minute blocked bucket
 	minuteBucket := now.Truncate(time.Minute)
@@ -220,30 +261,16 @@ func (sc *statsCache) GetCounts(deviceHash string, timeRange string) []model.Sta
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return []model.StatCount{}
+	}
+
 	bucketMap := sc.selectBucket(timeRange)
 	if bucketMap == nil {
 		return []model.StatCount{}
 	}
 
-	counts := bucketMap[deviceHash]
-	if counts == nil {
-		return []model.StatCount{}
-	}
-
-	result := make([]model.StatCount, 0, len(counts))
-	for timestamp, count := range counts {
-		result = append(result, model.StatCount{
-			Timestamp: timestamp,
-			Count:     count,
-		})
-	}
-
-	// Sort by timestamp for proper chart rendering
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp.Before(result[j].Timestamp)
-	})
-
-	return result
+	return fillSeries(bucketMap[deviceHash], timeRange)
 }
 
 // GetUserCounts aggregates query counts for all user devices based on time range
@@ -269,21 +296,7 @@ func (sc *statsCache) GetUserCounts(deviceHashes []string, timeRange string) []m
 		}
 	}
 
-	// Convert map to slice
-	result := make([]model.StatCount, 0, len(aggregated))
-	for timestamp, count := range aggregated {
-		result = append(result, model.StatCount{
-			Timestamp: timestamp,
-			Count:     count,
-		})
-	}
-
-	// Sort by timestamp for proper chart rendering
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp.Before(result[j].Timestamp)
-	})
-
-	return result
+	return fillSeries(aggregated, timeRange)
 }
 
 // GetBlockedCounts returns blocked query counts for a single device based on time range
@@ -291,30 +304,16 @@ func (sc *statsCache) GetBlockedCounts(deviceHash string, timeRange string) []mo
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
+	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
+		return []model.StatCount{}
+	}
+
 	bucketMap := sc.selectBlockedBucket(timeRange)
 	if bucketMap == nil {
 		return []model.StatCount{}
 	}
 
-	counts := bucketMap[deviceHash]
-	if counts == nil {
-		return []model.StatCount{}
-	}
-
-	result := make([]model.StatCount, 0, len(counts))
-	for timestamp, count := range counts {
-		result = append(result, model.StatCount{
-			Timestamp: timestamp,
-			Count:     count,
-		})
-	}
-
-	// Sort by timestamp for proper chart rendering
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp.Before(result[j].Timestamp)
-	})
-
-	return result
+	return fillSeries(bucketMap[deviceHash], timeRange)
 }
 
 // GetUserBlockedCounts aggregates blocked query counts for all user devices based on time range
@@ -340,21 +339,7 @@ func (sc *statsCache) GetUserBlockedCounts(deviceHashes []string, timeRange stri
 		}
 	}
 
-	// Convert map to slice
-	result := make([]model.StatCount, 0, len(aggregated))
-	for timestamp, count := range aggregated {
-		result = append(result, model.StatCount{
-			Timestamp: timestamp,
-			Count:     count,
-		})
-	}
-
-	// Sort by timestamp for proper chart rendering
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp.Before(result[j].Timestamp)
-	})
-
-	return result
+	return fillSeries(aggregated, timeRange)
 }
 
 // Start begins the background cleanup goroutine
@@ -374,7 +359,7 @@ func (sc *statsCache) Cleanup() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	now := time.Now()
+	now := timeNow()
 
 	// Clean minuteCounts: remove entries older than 24 hours
 	cutoff24h := now.Add(-24 * time.Hour)

@@ -16,6 +16,41 @@ func setupTestCache(deviceHash string, deviceID int) StatsCache {
 	return NewStatsCache(dc)
 }
 
+func setTestNow(t *testing.T, now time.Time) {
+	original := timeNow
+	timeNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		timeNow = original
+	})
+}
+
+func bucketCount(timeRange string) int {
+	config, ok := getTimeRangeConfig(timeRange)
+	if !ok {
+		return 0
+	}
+	return int(config.span / config.step)
+}
+
+func nonZeroBuckets(counts []model.StatCount) int {
+	total := 0
+	for _, count := range counts {
+		if count.Count != 0 {
+			total++
+		}
+	}
+	return total
+}
+
+func countAt(counts []model.StatCount, timestamp time.Time) (int, bool) {
+	for _, count := range counts {
+		if count.Timestamp.Equal(timestamp) {
+			return count.Count, true
+		}
+	}
+	return 0, false
+}
+
 // TestStatsCache_IgnoreUnknownDevice verifies that unknown devices are NOT accepted.
 func TestStatsCache_IgnoreUnknownDevice(t *testing.T) {
 	// Create StatsCache with empty DeviceCache
@@ -37,6 +72,8 @@ func TestStatsCache_IgnoreUnknownDevice(t *testing.T) {
 // setupTestCache is already defined above...
 
 func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
+	setTestNow(t, time.Date(2023, 10, 10, 13, 0, 0, 0, time.UTC))
+
 	deviceHash := "known-device"
 	sc := setupTestCache(deviceHash, 1)
 
@@ -65,12 +102,14 @@ func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
 		timeRange          string
 		expectedTotal      int
 		expectedBuckets    int
+		expectedNonZero    int
 		expectedBlocked    int
 		expectedBlockedBks int
+		expectedBlockedNZ  int
 	}{
-		{"Range24h (1-min buckets)", Range24h, 20, 4, 2, 2},
-		{"Range7d (5-min buckets)", Range7d, 20, 3, 2, 1},
-		{"Range30d (1-hour buckets)", Range30d, 20, 2, 2, 1},
+		{"Range24h (1-min buckets)", Range24h, 20, bucketCount(Range24h), 4, 2, bucketCount(Range24h), 2},
+		{"Range7d (5-min buckets)", Range7d, 20, bucketCount(Range7d), 3, 2, bucketCount(Range7d), 1},
+		{"Range30d (1-hour buckets)", Range30d, 20, bucketCount(Range30d), 2, 2, bucketCount(Range30d), 1},
 	}
 
 	for _, tt := range tests {
@@ -92,6 +131,10 @@ func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
 				t.Errorf("expected %d buckets, got %d", tt.expectedBuckets, len(counts))
 			}
 
+			if nonZeroBuckets(counts) != tt.expectedNonZero {
+				t.Errorf("expected %d non-zero buckets, got %d", tt.expectedNonZero, nonZeroBuckets(counts))
+			}
+
 			// Verify blocked total count
 			blockedTotal := 0
 			for _, c := range blockedCounts {
@@ -105,11 +148,17 @@ func TestStatsCache_IncrementAndGetCounts(t *testing.T) {
 			if len(blockedCounts) != tt.expectedBlockedBks {
 				t.Errorf("expected %d blocked buckets, got %d", tt.expectedBlockedBks, len(blockedCounts))
 			}
+
+			if nonZeroBuckets(blockedCounts) != tt.expectedBlockedNZ {
+				t.Errorf("expected %d non-zero blocked buckets, got %d", tt.expectedBlockedNZ, nonZeroBuckets(blockedCounts))
+			}
 		})
 	}
 }
 
 func TestStatsCache_GetUserCounts(t *testing.T) {
+	setTestNow(t, time.Date(2023, 10, 10, 13, 0, 0, 0, time.UTC))
+
 	// Create multiple devices in DeviceCache
 	dc := NewDeviceCache()
 	dc.LoadDevices([]*model.Device{
@@ -138,6 +187,14 @@ func TestStatsCache_GetUserCounts(t *testing.T) {
 	userCounts := sc.GetUserCounts(deviceHashes, Range24h)
 	userBlockedCounts := sc.GetUserBlockedCounts(deviceHashes, Range24h)
 
+	if len(userCounts) != bucketCount(Range24h) {
+		t.Fatalf("expected %d total buckets, got %d", bucketCount(Range24h), len(userCounts))
+	}
+
+	if len(userBlockedCounts) != bucketCount(Range24h) {
+		t.Fatalf("expected %d blocked buckets, got %d", bucketCount(Range24h), len(userBlockedCounts))
+	}
+
 	// Verify total counts across all devices
 	total := 0
 	for _, c := range userCounts {
@@ -147,9 +204,9 @@ func TestStatsCache_GetUserCounts(t *testing.T) {
 		t.Errorf("expected 12 total counts, got %d", total)
 	}
 
-	// Verify we have 2 distinct minute buckets
-	if len(userCounts) != 2 {
-		t.Errorf("expected 2 buckets, got %d", len(userCounts))
+	// Verify we still only have 2 non-zero minute buckets
+	if nonZeroBuckets(userCounts) != 2 {
+		t.Errorf("expected 2 non-zero buckets, got %d", nonZeroBuckets(userCounts))
 	}
 
 	// Verify blocked total counts across all devices
@@ -161,9 +218,9 @@ func TestStatsCache_GetUserCounts(t *testing.T) {
 		t.Errorf("expected 3 blocked counts, got %d", blockedTotal)
 	}
 
-	// Verify we have 1 distinct minute bucket for blocked
-	if len(userBlockedCounts) != 1 {
-		t.Errorf("expected 1 blocked bucket, got %d", len(userBlockedCounts))
+	// Verify we still only have 1 non-zero minute bucket for blocked
+	if nonZeroBuckets(userBlockedCounts) != 1 {
+		t.Errorf("expected 1 non-zero blocked bucket, got %d", nonZeroBuckets(userBlockedCounts))
 	}
 
 	// Specific bucket validation (t1 should have 8 counts)
@@ -182,12 +239,11 @@ func TestStatsCache_GetUserCounts(t *testing.T) {
 }
 
 func TestStatsCache_Cleanup(t *testing.T) {
+	now := time.Date(2023, 10, 10, 12, 0, 0, 0, time.UTC)
+	setTestNow(t, now)
+
 	deviceHash := "known-device"
 	sc := setupTestCache(deviceHash, 1)
-
-	// Since sc.Cleanup() uses time.Now(), we must base our offsets on time.Now()
-	// to properly test its behavior.
-	now := time.Now()
 
 	// Old timestamps beyond cleanup threshold
 	old1Min := now.Add(-25 * time.Hour).Truncate(time.Minute)         // > 24h
@@ -219,75 +275,65 @@ func TestStatsCache_Cleanup(t *testing.T) {
 
 	// Since IncrementAt adds to *all* buckets (1m, 5m, 1h),
 	// each increment will add to all three granularities.
-	// For Range24h (1-min buckets), we added at:
-	// - old1Min, old5Min, old1Hour
-	// - valid1Min, valid5Min, valid1Hour
-	// Total 6 buckets before cleanup.
-	if len(sc.GetCounts(deviceHash, Range24h)) != 6 {
-		t.Errorf("Expected 6 buckets for 24h range before cleanup")
+	// For Range24h (1-min buckets), the series is always padded to the full window.
+	if len(sc.GetCounts(deviceHash, Range24h)) != bucketCount(Range24h) {
+		t.Errorf("Expected full 24h window before cleanup")
 	}
 
 	// Trigger Cleanup
 	sc.Cleanup()
 
-	// Verify old stats are removed and valid ones are kept.
-	// We added old stats at 25h, 8d, 31d ago.
-	// For Range24h (1-min buckets), cutoff is 24h ago.
-	// So 25h, 8d, 31d will be removed.
-	// The ones at <24h, <7d (e.g. 6d), <30d (e.g. 29d)
-	// Actually valid5Min is 6 days ago, which is < 7d but > 24h.
-	// So valid5Min will ALSO be removed from 1-min buckets!
-	// Wait, let's trace this carefully:
-	// old1Min (25h ago) -> removed from 1m, removed from 5m, removed from 1h
-	// old5Min (8d ago) -> removed from 1m, removed from 5m, removed from 1h
-	// old1Hour (31d ago) -> removed from 1m, removed from 5m, removed from 1h
-
-	// valid1Min (23h ago) -> kept in 1m, kept in 5m, kept in 1h
-	// valid5Min (6d ago) -> removed from 1m! kept in 5m, kept in 1h
-	// valid1Hour (29d ago) -> removed from 1m! removed from 5m! kept in 1h
-
 	counts24h := sc.GetCounts(deviceHash, Range24h)
-	if len(counts24h) != 1 {
-		t.Errorf("Expected 1 valid bucket for 24h range after cleanup, got %v", counts24h)
-	} else if counts24h[0].Count != 2 {
-		t.Errorf("Expected count 2, got %d", counts24h[0].Count)
+	if len(counts24h) != bucketCount(Range24h) {
+		t.Fatalf("Expected full 24h range after cleanup, got %d buckets", len(counts24h))
+	}
+	if nonZeroBuckets(counts24h) != 1 {
+		t.Errorf("Expected 1 valid 24h bucket after cleanup, got %d", nonZeroBuckets(counts24h))
+	}
+	if count, ok := countAt(counts24h, valid1Min); !ok || count != 2 {
+		t.Errorf("Expected count 2 at valid1Min, got %d (found=%t)", count, ok)
 	}
 
-	// For Range7d (5-min buckets), cutoff is 7d ago.
-	// old1Min (25h) -> kept! (since it's < 7d)
-	// valid1Min (23h) -> kept
-	// valid5Min (6d) -> kept
-	// 3 buckets expected
 	counts7d := sc.GetCounts(deviceHash, Range7d)
-	if len(counts7d) != 3 {
-		t.Errorf("Expected 3 valid buckets for 7d range after cleanup, got %v", counts7d)
+	if len(counts7d) != bucketCount(Range7d) {
+		t.Fatalf("Expected full 7d range after cleanup, got %d buckets", len(counts7d))
+	}
+	if nonZeroBuckets(counts7d) != 3 {
+		t.Errorf("Expected 3 valid 7d buckets after cleanup, got %d", nonZeroBuckets(counts7d))
 	}
 
-	// For Range30d (1-hour buckets), cutoff is 30d ago.
-	// old1Min (25h) -> kept
-	// old5Min (8d) -> kept
-	// valid1Min (23h) -> kept
-	// valid5Min (6d) -> kept
-	// valid1Hour (29d) -> kept
-	// 5 buckets expected
 	counts30d := sc.GetCounts(deviceHash, Range30d)
-	if len(counts30d) != 5 {
-		t.Errorf("Expected 5 valid buckets for 30d range after cleanup, got %v", counts30d)
+	if len(counts30d) != bucketCount(Range30d) {
+		t.Fatalf("Expected full 30d range after cleanup, got %d buckets", len(counts30d))
+	}
+	if nonZeroBuckets(counts30d) != 5 {
+		t.Errorf("Expected 5 valid 30d buckets after cleanup, got %d", nonZeroBuckets(counts30d))
 	}
 
-	// Similar checks for blocked counts
 	blockedCounts24h := sc.GetBlockedCounts(deviceHash, Range24h)
-	if len(blockedCounts24h) != 1 {
-		t.Errorf("Expected 1 valid blocked bucket for 24h range after cleanup, got %v", blockedCounts24h)
+	if len(blockedCounts24h) != bucketCount(Range24h) {
+		t.Fatalf("Expected full 24h blocked range after cleanup, got %d buckets", len(blockedCounts24h))
+	}
+	if nonZeroBuckets(blockedCounts24h) != 1 {
+		t.Errorf("Expected 1 valid blocked 24h bucket after cleanup, got %d", nonZeroBuckets(blockedCounts24h))
+	}
+	if count, ok := countAt(blockedCounts24h, valid1Min); !ok || count != 2 {
+		t.Errorf("Expected blocked count 2 at valid1Min, got %d (found=%t)", count, ok)
 	}
 
 	blockedCounts7d := sc.GetBlockedCounts(deviceHash, Range7d)
-	if len(blockedCounts7d) != 3 {
-		t.Errorf("Expected 3 valid blocked buckets for 7d range after cleanup, got %v", blockedCounts7d)
+	if len(blockedCounts7d) != bucketCount(Range7d) {
+		t.Fatalf("Expected full 7d blocked range after cleanup, got %d buckets", len(blockedCounts7d))
+	}
+	if nonZeroBuckets(blockedCounts7d) != 3 {
+		t.Errorf("Expected 3 valid blocked 7d buckets after cleanup, got %d", nonZeroBuckets(blockedCounts7d))
 	}
 
 	blockedCounts30d := sc.GetBlockedCounts(deviceHash, Range30d)
-	if len(blockedCounts30d) != 5 {
-		t.Errorf("Expected 5 valid blocked buckets for 30d range after cleanup, got %v", blockedCounts30d)
+	if len(blockedCounts30d) != bucketCount(Range30d) {
+		t.Fatalf("Expected full 30d blocked range after cleanup, got %d buckets", len(blockedCounts30d))
+	}
+	if nonZeroBuckets(blockedCounts30d) != 5 {
+		t.Errorf("Expected 5 valid blocked 30d buckets after cleanup, got %d", nonZeroBuckets(blockedCounts30d))
 	}
 }
