@@ -36,7 +36,7 @@ DoT works the same way, with `{deviceHash}.yourdomain.com` as the TLS
 hostname on port 853. blkhole reads the hash from the subdomain, looks up
 which schedules and blocklists apply to that device right now, and answers
 NXDOMAIN for blocked domains. Everything else is forwarded to the upstream
-resolver (Cloudflare by default, configurable).
+resolver (Quad9 by default, configurable).
 
 Queries from hashes it doesn't know get refused, so the server can't be
 used as an open resolver.
@@ -99,7 +99,7 @@ blkhole -p 8080 -s $(openssl rand -hex 32)
 |---|---|---|---|
 | `-d <domain>` | `BLKHOLE_DOMAIN` | Production mode: HTTPS with autocert | none |
 | `-p <port>` | `BLKHOLE_PORT` | Local mode: plain HTTP | none |
-| `-u <host:port>` | `BLKHOLE_UPSTREAM_DNS` | Upstream DNS server | `1.1.1.1:53` |
+| `-u <host:port>` | `BLKHOLE_UPSTREAM_DNS` | Upstream DNS server | `9.9.9.9:53` |
 | `-s <hex>` | `BLKHOLE_SECRET` | JWT secret (hex-encoded, 32 bytes) | none, required |
 
 `-d` and `-p` are mutually exclusive. One is required.
