@@ -25,7 +25,7 @@ per-device rules, and a web admin interface.
 Requires Go 1.26+ and a C compiler (gcc or clang) for SQLite.
 
 ```sh
-CGO_ENABLED=1 go install github.com/lemon3studio/blkhole@latest
+CGO_ENABLED=1 go install github.com/blkhole-sh/blkhole@latest
 ```
 
 ### Docker

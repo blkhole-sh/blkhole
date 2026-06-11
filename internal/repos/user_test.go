@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 	_ "github.com/mattn/go-sqlite3"
 )
 

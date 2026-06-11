@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lemon3studio/blkhole/internal/db"
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/db"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 	_ "github.com/mattn/go-sqlite3"
 )
 

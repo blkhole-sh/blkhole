@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 	"math/rand"
 	"net/http"
 )

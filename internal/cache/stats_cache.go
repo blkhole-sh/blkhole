@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // Time range constants

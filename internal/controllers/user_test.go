@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // MockAuthService

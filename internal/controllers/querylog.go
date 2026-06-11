@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // QueryLogController defines the interface for query log operations
@@ -20,19 +21,40 @@ type QueryLogController interface {
 }
 
 type queryLogController struct {
-	queryLogs repos.QueryLogRepo
+	queryLogs   repos.QueryLogRepo
+	authService services.AuthService
 }
 
 // NewQueryLogController creates a new QueryLogController instance
-func NewQueryLogController(queryLogs repos.QueryLogRepo) QueryLogController {
-	return &queryLogController{queryLogs: queryLogs}
+func NewQueryLogController(queryLogs repos.QueryLogRepo, authService services.AuthService) QueryLogController {
+	return &queryLogController{queryLogs: queryLogs, authService: authService}
 }
 
-func (c *queryLogController) GetLogs(w http.ResponseWriter, r *http.Request) {
+// requireOwnUserID parses the userId path parameter and verifies it matches
+// the authenticated user. On failure it writes an error response and returns false.
+func (c *queryLogController) requireOwnUserID(w http.ResponseWriter, r *http.Request) (int, bool) {
 	userID, err := strconv.Atoi(chi.URLParam(r, "userId"))
 	if err != nil {
 		log.Printf("unable to parse userId from path parameter: %v", err)
 		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return 0, false
+	}
+
+	user, ok := currentUser(w, r, c.authService)
+	if !ok {
+		return 0, false
+	}
+	if userID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return 0, false
+	}
+
+	return userID, true
+}
+
+func (c *queryLogController) GetLogs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := c.requireOwnUserID(w, r)
+	if !ok {
 		return
 	}
 
@@ -50,14 +72,15 @@ func (c *queryLogController) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(logs)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(logs); err != nil {
+		log.Printf("failed to encode query logs: %v", err)
+	}
 }
 
 func (c *queryLogController) ExportLogs(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.Atoi(chi.URLParam(r, "userId"))
-	if err != nil {
-		log.Printf("unable to parse userId from path parameter: %v", err)
-		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+	userID, ok := c.requireOwnUserID(w, r)
+	if !ok {
 		return
 	}
 
@@ -86,4 +109,7 @@ func (c *queryLogController) ExportLogs(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 	cw.Flush()
+	if err := cw.Error(); err != nil {
+		log.Printf("failed to write query log export: %v", err)
+	}
 }

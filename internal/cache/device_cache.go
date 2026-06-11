@@ -4,7 +4,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // DeviceCache provides fast device hash to ID lookups and device-schedule mappings

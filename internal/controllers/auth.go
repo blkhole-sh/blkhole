@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // AuthController defines the interface for authentication operations
@@ -24,13 +24,16 @@ type AuthController interface {
 
 // authController implements the AuthController interface
 type authController struct {
-	authService services.AuthService
-	listService services.ListService
+	authService   services.AuthService
+	listService   services.ListService
+	secureCookies bool
 }
 
-// NewAuthController creates a new authentication controller
-func NewAuthController(authService services.AuthService, listService services.ListService) AuthController {
-	return &authController{authService: authService, listService: listService}
+// NewAuthController creates a new authentication controller. secureCookies
+// must be true when the server is reachable over HTTPS so auth cookies are
+// never sent over plaintext.
+func NewAuthController(authService services.AuthService, listService services.ListService, secureCookies bool) AuthController {
+	return &authController{authService: authService, listService: listService, secureCookies: secureCookies}
 }
 
 // Login handles user authentication
@@ -86,7 +89,7 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if pwned, err := isPasswordPwned(req.Password); err == nil && pwned {
+	if pwned, err := checkPasswordPwned(req.Password); err == nil && pwned {
 		http.Error(w, "Password has appeared in known data breaches, please choose a different one", http.StatusBadRequest)
 		return
 	}
@@ -161,11 +164,15 @@ func (c *authController) setSecureCookie(w http.ResponseWriter, name, value stri
 		Path:     "/",
 		Expires:  time.Now().Add(expiry),
 		HttpOnly: true,
-		Secure:   false,                // Set to false for development (HTTP)
+		Secure:   c.secureCookies,
 		SameSite: http.SameSiteLaxMode, // CSRF protection but allows same-site navigation
 	}
 	http.SetCookie(w, cookie)
 }
+
+// checkPasswordPwned is a package-level indirection so tests can stub out the
+// network call to the HIBP API.
+var checkPasswordPwned = isPasswordPwned
 
 // isPasswordPwned checks the HIBP Pwned Passwords API using k-anonymity.
 // Returns (true, nil) if the password appears in known breaches.
@@ -210,7 +217,7 @@ func (c *authController) clearAuthCookies(w http.ResponseWriter) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   c.secureCookies,
 		SameSite: http.SameSiteLaxMode,
 	}
 	refreshCookie := &http.Cookie{
@@ -219,7 +226,7 @@ func (c *authController) clearAuthCookies(w http.ResponseWriter) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   c.secureCookies,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, accessCookie)

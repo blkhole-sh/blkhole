@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // MockDeviceRepo satisfies repos.DeviceRepo
@@ -87,17 +87,19 @@ type MockScheduleRepo struct {
 	FindNamesByDeviceIDFunc func(deviceID int) ([]string, error)
 }
 
-func (m *MockScheduleRepo) Create(s *model.Schedule) (int, error)      { return 0, nil }
-func (m *MockScheduleRepo) Update(id int, s *model.Schedule) error      { return nil }
-func (m *MockScheduleRepo) Delete(id int) error                          { return nil }
+func (m *MockScheduleRepo) Create(s *model.Schedule) (int, error)         { return 0, nil }
+func (m *MockScheduleRepo) Update(id int, s *model.Schedule) error        { return nil }
+func (m *MockScheduleRepo) Delete(id int) error                           { return nil }
 func (m *MockScheduleRepo) LinkDevice(scheduleID int, deviceID int) error { return nil }
-func (m *MockScheduleRepo) LinkRule(id int, ruleID int) error            { return nil }
-func (m *MockScheduleRepo) LinkList(id int, listID int) error            { return nil }
-func (m *MockScheduleRepo) LoadDeviceIDs(id int) ([]int, error)          { return []int{}, nil }
-func (m *MockScheduleRepo) LoadRuleIDs(id int) ([]int, error)            { return []int{}, nil }
-func (m *MockScheduleRepo) LoadListIDs(id int) ([]int, error)            { return []int{}, nil }
-func (m *MockScheduleRepo) LoadRelations(s *model.Schedule) error        { return nil }
-func (m *MockScheduleRepo) FindByID(id int) (*model.Schedule, error)     { return nil, fmt.Errorf("not found") }
+func (m *MockScheduleRepo) LinkRule(id int, ruleID int) error             { return nil }
+func (m *MockScheduleRepo) LinkList(id int, listID int) error             { return nil }
+func (m *MockScheduleRepo) LoadDeviceIDs(id int) ([]int, error)           { return []int{}, nil }
+func (m *MockScheduleRepo) LoadRuleIDs(id int) ([]int, error)             { return []int{}, nil }
+func (m *MockScheduleRepo) LoadListIDs(id int) ([]int, error)             { return []int{}, nil }
+func (m *MockScheduleRepo) LoadRelations(s *model.Schedule) error         { return nil }
+func (m *MockScheduleRepo) FindByID(id int) (*model.Schedule, error) {
+	return nil, fmt.Errorf("not found")
+}
 func (m *MockScheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
 	return []*model.Schedule{}, nil
 }
@@ -121,7 +123,7 @@ func (m *MockScheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
 	return []*model.ScheduleRule{}, nil
 }
 func (m *MockScheduleRepo) HasDefaultsForUser(userID int) (bool, error) { return false, nil }
-func (m *MockScheduleRepo) SeedDefaults(userID int) error                { return nil }
+func (m *MockScheduleRepo) SeedDefaults(userID int) error               { return nil }
 
 // MockCryptoService satisfies services.CryptoService
 type MockCryptoService struct {
@@ -146,6 +148,15 @@ func withParam(r *http.Request, key, value string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 }
 
+// mockAuth returns an auth service whose current user has the given ID.
+func mockAuth(userID int) *MockAuthService {
+	return &MockAuthService{
+		UserFromContextFunc: func(ctx context.Context) (*model.User, error) {
+			return &model.User{ID: userID}, nil
+		},
+	}
+}
+
 func TestDeviceController_Create_Success(t *testing.T) {
 	deviceRepo := &MockDeviceRepo{
 		CreateFunc: func(d *model.Device) error {
@@ -153,7 +164,7 @@ func TestDeviceController_Create_Success(t *testing.T) {
 			return nil
 		},
 	}
-	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	body, _ := json.Marshal(map[string]interface{}{"name": "Test Device", "os": "iOS", "userId": 1})
 	req := httptest.NewRequest(http.MethodPost, "/devices", bytes.NewBuffer(body))
@@ -166,7 +177,7 @@ func TestDeviceController_Create_Success(t *testing.T) {
 }
 
 func TestDeviceController_Create_InvalidJSON(t *testing.T) {
-	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodPost, "/devices", bytes.NewBufferString("not-json"))
 	rr := httptest.NewRecorder()
@@ -181,7 +192,7 @@ func TestDeviceController_Create_HashError(t *testing.T) {
 	crypto := &MockCryptoService{
 		RandomHashFunc: func() (string, error) { return "", fmt.Errorf("crypto fail") },
 	}
-	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, crypto)
+	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, crypto, mockAuth(1))
 
 	body, _ := json.Marshal(map[string]interface{}{"name": "D", "os": "iOS", "userId": 1})
 	req := httptest.NewRequest(http.MethodPost, "/devices", bytes.NewBuffer(body))
@@ -196,10 +207,10 @@ func TestDeviceController_Create_HashError(t *testing.T) {
 func TestDeviceController_FindByID_Success(t *testing.T) {
 	deviceRepo := &MockDeviceRepo{
 		FindByIDFunc: func(id int) (*model.Device, error) {
-			return &model.Device{ID: id, Name: "Found", OS: model.MacOS}, nil
+			return &model.Device{ID: id, Name: "Found", OS: model.MacOS, UserID: 1}, nil
 		},
 	}
-	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/devices/1", nil), "id", "1")
 	rr := httptest.NewRecorder()
@@ -210,8 +221,25 @@ func TestDeviceController_FindByID_Success(t *testing.T) {
 	}
 }
 
+func TestDeviceController_FindByID_OtherUsersDevice_Forbidden(t *testing.T) {
+	deviceRepo := &MockDeviceRepo{
+		FindByIDFunc: func(id int) (*model.Device, error) {
+			return &model.Device{ID: id, Name: "Found", OS: model.MacOS, UserID: 2}, nil
+		},
+	}
+	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
+
+	req := withParam(httptest.NewRequest(http.MethodGet, "/devices/1", nil), "id", "1")
+	rr := httptest.NewRecorder()
+	controller.FindByID(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rr.Code)
+	}
+}
+
 func TestDeviceController_FindByID_BadParam(t *testing.T) {
-	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/devices/abc", nil), "id", "abc")
 	rr := httptest.NewRecorder()
@@ -228,7 +256,7 @@ func TestDeviceController_FindByID_NotFound(t *testing.T) {
 			return nil, fmt.Errorf("not found")
 		},
 	}
-	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/devices/99", nil), "id", "99")
 	rr := httptest.NewRecorder()
@@ -241,9 +269,12 @@ func TestDeviceController_FindByID_NotFound(t *testing.T) {
 
 func TestDeviceController_Delete_Success(t *testing.T) {
 	deviceRepo := &MockDeviceRepo{
+		FindByIDFunc: func(id int) (*model.Device, error) {
+			return &model.Device{ID: id, UserID: 1}, nil
+		},
 		DeleteFunc: func(id int) error { return nil },
 	}
-	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(deviceRepo, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/devices/1", nil), "id", "1")
 	rr := httptest.NewRecorder()
@@ -255,7 +286,7 @@ func TestDeviceController_Delete_Success(t *testing.T) {
 }
 
 func TestDeviceController_Delete_BadParam(t *testing.T) {
-	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{})
+	controller := NewDeviceController(&MockDeviceRepo{}, &MockScheduleRepo{}, &MockCryptoService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/devices/abc", nil), "id", "abc")
 	rr := httptest.NewRecorder()
