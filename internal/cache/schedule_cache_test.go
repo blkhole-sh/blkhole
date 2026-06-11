@@ -2,8 +2,9 @@ package cache
 
 import (
 	"testing"
+	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 func TestTimeStringToSlot(t *testing.T) {
@@ -32,65 +33,61 @@ func TestTimeStringToSlot(t *testing.T) {
 	}
 }
 
-func TestConvertToBitmask(t *testing.T) {
-	// 1. Monday only, 00:00 - 00:05
-	// Monday = day 0. 00:00 = slot 0 (bit 0), 00:05 = slot 1 (bit 0 still, since 1*8/288 = 0)
-	// Actually, bits per day = 8.
-	// Slot 0 to 287 are mapped to 0 to 7.
-	// A slot s maps to bit (s * 8) / 288.
-	// So slots 0-35 map to bit 0. Slots 36-71 map to bit 1.
-	// Let's test "00:00" to "23:55" for Monday, it should set all 8 bits of Monday (day 0) = 0xFF
-
-	schedAllDayMonday := &model.Schedule{
+func TestScheduleWindow_CoversSlot(t *testing.T) {
+	morning := convertToWindow(&model.Schedule{
+		Active:    true,
 		Monday:    true,
-		StartTime: "00:00",
-		EndTime:   "23:55",
-	}
-	mask := convertToBitmask(schedAllDayMonday)
-	if mask != 0xFF {
-		t.Errorf("Expected 0xFF for all day Monday, got 0x%X", mask)
-	}
-
-	// 2. All days, 00:00 to 23:55 -> 56 bits set (8 bits per day * 7 days) -> 0x00FFFFFFFFFFFFFF
-	schedAllDaysAllTimes := &model.Schedule{
-		Monday:    true,
-		Tuesday:   true,
-		Wednesday: true,
-		Thursday:  true,
-		Friday:    true,
-		Saturday:  true,
-		Sunday:    true,
-		StartTime: "00:00",
-		EndTime:   "23:55",
-	}
-	maskAll := convertToBitmask(schedAllDaysAllTimes)
-	expectedAll := uint64(0x00FFFFFFFFFFFFFF)
-	if maskAll != expectedAll {
-		t.Errorf("Expected 0x%X for all days all times, got 0x%X", expectedAll, maskAll)
-	}
-
-	// 3. Tuesday only, 00:00 to 02:55 -> slots 0 to 35 -> bit 0 of Tuesday
-	// Tuesday is day 1. Bits 8 to 15. Bit 8 should be set.
-	schedTuesdayMorning := &model.Schedule{
+		StartTime: "09:00",
+		EndTime:   "10:00",
+	})
+	allDay := convertToWindow(&model.Schedule{
+		Active:    true,
 		Tuesday:   true,
 		StartTime: "00:00",
-		EndTime:   "02:55",
-	}
-	maskTue := convertToBitmask(schedTuesdayMorning)
-	if maskTue != 0x0100 { // bit 8 set
-		t.Errorf("Expected 0x0100 for Tuesday morning, got 0x%X", maskTue)
-	}
-}
+		EndTime:   "00:00",
+	})
+	overnight := convertToWindow(&model.Schedule{
+		Active:    true,
+		Monday:    true,
+		StartTime: "22:00",
+		EndTime:   "06:00",
+	})
+	inactive := convertToWindow(&model.Schedule{
+		Active:    false,
+		Monday:    true,
+		StartTime: "00:00",
+		EndTime:   "00:00",
+	})
 
-func TestGetCurrentTimeMask(t *testing.T) {
-	mask := getCurrentTimeMask()
-	// Just verify it's a power of 2 (only one bit set) and non-zero
-	if mask == 0 {
-		t.Errorf("getCurrentTimeMask() returned 0")
+	tests := []struct {
+		name   string
+		window scheduleWindow
+		day    uint8
+		slot   uint16
+		want   bool
+	}{
+		{"morning at 09:00", morning, 0, timeStringToSlot("09:00"), true},
+		{"morning at 10:00", morning, 0, timeStringToSlot("10:00"), true},
+		{"morning at 10:05 just after end", morning, 0, timeStringToSlot("10:05"), false},
+		{"morning at 08:55 just before start", morning, 0, timeStringToSlot("08:55"), false},
+		{"morning at 11:00 same 3h-band as window", morning, 0, timeStringToSlot("11:00"), false},
+		{"morning on wrong day", morning, 1, timeStringToSlot("09:30"), false},
+		{"all day at midnight", allDay, 1, timeStringToSlot("00:00"), true},
+		{"all day at 23:55", allDay, 1, timeStringToSlot("23:55"), true},
+		{"all day on wrong day", allDay, 0, timeStringToSlot("12:00"), false},
+		{"overnight at 23:00", overnight, 0, timeStringToSlot("23:00"), true},
+		{"overnight at 05:00", overnight, 0, timeStringToSlot("05:00"), true},
+		{"overnight at 12:00", overnight, 0, timeStringToSlot("12:00"), false},
+		{"inactive schedule never covers", inactive, 0, timeStringToSlot("12:00"), false},
 	}
-	// Check if only one bit is set
-	if (mask & (mask - 1)) != 0 {
-		t.Errorf("getCurrentTimeMask() returned more than one bit set: 0x%X", mask)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.window.coversSlot(tc.day, tc.slot)
+			if got != tc.want {
+				t.Errorf("coversSlot(%d, %d) = %v; want %v", tc.day, tc.slot, got, tc.want)
+			}
+		})
 	}
 }
 
@@ -157,9 +154,7 @@ func TestScheduleCache_HasRuleIntersection(t *testing.T) {
 func TestScheduleCache_FilterActiveSchedules(t *testing.T) {
 	sc := NewScheduleCache()
 
-	// An always-active schedule
-	s1 := &model.Schedule{
-		ID:        1,
+	allDays := model.Schedule{
 		Monday:    true,
 		Tuesday:   true,
 		Wednesday: true,
@@ -167,36 +162,34 @@ func TestScheduleCache_FilterActiveSchedules(t *testing.T) {
 		Friday:    true,
 		Saturday:  true,
 		Sunday:    true,
-		StartTime: "00:00",
-		EndTime:   "23:55",
 	}
+
+	// An always-active schedule
+	s1 := allDays
+	s1.ID = 1
+	s1.Active = true
+	s1.StartTime = "00:00"
+	s1.EndTime = "00:00"
 
 	// A never-active schedule (no days)
 	s2 := &model.Schedule{
 		ID:        2,
+		Active:    true,
 		StartTime: "00:00",
-		EndTime:   "23:55",
+		EndTime:   "00:00",
 	}
 
-	// A never-active schedule (no time slots, invalid format basically or 00:00 to 00:00 which could only be active for 5 mins if current time is exactly 00:00-00:05, but to be safe let's use invalid times)
-	s3 := &model.Schedule{
-		ID:        3,
-		Monday:    true,
-		Tuesday:   true,
-		Wednesday: true,
-		Thursday:  true,
-		Friday:    true,
-		Saturday:  true,
-		Sunday:    true,
-		StartTime: "12:60", // invalid
-		EndTime:   "13:60", // invalid
-	}
+	// A deactivated schedule that would otherwise always be active
+	s3 := allDays
+	s3.ID = 3
+	s3.Active = false
+	s3.StartTime = "00:00"
+	s3.EndTime = "00:00"
 
-	sc.LoadSchedules([]*model.Schedule{s1, s2, s3})
+	sc.LoadSchedules([]*model.Schedule{&s1, s2, &s3})
 
-	// To avoid flaky tests with current time, s1 is guaranteed active (all bits set),
-	// s2 is guaranteed inactive (0 bits set), s3 is guaranteed inactive (0 bits set).
-
+	// s1 is guaranteed active (all days, all day), s2 is guaranteed inactive
+	// (no days), s3 is guaranteed inactive (active flag unset), 4 is unknown.
 	active := sc.FilterActiveSchedules([]int{1, 2, 3, 4})
 	if len(active) != 1 || active[0] != 1 {
 		t.Errorf("FilterActiveSchedules([1, 2, 3, 4]) = %v; want [1]", active)
@@ -205,5 +198,53 @@ func TestScheduleCache_FilterActiveSchedules(t *testing.T) {
 	empty := sc.FilterActiveSchedules([]int{})
 	if len(empty) != 0 {
 		t.Errorf("FilterActiveSchedules([]) = %v; want []", empty)
+	}
+}
+
+func TestScheduleCache_FilterActiveSchedules_TimeOfDayPrecision(t *testing.T) {
+	sc := NewScheduleCache()
+
+	now := time.Now()
+
+	// A one-hour window centered on the current 5-minute slot
+	start := now.Add(-30 * time.Minute)
+	end := now.Add(30 * time.Minute)
+
+	// Skip the edge case where the window would cross midnight
+	if start.Day() != end.Day() {
+		t.Skip("current time too close to midnight for this test")
+	}
+
+	current := model.Schedule{
+		ID:        1,
+		Active:    true,
+		StartTime: start.Format("15:04"),
+		EndTime:   end.Format("15:04"),
+		Monday:    true,
+		Tuesday:   true,
+		Wednesday: true,
+		Thursday:  true,
+		Friday:    true,
+		Saturday:  true,
+		Sunday:    true,
+	}
+
+	// A window in the same 3-hour band that already ended over an hour ago.
+	// With the old 8-bit day masks this was indistinguishable from an active
+	// window.
+	past := current
+	past.ID = 2
+	past.StartTime = start.Add(-90 * time.Minute).Format("15:04")
+	past.EndTime = end.Add(-90 * time.Minute).Format("15:04")
+
+	if start.Add(-90*time.Minute).Day() != start.Day() {
+		t.Skip("current time too close to midnight for this test")
+	}
+
+	sc.LoadSchedules([]*model.Schedule{&current, &past})
+
+	active := sc.FilterActiveSchedules([]int{1, 2})
+	if len(active) != 1 || active[0] != 1 {
+		t.Errorf("FilterActiveSchedules([1, 2]) = %v; want [1]", active)
 	}
 }

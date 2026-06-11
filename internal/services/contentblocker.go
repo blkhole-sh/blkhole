@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 )
 
 // domainRegex is used to check for valid domain format
@@ -125,7 +125,7 @@ func (cb *contentBlocker) Init() error {
 		return err
 	}
 
-	// Load schedules and pre-compute bitmasks for efficient time filtering
+	// Load schedules and pre-compute windows for efficient time filtering
 	if err := cb.initSchedules(); err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (cb *contentBlocker) IsBlocked(domain, deviceHash string) (bool, error) {
 		return false, nil
 	}
 
-	// Filter to only active schedules using efficient bitmask comparison
+	// Filter to only schedules that are active right now
 	activeScheduleIDs := cb.scheduleCache.FilterActiveSchedules(scheduleIDs)
 	if len(activeScheduleIDs) == 0 {
 		return false, nil

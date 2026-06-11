@@ -1,11 +1,12 @@
 package services
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/model"
 	"github.com/miekg/dns"
 )
 
@@ -30,16 +31,31 @@ type mockStatsCache struct {
 	cache.DeviceCache
 }
 
-func (m *mockStatsCache) Increment(deviceHash string)              { m.incrementedHashes = append(m.incrementedHashes, deviceHash) }
-func (m *mockStatsCache) IncrementBlocked(deviceHash string)       { m.blockedHashes = append(m.blockedHashes, deviceHash) }
-func (m *mockStatsCache) IncrementAt(h string, _ time.Time, _ int) {}
-func (m *mockStatsCache) IncrementBlockedAt(h string, _ time.Time, _ int) {}
-func (m *mockStatsCache) GetCounts(h, r string) []model.StatCount          { return nil }
-func (m *mockStatsCache) GetBlockedCounts(h, r string) []model.StatCount   { return nil }
-func (m *mockStatsCache) GetUserCounts(hs []string, r string) []model.StatCount { return nil }
+func (m *mockStatsCache) Increment(deviceHash string) {
+	m.incrementedHashes = append(m.incrementedHashes, deviceHash)
+}
+func (m *mockStatsCache) IncrementBlocked(deviceHash string) {
+	m.blockedHashes = append(m.blockedHashes, deviceHash)
+}
+func (m *mockStatsCache) IncrementAt(h string, _ time.Time, _ int)                     {}
+func (m *mockStatsCache) IncrementBlockedAt(h string, _ time.Time, _ int)              {}
+func (m *mockStatsCache) GetCounts(h, r string) []model.StatCount                      { return nil }
+func (m *mockStatsCache) GetBlockedCounts(h, r string) []model.StatCount               { return nil }
+func (m *mockStatsCache) GetUserCounts(hs []string, r string) []model.StatCount        { return nil }
 func (m *mockStatsCache) GetUserBlockedCounts(hs []string, r string) []model.StatCount { return nil }
-func (m *mockStatsCache) Start()                                            {}
-func (m *mockStatsCache) Cleanup()                                          {}
+func (m *mockStatsCache) Start()                                                       {}
+func (m *mockStatsCache) Cleanup()                                                     {}
+
+// newTestDeviceCache returns a device cache populated with the given hashes
+func newTestDeviceCache(hashes ...string) cache.DeviceCache {
+	dc := cache.NewDeviceCache()
+	devices := make([]*model.Device, len(hashes))
+	for i, h := range hashes {
+		devices[i] = &model.Device{ID: i + 1, Hash: h}
+	}
+	dc.LoadDevices(devices)
+	return dc
+}
 
 func newTestDNSMsg(domain string) *dns.Msg {
 	msg := new(dns.Msg)
@@ -54,7 +70,7 @@ func TestResolver_BlockedDomain_ReturnsNXDOMAIN(t *testing.T) {
 		},
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
+	r := NewResolver(blocker, stats, newTestDeviceCache("device-hash"), "127.0.0.1:5353", nil)
 
 	msg := newTestDNSMsg("blocked.com")
 	resp, err := r.Resolve(msg, "device-hash")
@@ -75,7 +91,7 @@ func TestResolver_BlockedDomain_IncrementsBlockedStat(t *testing.T) {
 		isBlockedFunc: func(_, _ string) (bool, error) { return true, nil },
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
+	r := NewResolver(blocker, stats, newTestDeviceCache("dev-hash"), "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("blocked.com"), "dev-hash")
 
@@ -87,7 +103,7 @@ func TestResolver_BlockedDomain_IncrementsBlockedStat(t *testing.T) {
 func TestResolver_EmptyDeviceHash_SkipsStatIncrement(t *testing.T) {
 	blocker := &mockContentBlocker{}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
+	r := NewResolver(blocker, stats, newTestDeviceCache(), "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("example.com"), "")
 
@@ -101,7 +117,7 @@ func TestResolver_NonBlockedDomain_IncrementsQueryStat(t *testing.T) {
 		isBlockedFunc: func(_, _ string) (bool, error) { return false, nil },
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil)
+	r := NewResolver(blocker, stats, newTestDeviceCache("my-device"), "127.0.0.1:5353", nil)
 
 	r.Resolve(newTestDNSMsg("example.com"), "my-device")
 
@@ -110,12 +126,49 @@ func TestResolver_NonBlockedDomain_IncrementsQueryStat(t *testing.T) {
 	}
 }
 
+func TestResolver_UnknownDevice_ReturnsREFUSED(t *testing.T) {
+	blocker := &mockContentBlocker{}
+	stats := &mockStatsCache{}
+	r := NewResolver(blocker, stats, newTestDeviceCache(), "127.0.0.1:5353", nil)
+
+	resp, err := r.Resolve(newTestDNSMsg("example.com"), "unknown-device")
+
+	if err != nil {
+		t.Fatalf("Resolve() unexpected error: %v", err)
+	}
+	if resp.Rcode != dns.RcodeRefused {
+		t.Errorf("expected REFUSED (%d), got %d", dns.RcodeRefused, resp.Rcode)
+	}
+	if len(stats.incrementedHashes) != 0 {
+		t.Errorf("Increment should not be called for unknown device, got %v", stats.incrementedHashes)
+	}
+}
+
+func TestResolver_ContentBlockerError_DoesNotBlock(t *testing.T) {
+	blocker := &mockContentBlocker{
+		isBlockedFunc: func(domain, _ string) (bool, error) {
+			return false, fmt.Errorf("invalid domain format: %s", domain)
+		},
+	}
+	stats := &mockStatsCache{}
+	r := NewResolver(blocker, stats, newTestDeviceCache("dev"), "127.0.0.1:5353", nil)
+
+	resp, _ := r.Resolve(newTestDNSMsg("_dmarc.example.com"), "dev")
+
+	if resp.Rcode == dns.RcodeNameError {
+		t.Errorf("content blocker error must not result in NXDOMAIN")
+	}
+	if len(stats.blockedHashes) != 0 {
+		t.Errorf("IncrementBlocked should not be called on blocker error, got %v", stats.blockedHashes)
+	}
+}
+
 func TestResolver_UpstreamFailure_ReturnsSERVFAIL(t *testing.T) {
 	blocker := &mockContentBlocker{
 		isBlockedFunc: func(_, _ string) (bool, error) { return false, nil },
 	}
 	stats := &mockStatsCache{}
-	r := NewResolver(blocker, stats, "127.0.0.1:5353", nil) // unreachable upstream
+	r := NewResolver(blocker, stats, newTestDeviceCache(), "127.0.0.1:5353", nil) // unreachable upstream
 
 	msg := newTestDNSMsg("example.com")
 	resp, err := r.Resolve(msg, "")

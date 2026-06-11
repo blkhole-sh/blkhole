@@ -7,13 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
-const (
-	slotsPerHour = 12 // 5-minute slots per hour (60/5)
-	bitsPerDay   = 8  // Each day gets 8 bits in the 64-bit mask (64 bits / 8 days = 8 bits per day)
-)
+const slotsPerHour = 12 // 5-minute slots per hour (60/5)
 
 // ScheduleCache provides fast schedule-to-rule lookups and rule intersection checks
 type ScheduleCache interface {
@@ -24,12 +21,22 @@ type ScheduleCache interface {
 	FilterActiveSchedules(scheduleIDs []int) []int
 }
 
+// scheduleWindow holds a schedule's active days and time-of-day window with
+// 5-minute slot precision
+type scheduleWindow struct {
+	active    bool
+	days      uint8 // Monday=bit0, Tuesday=bit1, ..., Sunday=bit6
+	allDay    bool
+	startSlot uint16 // inclusive, 0-287
+	endSlot   uint16 // inclusive, 0-287
+}
+
 // scheduleCache implements the ScheduleCache interface
 type scheduleCache struct {
 	mu              sync.RWMutex
 	scheduleToRule  map[int][]int            // Schedule ID → Rule IDs
 	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → Rule IDs as hash set for O(1) lookup
-	scheduleMasks   map[int]uint64           // Schedule ID → Pre-computed bitmask for time filtering
+	scheduleWindows map[int]scheduleWindow   // Schedule ID → Pre-computed window for time filtering
 }
 
 // NewScheduleCache creates a new schedule cache instance
@@ -37,25 +44,22 @@ func NewScheduleCache() ScheduleCache {
 	return &scheduleCache{
 		scheduleToRule:  make(map[int][]int),
 		scheduleRuleSet: make(map[int]map[int]struct{}),
-		scheduleMasks:   make(map[int]uint64),
+		scheduleWindows: make(map[int]scheduleWindow),
 	}
 }
 
-// LoadSchedules populates the schedule cache with pre-computed bitmasks for active filtering
+// LoadSchedules populates the schedule cache with pre-computed windows for active filtering
 func (sc *scheduleCache) LoadSchedules(schedules []*model.Schedule) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
 	for _, schedule := range schedules {
-		sc.scheduleMasks[schedule.ID] = convertToBitmask(schedule)
+		sc.scheduleWindows[schedule.ID] = convertToWindow(schedule)
 	}
 }
 
-// convertToBitmask converts Schedule boolean days and time strings to efficient bitmask
-func convertToBitmask(schedule *model.Schedule) uint64 {
-	var mask uint64
-
-	// Convert day booleans to bitmask (Monday=bit0, Tuesday=bit1, ..., Sunday=bit6)
+// convertToWindow converts Schedule boolean days and time strings to a scheduleWindow
+func convertToWindow(schedule *model.Schedule) scheduleWindow {
 	activeDays := []bool{
 		schedule.Monday,
 		schedule.Tuesday,
@@ -73,44 +77,31 @@ func convertToBitmask(schedule *model.Schedule) uint64 {
 		}
 	}
 
-	// Equal start and end time means all day — set all 8 bits for each active day
-	if schedule.StartTime == schedule.EndTime {
-		for day := range 7 {
-			if days&(1<<day) != 0 {
-				dayOffset := uint64(day) * bitsPerDay
-				mask |= uint64(0xFF) << dayOffset
-			}
-		}
-		return mask
+	return scheduleWindow{
+		active: schedule.Active,
+		days:   days,
+		// Equal start and end time means all day
+		allDay:    schedule.StartTime == schedule.EndTime,
+		startSlot: timeStringToSlot(schedule.StartTime),
+		endSlot:   timeStringToSlot(schedule.EndTime),
 	}
-
-	// Convert time strings to slots (0-287, where each slot = 5 minutes)
-	startSlot := timeStringToSlot(schedule.StartTime)
-	endSlot := timeStringToSlot(schedule.EndTime)
-
-	// Create bitmask for each active day (each day gets 8 bits: Monday=0-7, Tuesday=8-15, etc.)
-	for day := range 7 {
-		if days&(1<<day) != 0 {
-			mask |= calculateDayMask(uint16(day), startSlot, endSlot)
-		}
-	}
-
-	return mask
 }
 
-// calculateDayMask generates the bitmask for a specific day given start and end slots
-func calculateDayMask(day uint16, startSlot, endSlot uint16) uint64 {
-	var dayMask uint64
-	dayOffset := day * bitsPerDay
-
-	for slot := startSlot; slot <= endSlot; slot++ {
-		bitInDay := (slot * bitsPerDay) / (24 * slotsPerHour)
-		if bitInDay < bitsPerDay {
-			dayMask |= 1 << (dayOffset + bitInDay)
-		}
+// coversSlot reports whether the window covers the given day (Monday=0) and
+// 5-minute slot. Windows whose end slot is before their start slot wrap past
+// midnight (e.g. 22:00-06:00).
+func (w scheduleWindow) coversSlot(day uint8, slot uint16) bool {
+	if !w.active || w.days&(1<<day) == 0 {
+		return false
 	}
-
-	return dayMask
+	if w.allDay {
+		return true
+	}
+	if w.startSlot <= w.endSlot {
+		return w.startSlot <= slot && slot <= w.endSlot
+	}
+	// Overnight window
+	return slot >= w.startSlot || slot <= w.endSlot
 }
 
 // timeStringToSlot converts "HH:MM" format to 5-minute slot number (0-287)
@@ -134,28 +125,6 @@ func timeStringToSlot(timeStr string) uint16 {
 
 	// Convert to slot: hour*12 + minute/5 (e.g., "09:15" -> 9*12 + 15/5 = 111)
 	return uint16(hour*slotsPerHour + minute/5)
-}
-
-// getCurrentTimeMask creates a bitmask for the current time
-func getCurrentTimeMask() uint64 {
-	now := time.Now()
-
-	// Convert Go's Sunday=0 weekday to Monday=0 format
-	dayBit := uint8((now.Weekday() + 6) % 7)
-
-	// Convert current time to slot number (0-287)
-	currentSlot := uint16(now.Hour()*slotsPerHour + now.Minute()/5)
-
-	// Calculate bit position for current day and time
-	dayOffset := uint16(dayBit) * bitsPerDay
-
-	// Scale current slot to bit position within the day (0-7)
-	bitInDay := (currentSlot * bitsPerDay) / (24 * slotsPerHour)
-	if bitInDay < bitsPerDay {
-		return 1 << (dayOffset + bitInDay)
-	}
-
-	return 0
 }
 
 // LoadScheduleRules populates the schedule-to-rule mapping
@@ -213,7 +182,7 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 	return false
 }
 
-// FilterActiveSchedules returns only the schedules that are currently active using efficient bitmask comparison
+// FilterActiveSchedules returns only the schedules that are active at the current time
 func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 	if len(scheduleIDs) == 0 {
 		return nil
@@ -222,15 +191,19 @@ func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
+	now := time.Now()
+
+	// Convert Go's Sunday=0 weekday to Monday=0 format
+	day := uint8((now.Weekday() + 6) % 7)
+
+	// Convert current time to slot number (0-287)
+	slot := uint16(now.Hour()*slotsPerHour + now.Minute()/5)
+
 	// Pre-allocate slice with capacity to avoid reallocations
 	activeScheduleIDs := make([]int, 0, len(scheduleIDs))
 
-	// Get current time as bitmask for comparison
-	currentTimeMask := getCurrentTimeMask()
-
-	// Check each schedule's bitmask against current time
 	for _, scheduleID := range scheduleIDs {
-		if scheduleMask, exists := sc.scheduleMasks[scheduleID]; exists && scheduleMask&currentTimeMask != 0 {
+		if window, exists := sc.scheduleWindows[scheduleID]; exists && window.coversSlot(day, slot) {
 			activeScheduleIDs = append(activeScheduleIDs, scheduleID)
 		}
 	}

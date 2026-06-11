@@ -36,16 +36,17 @@ Transform tasks into verifiable goals before starting:
 
 ## Branch & PR Rules
 
+The repository lives at `blkhole-sh/blkhole` (moved from `Lemon3Studio/blkhole`; the old URL redirects). Since the move there is no `development` branch — `main` is the only long-lived branch.
+
 | Branch | Purpose |
 |--------|---------|
-| `main` | Production — only receives merges from `development` |
-| `development` | Integration — all PRs target this |
+| `main` | Production — all PRs target this |
 | `feat/*` | New features |
 | `fix/*` | Bug fixes |
 
-- Always branch from `development`
+- Always branch from `main`
 - Always submit work via PR — never push directly to any branch
-- PRs always target `development`
+- PRs always target `main`
 
 ## Commit Messages
 

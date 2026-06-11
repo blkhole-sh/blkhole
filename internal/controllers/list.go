@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/repos"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -26,14 +26,40 @@ type ListController interface {
 type listController struct {
 	lists       repos.ListRepo
 	listService services.ListService
+	authService services.AuthService
 }
 
 // NewListController creates a new ListController instance
-func NewListController(listRepo repos.ListRepo, listService services.ListService) ListController {
+func NewListController(listRepo repos.ListRepo, listService services.ListService, authService services.AuthService) ListController {
 	return &listController{
 		lists:       listRepo,
 		listService: listService,
+		authService: authService,
 	}
+}
+
+// requireList loads the list with the given id and verifies it belongs to the
+// authenticated user. On failure it writes an error response and returns false.
+func (lc *listController) requireList(w http.ResponseWriter, r *http.Request, id int) (*model.List, bool) {
+	user, ok := currentUser(w, r, lc.authService)
+	if !ok {
+		return nil, false
+	}
+
+	l, err := lc.lists.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find blocklist in db: %v", err)
+		http.Error(w, "Unable to find blocklist in db", http.StatusNotFound)
+		return nil, false
+	}
+
+	if l.UserID != user.ID {
+		log.Printf("user %d attempted to access list %d owned by %d", user.ID, l.ID, l.UserID)
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return nil, false
+	}
+
+	return l, true
 }
 
 func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +72,13 @@ func (lc *listController) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to decode list from request body", http.StatusBadRequest)
 		return
 	}
+
+	// Always create the list for the authenticated user
+	user, ok := currentUser(w, r, lc.authService)
+	if !ok {
+		return
+	}
+	l.UserID = user.ID
 
 	// Store list into db
 	if _, err := lc.lists.Create(&l); err != nil {
@@ -74,11 +107,9 @@ func (lc *listController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find list in db
-	l, err := lc.lists.FindByID(id)
-	if err != nil {
-		log.Printf("unable to find blocklist in db: %v", err)
-		http.Error(w, "Unable to find blocklist in db", http.StatusNotFound)
+	// Find list in db and verify ownership
+	l, ok := lc.requireList(w, r, id)
+	if !ok {
 		return
 	}
 
@@ -92,6 +123,16 @@ func (lc *listController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("unable to parse userId from path parameter: %v", err)
 		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Users may only list their own blocklists
+	user, ok := currentUser(w, r, lc.authService)
+	if !ok {
+		return
+	}
+	if userID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -137,6 +178,11 @@ func (lc *listController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify list belongs to the authenticated user
+	if _, ok := lc.requireList(w, r, id); !ok {
+		return
+	}
+
 	// Update list in db
 	if err := lc.lists.Update(id, &l); err != nil {
 		log.Printf("failed to update list with id %d: %v", id, err)
@@ -172,10 +218,8 @@ func (lc *listController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l, err := lc.lists.FindByID(id)
-	if err != nil {
-		log.Printf("unable to find list with id %d: %v", id, err)
-		http.Error(w, "Unable to find list", http.StatusNotFound)
+	l, ok := lc.requireList(w, r, id)
+	if !ok {
 		return
 	}
 

@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/repos"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -29,16 +29,54 @@ type scheduleController struct {
 	devices        repos.DeviceRepo
 	lists          repos.ListRepo
 	contentBlocker services.ContentBlocker
+	authService    services.AuthService
 }
 
 // NewScheduleController creates a new ScheduleController instance
-func NewScheduleController(scheduleRepo repos.ScheduleRepo, deviceRepo repos.DeviceRepo, listRepo repos.ListRepo, contentBlocker services.ContentBlocker) ScheduleController {
+func NewScheduleController(scheduleRepo repos.ScheduleRepo, deviceRepo repos.DeviceRepo, listRepo repos.ListRepo, contentBlocker services.ContentBlocker, authService services.AuthService) ScheduleController {
 	return &scheduleController{
 		contentBlocker: contentBlocker,
 		schedules:      scheduleRepo,
 		devices:        deviceRepo,
 		lists:          listRepo,
+		authService:    authService,
 	}
+}
+
+// requireSchedule loads the schedule with the given id and verifies it belongs
+// to the authenticated user. On failure it writes an error response and returns false.
+func (sc *scheduleController) requireSchedule(w http.ResponseWriter, r *http.Request, id int) (*model.Schedule, bool) {
+	user, ok := currentUser(w, r, sc.authService)
+	if !ok {
+		return nil, false
+	}
+
+	s, err := sc.schedules.FindByID(id)
+	if err != nil {
+		log.Printf("unable to find schedule in db: %v", err)
+		http.Error(w, "Unable to find schedule in db", http.StatusNotFound)
+		return nil, false
+	}
+
+	if s.UserID != user.ID {
+		log.Printf("user %d attempted to access schedule %d owned by %d", user.ID, s.ID, s.UserID)
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return nil, false
+	}
+
+	return s, true
+}
+
+// reloadBlocker rebuilds the content blocker cache so schedule changes take
+// effect on DNS blocking immediately. On failure it writes an error response
+// and returns false; the schedule change is already persisted at that point.
+func (sc *scheduleController) reloadBlocker(w http.ResponseWriter) bool {
+	if err := sc.contentBlocker.Reload(); err != nil {
+		log.Printf("failed to reload content blocker: %v", err)
+		http.Error(w, "Schedule was saved but could not be applied to DNS blocking", http.StatusInternalServerError)
+		return false
+	}
+	return true
 }
 
 // IsBlocked handles GET requests to check if a domain is blocked
@@ -69,8 +107,23 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Always create the schedule for the authenticated user
+	user, ok := currentUser(w, r, sc.authService)
+	if !ok {
+		return
+	}
+	s.UserID = user.ID
+
 	// Store schedule into db
-	sc.schedules.Create(&s)
+	if _, err := sc.schedules.Create(&s); err != nil {
+		log.Printf("failed to create schedule: %v", err)
+		http.Error(w, "Unable to create schedule", http.StatusInternalServerError)
+		return
+	}
+
+	if !sc.reloadBlocker(w) {
+		return
+	}
 
 	// Respond with JSON encoded schedule DTO
 	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
@@ -85,11 +138,9 @@ func (sc *scheduleController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find schedule in db
-	s, err := sc.schedules.FindByID(id)
-	if err != nil {
-		log.Printf("unable to find schedule in db: %v", err)
-		http.Error(w, "Unable to find schedule in db", http.StatusNotFound)
+	// Find schedule in db and verify ownership
+	s, ok := sc.requireSchedule(w, r, id)
+	if !ok {
 		return
 	}
 
@@ -103,6 +154,16 @@ func (sc *scheduleController) FindByUser(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Printf("unable to parse userId from path parameter: %v", err)
 		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Users may only list their own schedules
+	user, ok := currentUser(w, r, sc.authService)
+	if !ok {
+		return
+	}
+	if userID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -158,10 +219,8 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := sc.schedules.FindByID(id)
-	if err != nil {
-		log.Printf("unable to find schedule with id %d: %v", id, err)
-		http.Error(w, "Unable to find schedule", http.StatusNotFound)
+	existing, ok := sc.requireSchedule(w, r, id)
+	if !ok {
 		return
 	}
 	if existing.IsDefault && !s.Active {
@@ -173,6 +232,10 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	if err := sc.schedules.Update(id, &s); err != nil {
 		log.Printf("failed to update schedule with id %d: %v", id, err)
 		http.Error(w, "Unable to update schedule", http.StatusInternalServerError)
+		return
+	}
+
+	if !sc.reloadBlocker(w) {
 		return
 	}
 
@@ -209,10 +272,8 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s, err := sc.schedules.FindByID(id)
-	if err != nil {
-		log.Printf("unable to find schedule with id %d: %v", id, err)
-		http.Error(w, "Unable to find schedule", http.StatusNotFound)
+	s, ok := sc.requireSchedule(w, r, id)
+	if !ok {
 		return
 	}
 
@@ -222,7 +283,15 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete schedule from db
-	sc.schedules.Delete(id)
+	if err := sc.schedules.Delete(id); err != nil {
+		log.Printf("failed to delete schedule with id %d: %v", id, err)
+		http.Error(w, "Unable to delete schedule", http.StatusInternalServerError)
+		return
+	}
+
+	if !sc.reloadBlocker(w) {
+		return
+	}
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

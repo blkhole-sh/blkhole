@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/lemon3studio/blkhole/internal/controllers"
-	"github.com/lemon3studio/blkhole/internal/middleware"
+	"github.com/blkhole-sh/blkhole/internal/controllers"
+	"github.com/blkhole-sh/blkhole/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
@@ -20,7 +20,6 @@ func InitAPI(
 	quoteController controllers.QuoteController,
 	mobileConfigController controllers.MobileConfigController,
 	settingsController controllers.SettingsController,
-	testController controllers.TestController,
 	webController controllers.WebController,
 	queryLogController controllers.QueryLogController,
 	tokenAuth *jwtauth.JWTAuth,
@@ -48,7 +47,6 @@ func InitAPI(
 
 			// User API routes
 			r.Get("/users/{id}", userController.FindByID)
-			r.Put("/users", userController.Create)
 			r.Patch("/users/{id}", userController.Update)
 			r.Delete("/users/{id}", userController.Delete)
 
@@ -83,7 +81,4 @@ func InitAPI(
 			r.Get("/users/{userId}/logs/export", queryLogController.ExportLogs)
 		})
 	})
-
-	// Serve test route
-	r.Get("/test", testController.RunTest)
 }

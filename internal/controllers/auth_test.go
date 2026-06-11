@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // MockAuthService is a mock implementation of AuthService
@@ -50,11 +50,6 @@ func (m *MockAuthService) UserFromContext(ctx context.Context) (*model.User, err
 	}
 	return nil, fmt.Errorf("UserFromContextFunc not implemented")
 }
-
-type MockListService struct{}
-
-func (m *MockListService) LoadList(l *model.List) error  { return nil }
-func (m *MockListService) SeedDefaults(userID int) error { return nil }
 
 func TestAuthController_Login(t *testing.T) {
 	tests := []struct {
@@ -125,7 +120,7 @@ func TestAuthController_Login(t *testing.T) {
 			mockService := &MockAuthService{
 				LoginFunc: tt.mockLogin,
 			}
-			controller := NewAuthController(mockService, &MockListService{})
+			controller := NewAuthController(mockService, &MockListService{}, false)
 
 			var body []byte
 			if s, ok := tt.requestBody.(string); ok {
@@ -224,14 +219,14 @@ func TestAuthController_Register(t *testing.T) {
 			},
 			mockRegister:   nil,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "Password must be at least 8 characters",
+			expectedBody:   "Password must be at least 12 characters",
 			checkCookies:   false,
 		},
 		{
 			name: "Email Already Registered",
 			requestBody: map[string]string{
 				"email":    "existing@example.com",
-				"password": "password123",
+				"password": "password123456",
 			},
 			mockRegister: func(email, password string) (*services.LoginResult, error) {
 				return nil, fmt.Errorf("email already registered")
@@ -242,12 +237,17 @@ func TestAuthController_Register(t *testing.T) {
 		},
 	}
 
+	// Stub the HIBP breach check so tests don't hit the network
+	origCheck := checkPasswordPwned
+	checkPasswordPwned = func(string) (bool, error) { return false, nil }
+	defer func() { checkPasswordPwned = origCheck }()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := &MockAuthService{
 				RegisterFunc: tt.mockRegister,
 			}
-			controller := NewAuthController(mockService, &MockListService{})
+			controller := NewAuthController(mockService, &MockListService{}, false)
 
 			var body []byte
 			if s, ok := tt.requestBody.(string); ok {
@@ -343,7 +343,7 @@ func TestAuthController_RefreshToken(t *testing.T) {
 			mockService := &MockAuthService{
 				RefreshTokenFunc: tt.mockRefresh,
 			}
-			controller := NewAuthController(mockService, &MockListService{})
+			controller := NewAuthController(mockService, &MockListService{}, false)
 
 			req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
 			if tt.cookieValue != "" {
@@ -395,7 +395,7 @@ func TestAuthController_RefreshToken(t *testing.T) {
 }
 
 func TestAuthController_Logout(t *testing.T) {
-	controller := NewAuthController(&MockAuthService{}, &MockListService{})
+	controller := NewAuthController(&MockAuthService{}, &MockListService{}, false)
 
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	w := httptest.NewRecorder()
@@ -458,7 +458,7 @@ func TestAuthController_GetCurrentUser(t *testing.T) {
 			mockService := &MockAuthService{
 				UserFromContextFunc: tt.mockUser,
 			}
-			controller := NewAuthController(mockService, &MockListService{})
+			controller := NewAuthController(mockService, &MockListService{}, false)
 
 			req := httptest.NewRequest(http.MethodGet, "/me", nil)
 			w := httptest.NewRecorder()

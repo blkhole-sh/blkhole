@@ -3,7 +3,7 @@ package cache
 import (
 	"testing"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 func TestDeviceCache_GetDeviceID_Hit(t *testing.T) {

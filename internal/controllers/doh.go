@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/middleware"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/middleware"
+	"github.com/blkhole-sh/blkhole/internal/services"
 
 	"github.com/miekg/dns"
 )
@@ -85,8 +85,12 @@ func (dc *dohController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	resp, err := dc.resolver.Resolve(msg, deviceHash)
 	if err != nil {
 		log.Printf("failed to resolve dns query: %v", err)
-		http.Error(w, "Failed to resolve DNS query", http.StatusInternalServerError)
-		return
+	}
+
+	// If no response is available, reply with SERVFAIL
+	if resp == nil {
+		resp = new(dns.Msg)
+		resp.SetRcode(msg, dns.RcodeServerFailure)
 	}
 
 	// Pack and send the DNS response

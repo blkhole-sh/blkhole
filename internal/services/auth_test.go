@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 )
 
 func TestAuthService_Register(t *testing.T) {

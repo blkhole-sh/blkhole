@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/middleware"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/middleware"
 	"github.com/miekg/dns"
 )
 
@@ -195,8 +195,16 @@ func TestDOHController_DNSQuery_ResolveError(t *testing.T) {
 
 	controller.DNSQuery(w, req)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	resp := new(dns.Msg)
+	if err := resp.Unpack(w.Body.Bytes()); err != nil {
+		t.Fatalf("failed to unpack DNS response: %v", err)
+	}
+	if resp.Rcode != dns.RcodeServerFailure {
+		t.Errorf("Expected SERVFAIL (%d), got %d", dns.RcodeServerFailure, resp.Rcode)
 	}
 }
 

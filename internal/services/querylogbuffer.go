@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 )
 
 type queryLogEntry struct {
