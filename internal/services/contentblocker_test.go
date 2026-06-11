@@ -182,6 +182,7 @@ func createTestSchedule(t *testing.T, schedules repos.ScheduleRepo, rules repos.
 	schedule := &model.Schedule{
 		Name:      "Test Schedule",              // Human-readable name
 		UserID:    userID,                       // Links schedule to its owner
+		Active:    true,                         // Schedule is enabled
 		StartTime: startStr,                     // Start time in HH:MM format
 		EndTime:   endStr,                       // End time in HH:MM format
 		Monday:    now.Weekday() == time.Monday, // Active on current day
@@ -452,6 +453,7 @@ func TestContentBlocker_TimeBasedBlocking(t *testing.T) {
 	schedule := &model.Schedule{
 		Name:      "Inactive Schedule",
 		UserID:    userID,
+		Active:    true,
 		StartTime: yesterdayStart.Format("15:04"),     // Use yesterday's time
 		EndTime:   yesterdayEnd.Format("15:04"),       // End time 1 hour later
 		Monday:    yesterday.Weekday() == time.Monday, // Active only on yesterday's day
@@ -877,6 +879,7 @@ func TestContentBlocker_RealWorldData(t *testing.T) {
 	schedule := &model.Schedule{
 		Name:      "Base Protection",
 		UserID:    userID,
+		Active:    true,
 		StartTime: "00:00",
 		EndTime:   "23:55",
 		Monday:    true,

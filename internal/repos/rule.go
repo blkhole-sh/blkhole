@@ -157,33 +157,49 @@ func (rr *ruleRepo) BatchCreateOrGet(rules []*model.Rule) error {
 // Update modifies an existing rule with given ID in the database if not referenced
 func (rr *ruleRepo) Update(id int, r *model.Rule) error {
 	query := `UPDATE rule SET domain_id=?, allowed=? WHERE id = ? AND id NOT IN (
-		SELECT DISTINCT rule_id FROM list_rule 
-		UNION 
+		SELECT DISTINCT rule_id FROM list_rule
+		UNION
 		SELECT DISTINCT rule_id FROM schedule_rule
 	)`
 
-	_, err := rr.db.ExecContext(rr.ctx, query, r.DomainID, r.Allowed, id)
+	result, err := rr.db.ExecContext(rr.ctx, query, r.DomainID, r.Allowed, id)
 	if err != nil {
 		return err
 	}
 
-	return err
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("rule %d not updated: missing or referenced by a list or schedule", id)
+	}
+
+	return nil
 }
 
 // Delete removes an existing rule with given ID from the database if not referenced
 func (rr *ruleRepo) Delete(id int) error {
 	query := `DELETE FROM rule WHERE id = ? AND id NOT IN (
-		SELECT DISTINCT rule_id FROM list_rule 
-		UNION 
+		SELECT DISTINCT rule_id FROM list_rule
+		UNION
 		SELECT DISTINCT rule_id FROM schedule_rule
 	)`
 
-	_, err := rr.db.ExecContext(rr.ctx, query, id)
+	result, err := rr.db.ExecContext(rr.ctx, query, id)
 	if err != nil {
 		return err
 	}
 
-	return err
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("rule %d not deleted: missing or referenced by a list or schedule", id)
+	}
+
+	return nil
 }
 
 // FindAll returns all existing rules from the database

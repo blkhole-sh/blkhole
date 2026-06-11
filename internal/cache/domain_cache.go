@@ -62,13 +62,8 @@ func (dc *domainCache) LoadRules(rules []*model.Rule) {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
 
-	bildCount := 0
 	for _, r := range rules {
 		dc.domainToRule[r.DomainID] = append(dc.domainToRule[r.DomainID], r.ID)
-		// Debug bild.de related rules
-		if r.DomainID == 279661 || r.DomainID == 279660 || (r.DomainID >= 12270 && r.DomainID <= 12280) {
-			bildCount++
-		}
 	}
 }
 

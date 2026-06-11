@@ -28,15 +28,41 @@ type deviceController struct {
 	devices       repos.DeviceRepo
 	schedules     repos.ScheduleRepo
 	cryptoService services.CryptoService
+	authService   services.AuthService
 }
 
 // NewDeviceController creates a new DeviceController instance
-func NewDeviceController(deviceRepo repos.DeviceRepo, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService) DeviceController {
+func NewDeviceController(deviceRepo repos.DeviceRepo, scheduleRepo repos.ScheduleRepo, cryptoService services.CryptoService, authService services.AuthService) DeviceController {
 	return &deviceController{
 		devices:       deviceRepo,
 		schedules:     scheduleRepo,
 		cryptoService: cryptoService,
+		authService:   authService,
 	}
+}
+
+// requireDevice loads the device with the given id and verifies it belongs to
+// the authenticated user. On failure it writes an error response and returns false.
+func (dc *deviceController) requireDevice(w http.ResponseWriter, r *http.Request, id int) (*model.Device, bool) {
+	user, ok := currentUser(w, r, dc.authService)
+	if !ok {
+		return nil, false
+	}
+
+	d, err := dc.devices.FindByID(id)
+	if err != nil {
+		log.Printf("failed to find device by id %d: %v", id, err)
+		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+		return nil, false
+	}
+
+	if d.UserID != user.ID {
+		log.Printf("user %d attempted to access device %d owned by %d", user.ID, d.ID, d.UserID)
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return nil, false
+	}
+
+	return d, true
 }
 
 func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +75,13 @@ func (dc *deviceController) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to decode device from request body", http.StatusBadRequest)
 		return
 	}
+
+	// Always create the device for the authenticated user
+	user, ok := currentUser(w, r, dc.authService)
+	if !ok {
+		return
+	}
+	d.UserID = user.ID
 
 	hash, err := dc.cryptoService.RandomHash()
 	if err != nil {
@@ -79,10 +112,8 @@ func (dc *deviceController) FindByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := dc.devices.FindByID(id)
-	if err != nil {
-		log.Printf("failed to find device by id %d: %v", id, err)
-		http.Error(w, "Unable to find device in db", http.StatusNotFound)
+	d, ok := dc.requireDevice(w, r, id)
+	if !ok {
 		return
 	}
 
@@ -109,6 +140,16 @@ func (dc *deviceController) FindByUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("unable to parse userId from path parameter: %v", err)
 		http.Error(w, "Unable to parse userId from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Users may only list their own devices
+	user, ok := currentUser(w, r, dc.authService)
+	if !ok {
+		return
+	}
+	if userID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -164,6 +205,11 @@ func (dc *deviceController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify device belongs to the authenticated user
+	if _, ok := dc.requireDevice(w, r, id); !ok {
+		return
+	}
+
 	// Update device in db
 	if err := dc.devices.Update(id, &d); err != nil {
 		log.Printf("failed to update device with id %d: %v", id, err)
@@ -201,6 +247,11 @@ func (dc *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("unable to parse id from path parameter: %v", err)
 		http.Error(w, "Unable to parse id from path parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Verify device belongs to the authenticated user
+	if _, ok := dc.requireDevice(w, r, id); !ok {
 		return
 	}
 

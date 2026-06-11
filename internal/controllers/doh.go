@@ -85,6 +85,8 @@ func (dc *dohController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	resp, err := dc.resolver.Resolve(msg, deviceHash)
 	if err != nil {
 		log.Printf("failed to resolve dns query: %v", err)
+	}
+	if resp == nil {
 		http.Error(w, "Failed to resolve DNS query", http.StatusInternalServerError)
 		return
 	}

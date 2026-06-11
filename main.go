@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/controllers"
@@ -26,7 +27,6 @@ import (
 	"github.com/lemon3studio/blkhole/internal/routes"
 	"github.com/lemon3studio/blkhole/internal/servers"
 	"github.com/lemon3studio/blkhole/internal/services"
-	"github.com/lemon3studio/blkhole/internal/test"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/sync/errgroup"
 
@@ -64,13 +64,13 @@ var (
 	queryLogs repos.QueryLogRepo
 
 	// Services
-	contentBlocker  services.ContentBlocker
-	resolver        services.Resolver
-	cryptoService   services.CryptoService
-	listService     services.ListService
-	authService     services.AuthService
-	queryLogBuffer  *services.QueryLogBuffer
-	tokenAuth       *jwtauth.JWTAuth
+	contentBlocker services.ContentBlocker
+	resolver       services.Resolver
+	cryptoService  services.CryptoService
+	listService    services.ListService
+	authService    services.AuthService
+	queryLogBuffer *services.QueryLogBuffer
+	tokenAuth      *jwtauth.JWTAuth
 
 	// Caches
 	statsCache  cache.StatsCache
@@ -89,10 +89,6 @@ var (
 	settingsController     controllers.SettingsController
 	webController          controllers.WebController
 	queryLogController     controllers.QueryLogController
-
-	// Test
-	t              test.Test
-	testController controllers.TestController
 )
 
 func envOrDefault(key, def string) string {
@@ -197,7 +193,7 @@ func initCaches() {
 func initServices(secret []byte, upstreamDNS string) {
 	contentBlocker = services.NewContentBlocker(devices, rules, schedules, domains, deviceCache)
 	queryLogBuffer = services.NewQueryLogBuffer(queryLogs)
-	resolver = services.NewResolver(contentBlocker, statsCache, upstreamDNS, queryLogBuffer)
+	resolver = services.NewResolver(contentBlocker, statsCache, deviceCache, upstreamDNS, queryLogBuffer)
 	cryptoService = services.NewCryptoService(secret)
 	listService = services.NewListService(lists, rules, domains, contentBlocker)
 
@@ -206,30 +202,29 @@ func initServices(secret []byte, upstreamDNS string) {
 }
 
 func initControllers(domain, upstreamDNS string) {
-	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService)
+	// Production mode serves over HTTPS, so auth cookies must be Secure
+	secureCookies := domain != "" && domain != "localhost"
+
+	deviceController = controllers.NewDeviceController(devices, schedules, cryptoService, authService)
 	userController = controllers.NewUserController(users, authService, cryptoService)
 	dohController = controllers.NewDoHController(resolver, upstreamDNS, domain, statsCache)
-	listController = controllers.NewListController(lists, listService)
+	listController = controllers.NewListController(lists, listService, authService)
 	mobileConfigController = controllers.NewMobileConfigController(domain, devices, authService)
-	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker)
+	scheduleController = controllers.NewScheduleController(schedules, devices, lists, contentBlocker, authService)
 	quoteController = controllers.NewQuoteController()
-	authController = controllers.NewAuthController(authService, listService)
-	statsController = controllers.NewStatsController(statsCache, devices, queryLogs)
+	authController = controllers.NewAuthController(authService, listService, secureCookies)
+	statsController = controllers.NewStatsController(statsCache, devices, queryLogs, authService)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
-	queryLogController = controllers.NewQueryLogController(queryLogs)
+	queryLogController = controllers.NewQueryLogController(queryLogs, authService)
 }
 
-func initWebAndTest() {
+func initWeb() {
 	// Initialize frontend controller with embedded assets
 	webSubFS, err := fs.Sub(webFS, "static")
 	if err != nil {
 		log.Fatal(err)
 	}
 	webController = controllers.NewWebController(webSubFS)
-
-	// Initialize test
-	t := test.NewTest(users, devices, rules, lists, listService, schedules, cryptoService, domains, statsCache, deviceCache)
-	testController = controllers.NewTestController(t)
 }
 
 func initTLS(domain string) *tls.Config {
@@ -300,7 +295,7 @@ func initDependencies(cfg *Config) {
 	initCaches()
 	initServices(secret, upstreamDNS)
 	initControllers(cfg.Domain, upstreamDNS)
-	initWebAndTest()
+	initWeb()
 }
 
 func initRouter(cfg *Config) *chi.Mux {
@@ -334,7 +329,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	}))
 
 	// Initialize routes
-	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, testController, webController, queryLogController, tokenAuth)
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, webController, queryLogController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
 	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 
@@ -382,10 +377,15 @@ func main() {
 	// Start background tasks
 	statsCache.Start()
 
-	// Prune query logs older than 90 days
-	if err := queryLogs.DeleteOlderThan(90); err != nil {
-		log.Printf("failed to prune old query logs: %v", err)
-	}
+	// Prune query logs older than 90 days, repeating daily
+	go func() {
+		for {
+			if err := queryLogs.DeleteOlderThan(90); err != nil {
+				log.Printf("failed to prune old query logs: %v", err)
+			}
+			time.Sleep(24 * time.Hour)
+		}
+	}()
 
 	// Initialize HTTP router
 	r := initRouter(cfg)
@@ -412,7 +412,7 @@ func main() {
 
 	if cfg.TLSConfig != nil {
 		g.Go(func() error {
-			err := servers.StartDoT(ctx, resolver, cfg.TLSConfig)
+			err := servers.StartDoT(ctx, resolver, cfg.Domain, cfg.TLSConfig)
 			if err != nil {
 				log.Printf("dot server error: %v", err)
 			}

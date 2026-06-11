@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/lemon3studio/blkhole/internal/cache"
 	"github.com/lemon3studio/blkhole/internal/model"
 	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/lemon3studio/blkhole/internal/services"
 )
 
 // StatsController defines the interface for stats operations
@@ -20,17 +22,19 @@ type StatsController interface {
 
 // statsController implements the StatsController interface
 type statsController struct {
-	statsCache cache.StatsCache
-	devices    repos.DeviceRepo
-	queryLogs  repos.QueryLogRepo
+	statsCache  cache.StatsCache
+	devices     repos.DeviceRepo
+	queryLogs   repos.QueryLogRepo
+	authService services.AuthService
 }
 
 // NewStatsController creates a new StatsController instance
-func NewStatsController(statsCache cache.StatsCache, devices repos.DeviceRepo, queryLogs repos.QueryLogRepo) StatsController {
+func NewStatsController(statsCache cache.StatsCache, devices repos.DeviceRepo, queryLogs repos.QueryLogRepo, authService services.AuthService) StatsController {
 	return &statsController{
-		statsCache: statsCache,
-		devices:    devices,
-		queryLogs:  queryLogs,
+		statsCache:  statsCache,
+		devices:     devices,
+		queryLogs:   queryLogs,
+		authService: authService,
 	}
 }
 
@@ -42,6 +46,16 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Printf("failed to parse userId: %v", err)
 		http.Error(w, "Invalid userId", http.StatusBadRequest)
+		return
+	}
+
+	// Users may only read their own stats
+	user, ok := currentUser(w, r, sc.authService)
+	if !ok {
+		return
+	}
+	if userID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -76,8 +90,8 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 	blocked := sc.statsCache.GetUserBlockedCounts(deviceHashes, timeRange)
 
 	// Merge with DB stats to recover history lost across restarts.
-	// For each bucket: use max(cache, db) — cache wins for live data,
-	// DB fills in buckets the cache doesn't have yet.
+	// The cache is authoritative for buckets it has (the DB may lag behind
+	// unflushed query logs); DB-only buckets fill in pre-restart history.
 	var stepSec int64
 	var span time.Duration
 	switch timeRange {
@@ -95,16 +109,8 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Printf("failed to get db stats: %v", err)
 	} else {
-		for i, s := range total {
-			if dbCount := dbTotal[s.Timestamp]; dbCount > s.Count {
-				total[i].Count = dbCount
-			}
-		}
-		for i, s := range blocked {
-			if dbCount := dbBlocked[s.Timestamp]; dbCount > s.Count {
-				blocked[i].Count = dbCount
-			}
-		}
+		total = mergeCounts(total, dbTotal)
+		blocked = mergeCounts(blocked, dbBlocked)
 	}
 
 	stats := model.QueryStatsDTO{Total: total, Blocked: blocked}
@@ -114,4 +120,32 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Printf("failed to encode response: %v", err)
 	}
+}
+
+// mergeCounts merges cache and DB buckets, taking the larger count per bucket.
+// Timestamps are normalized to UTC so cache (local) and DB (UTC) buckets for
+// the same instant collapse into one.
+func mergeCounts(cacheCounts []model.StatCount, dbCounts map[time.Time]int) []model.StatCount {
+	merged := make(map[time.Time]int, len(cacheCounts)+len(dbCounts))
+	for ts, count := range dbCounts {
+		merged[ts.UTC()] = count
+	}
+	for _, s := range cacheCounts {
+		ts := s.Timestamp.UTC()
+		if s.Count > merged[ts] {
+			merged[ts] = s.Count
+		}
+	}
+
+	result := make([]model.StatCount, 0, len(merged))
+	for ts, count := range merged {
+		result = append(result, model.StatCount{Timestamp: ts, Count: count})
+	}
+
+	// Sort by timestamp for proper chart rendering
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Timestamp.Before(result[j].Timestamp)
+	})
+
+	return result
 }

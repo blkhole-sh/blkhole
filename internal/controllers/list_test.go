@@ -19,10 +19,10 @@ func (m *MockListService) SeedDefaults(userID int) error { return nil }
 
 // MockListRepo satisfies repos.ListRepo
 type MockListRepo struct {
-	CreateFunc    func(l *model.List) (int, error)
-	UpdateFunc    func(id int, l *model.List) error
-	DeleteFunc    func(id int) error
-	FindByIDFunc  func(id int) (*model.List, error)
+	CreateFunc     func(l *model.List) (int, error)
+	UpdateFunc     func(id int, l *model.List) error
+	DeleteFunc     func(id int) error
+	FindByIDFunc   func(id int) (*model.List, error)
 	FindByUserFunc func(userID int) ([]*model.List, error)
 }
 
@@ -45,11 +45,11 @@ func (m *MockListRepo) Delete(id int) error {
 	}
 	return nil
 }
-func (m *MockListRepo) LinkSchedule(id int, scheduleID int) error     { return nil }
-func (m *MockListRepo) LoadRules(id int) ([]model.Rule, error)        { return []model.Rule{}, nil }
-func (m *MockListRepo) GetRuleCount(id int) (int, error)              { return 0, nil }
-func (m *MockListRepo) LoadScheduleIDs(id int) ([]int, error)         { return []int{}, nil }
-func (m *MockListRepo) LoadRelations(l *model.List) error             { return nil }
+func (m *MockListRepo) LinkSchedule(id int, scheduleID int) error { return nil }
+func (m *MockListRepo) LoadRules(id int) ([]model.Rule, error)    { return []model.Rule{}, nil }
+func (m *MockListRepo) GetRuleCount(id int) (int, error)          { return 0, nil }
+func (m *MockListRepo) LoadScheduleIDs(id int) ([]int, error)     { return []int{}, nil }
+func (m *MockListRepo) LoadRelations(l *model.List) error         { return nil }
 func (m *MockListRepo) FindByID(id int) (*model.List, error) {
 	if m.FindByIDFunc != nil {
 		return m.FindByIDFunc(id)
@@ -79,7 +79,7 @@ func TestListController_Create_Success(t *testing.T) {
 			return 10, nil
 		},
 	}
-	controller := NewListController(listRepo, &MockListService{})
+	controller := NewListController(listRepo, &MockListService{}, mockAuth(1))
 
 	body, _ := json.Marshal(map[string]interface{}{"name": "My List", "userId": 1})
 	req := httptest.NewRequest(http.MethodPost, "/lists", bytes.NewBuffer(body))
@@ -92,7 +92,7 @@ func TestListController_Create_Success(t *testing.T) {
 }
 
 func TestListController_Create_InvalidJSON(t *testing.T) {
-	controller := NewListController(&MockListRepo{}, &MockListService{})
+	controller := NewListController(&MockListRepo{}, &MockListService{}, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodPost, "/lists", bytes.NewBufferString("bad"))
 	rr := httptest.NewRecorder()
@@ -106,10 +106,10 @@ func TestListController_Create_InvalidJSON(t *testing.T) {
 func TestListController_FindByID_Success(t *testing.T) {
 	listRepo := &MockListRepo{
 		FindByIDFunc: func(id int) (*model.List, error) {
-			return &model.List{ID: id, Name: "Found List"}, nil
+			return &model.List{ID: id, Name: "Found List", UserID: 1}, nil
 		},
 	}
-	controller := NewListController(listRepo, &MockListService{})
+	controller := NewListController(listRepo, &MockListService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/lists/1", nil), "id", "1")
 	rr := httptest.NewRecorder()
@@ -120,8 +120,25 @@ func TestListController_FindByID_Success(t *testing.T) {
 	}
 }
 
+func TestListController_FindByID_OtherUsersList_Forbidden(t *testing.T) {
+	listRepo := &MockListRepo{
+		FindByIDFunc: func(id int) (*model.List, error) {
+			return &model.List{ID: id, Name: "Found List", UserID: 2}, nil
+		},
+	}
+	controller := NewListController(listRepo, &MockListService{}, mockAuth(1))
+
+	req := withParam(httptest.NewRequest(http.MethodGet, "/lists/1", nil), "id", "1")
+	rr := httptest.NewRecorder()
+	controller.FindByID(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rr.Code)
+	}
+}
+
 func TestListController_FindByID_BadParam(t *testing.T) {
-	controller := NewListController(&MockListRepo{}, &MockListService{})
+	controller := NewListController(&MockListRepo{}, &MockListService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/lists/abc", nil), "id", "abc")
 	rr := httptest.NewRecorder()
@@ -136,7 +153,7 @@ func TestListController_FindByID_NotFound(t *testing.T) {
 	listRepo := &MockListRepo{
 		FindByIDFunc: func(id int) (*model.List, error) { return nil, fmt.Errorf("not found") },
 	}
-	controller := NewListController(listRepo, &MockListService{})
+	controller := NewListController(listRepo, &MockListService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/lists/99", nil), "id", "99")
 	rr := httptest.NewRecorder()
@@ -153,7 +170,7 @@ func TestListController_FindByUser_Success(t *testing.T) {
 			return []*model.List{{ID: 1, Name: "L1"}, {ID: 2, Name: "L2"}}, nil
 		},
 	}
-	controller := NewListController(listRepo, &MockListService{})
+	controller := NewListController(listRepo, &MockListService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/lists", nil), "userId", "1")
 	rr := httptest.NewRecorder()
@@ -173,10 +190,10 @@ func TestListController_FindByUser_Success(t *testing.T) {
 func TestListController_Delete_Success(t *testing.T) {
 	repo := &MockListRepo{
 		FindByIDFunc: func(id int) (*model.List, error) {
-			return &model.List{ID: id, IsDefault: false}, nil
+			return &model.List{ID: id, IsDefault: false, UserID: 1}, nil
 		},
 	}
-	controller := NewListController(repo, &MockListService{})
+	controller := NewListController(repo, &MockListService{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/lists/1", nil), "id", "1")
 	rr := httptest.NewRecorder()

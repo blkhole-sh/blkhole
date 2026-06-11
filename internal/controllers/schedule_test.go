@@ -50,7 +50,7 @@ func TestScheduleController_IsBlocked_Blocked(t *testing.T) {
 	blocker := &MockContentBlocker{
 		IsBlockedFunc: func(domain, _ string) (bool, error) { return true, nil },
 	}
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker)
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodGet, "/schedule/isblocked?domain=evil.com&deviceHash=abc", nil)
 	rr := httptest.NewRecorder()
@@ -68,7 +68,7 @@ func TestScheduleController_IsBlocked_NotBlocked(t *testing.T) {
 	blocker := &MockContentBlocker{
 		IsBlockedFunc: func(_, _ string) (bool, error) { return false, nil },
 	}
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker)
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodGet, "/schedule/isblocked?domain=google.com&deviceHash=abc", nil)
 	rr := httptest.NewRecorder()
@@ -83,7 +83,7 @@ func TestScheduleController_IsBlocked_Error(t *testing.T) {
 	blocker := &MockContentBlocker{
 		IsBlockedFunc: func(_, _ string) (bool, error) { return false, fmt.Errorf("invalid") },
 	}
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker)
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, blocker, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodGet, "/schedule/isblocked?domain=bad..domain", nil)
 	rr := httptest.NewRecorder()
@@ -96,7 +96,7 @@ func TestScheduleController_IsBlocked_Error(t *testing.T) {
 
 func TestScheduleController_Create_Success(t *testing.T) {
 	schedRepo := &MockScheduleRepoFull{}
-	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"name":      "Morning",
@@ -114,7 +114,7 @@ func TestScheduleController_Create_Success(t *testing.T) {
 }
 
 func TestScheduleController_Create_InvalidJSON(t *testing.T) {
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	req := httptest.NewRequest(http.MethodPost, "/schedules", bytes.NewBufferString("bad"))
 	rr := httptest.NewRecorder()
@@ -126,7 +126,7 @@ func TestScheduleController_Create_InvalidJSON(t *testing.T) {
 }
 
 func TestScheduleController_FindByID_BadParam(t *testing.T) {
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/schedules/abc", nil), "id", "abc")
 	rr := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestScheduleController_FindByID_NotFound(t *testing.T) {
 	schedRepo := &MockScheduleRepoFull{
 		FindByIDFn: func(id int) (*model.Schedule, error) { return nil, fmt.Errorf("not found") },
 	}
-	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodGet, "/schedules/99", nil), "id", "99")
 	rr := httptest.NewRecorder()
@@ -155,10 +155,10 @@ func TestScheduleController_FindByID_NotFound(t *testing.T) {
 func TestScheduleController_Delete_Success(t *testing.T) {
 	repo := &MockScheduleRepoFull{
 		FindByIDFn: func(id int) (*model.Schedule, error) {
-			return &model.Schedule{ID: id, IsDefault: false}, nil
+			return &model.Schedule{ID: id, IsDefault: false, UserID: 1}, nil
 		},
 	}
-	controller := NewScheduleController(repo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(repo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/schedules/1", nil), "id", "1")
 	rr := httptest.NewRecorder()
@@ -170,7 +170,7 @@ func TestScheduleController_Delete_Success(t *testing.T) {
 }
 
 func TestScheduleController_Delete_BadParam(t *testing.T) {
-	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{})
+	controller := NewScheduleController(&MockScheduleRepo{}, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
 
 	req := withParam(httptest.NewRequest(http.MethodDelete, "/schedules/abc", nil), "id", "abc")
 	rr := httptest.NewRecorder()

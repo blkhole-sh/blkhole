@@ -362,7 +362,7 @@ func (sr *scheduleRepo) FindByUser(userID int) ([]*model.Schedule, error) {
 
 // FindAll returns all existing schedules from the database
 func (sr *scheduleRepo) FindAll() ([]*model.Schedule, error) {
-	query := "SELECT id, name, start_time, end_time, days, user_id FROM schedule"
+	query := "SELECT id, name, start_time, end_time, days, active, user_id, is_default FROM schedule"
 	var dbRows []dbSchedule
 
 	if err := sqlscan.Select(sr.ctx, sr.db, &dbRows, query); err != nil {

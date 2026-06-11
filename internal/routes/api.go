@@ -20,7 +20,6 @@ func InitAPI(
 	quoteController controllers.QuoteController,
 	mobileConfigController controllers.MobileConfigController,
 	settingsController controllers.SettingsController,
-	testController controllers.TestController,
 	webController controllers.WebController,
 	queryLogController controllers.QueryLogController,
 	tokenAuth *jwtauth.JWTAuth,
@@ -48,7 +47,6 @@ func InitAPI(
 
 			// User API routes
 			r.Get("/users/{id}", userController.FindByID)
-			r.Put("/users", userController.Create)
 			r.Patch("/users/{id}", userController.Update)
 			r.Delete("/users/{id}", userController.Delete)
 
@@ -83,7 +81,4 @@ func InitAPI(
 			r.Get("/users/{userId}/logs/export", queryLogController.ExportLogs)
 		})
 	})
-
-	// Serve test route
-	r.Get("/test", testController.RunTest)
 }

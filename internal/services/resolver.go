@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -18,16 +19,18 @@ type Resolver interface {
 type resolver struct {
 	contentBlocker ContentBlocker
 	statsCache     cache.StatsCache
+	deviceCache    cache.DeviceCache
 	upstreamDNS    string
 	dnsClient      *dns.Client
 	queryLog       *QueryLogBuffer
 }
 
 // NewResolver creates a new Resolver instance
-func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, upstreamDNS string, queryLog *QueryLogBuffer) Resolver {
+func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, deviceCache cache.DeviceCache, upstreamDNS string, queryLog *QueryLogBuffer) Resolver {
 	return &resolver{
 		contentBlocker: contentBlocker,
 		statsCache:     statsCache,
+		deviceCache:    deviceCache,
 		upstreamDNS:    upstreamDNS,
 		queryLog:       queryLog,
 		dnsClient: &dns.Client{
@@ -39,22 +42,32 @@ func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, ups
 
 // Resolve proccesses a DNS message and returns the answer message
 func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
-	// Increment query count for this device
-	// TODO: Check if device exists in cache, otherwise return DNS error
-	if deviceHash != "" {
-		r.statsCache.Increment(deviceHash)
-	}
-
 	// Create the response message
 	response := new(dns.Msg)
 	response.SetReply(msg)
+
+	// Refuse queries for unknown devices
+	if deviceHash != "" {
+		if _, ok := r.deviceCache.GetDeviceID(deviceHash); !ok {
+			response.SetRcode(msg, dns.RcodeRefused)
+			return response, nil
+		}
+
+		// Increment query count for this device
+		r.statsCache.Increment(deviceHash)
+	}
 
 	// Check if any domain should be blocked
 	blocked := false
 	for _, question := range msg.Question {
 		domain := strings.TrimSuffix(question.Name, ".")
 		isBlocked, err := r.contentBlocker.IsBlocked(domain, deviceHash)
-		if isBlocked || err != nil {
+		if err != nil {
+			// A failed check (e.g. unusual domain format) must not block the query
+			log.Printf("content blocker check failed for %q: %v", domain, err)
+			continue
+		}
+		if isBlocked {
 			blocked = true
 			break
 		}
@@ -82,11 +95,9 @@ func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
 	// Forward the DNS query to the upstream server
 	res, _, err := r.dnsClient.Exchange(msg, r.upstreamDNS)
 	if err != nil {
-		log.Printf("failed to forward dns query to upstream server: %v", err)
-
 		// Set SERVFAIL in case of an upstream failure
 		response.SetRcode(msg, dns.RcodeServerFailure)
-		return response, nil
+		return response, fmt.Errorf("failed to forward dns query to upstream server: %w", err)
 	}
 
 	// Append the answer from the upstream server
