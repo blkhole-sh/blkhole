@@ -103,7 +103,7 @@ func initConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Port, "p", envOrDefault("BLKHOLE_PORT", ""), "HTTP port (local mode only, mutually exclusive with -d)")
 	flag.StringVar(&cfg.Domain, "d", envOrDefault("BLKHOLE_DOMAIN", "localhost"), "Domain for HTTPS with autocert (production mode, mutually exclusive with -p)")
-	flag.StringVar(&cfg.UpstreamDNS, "u", envOrDefault("BLKHOLE_UPSTREAM_DNS", "1.1.1.1:53"), "Upstream DNS server")
+	flag.StringVar(&cfg.UpstreamDNS, "u", envOrDefault("BLKHOLE_UPSTREAM_DNS", "9.9.9.9:53"), "Upstream DNS server")
 	flag.StringVar(&cfg.Secret, "s", envOrDefault("BLKHOLE_SECRET", ""), "JWT secret (hex)")
 
 	flag.Parse()
