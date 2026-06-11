@@ -87,26 +87,54 @@ fly deploy
 
 ## Running
 
-```sh
-# Production: HTTPS with automatic certificates, DoT on :853
-blkhole -d yourdomain.com -s $(openssl rand -hex 32)
+blkhole runs in one of two modes.
 
-# Local: plain HTTP, no TLS, no DoT
+### Standalone (recommended)
+
+blkhole terminates TLS itself, with automatic certificates from Let's
+Encrypt. This is the only mode that serves DNS-over-TLS, which Android's
+Private DNS setting requires.
+
+```sh
+blkhole -d yourdomain.com -s $(openssl rand -hex 32)
+```
+
+Ports 80, 443, and 853 must be reachable, and your domain's DNS (including
+a wildcard for the device subdomains) must point at the server, or autocert
+can't issue certificates.
+
+### Plain HTTP (testing, reverse proxy)
+
+For local testing, or behind a reverse proxy that terminates TLS:
+
+```sh
 blkhole -p 8080 -s $(openssl rand -hex 32)
 ```
 
+The web UI and DoH work fine through a proxy. DoT does not: the DoT
+listener only runs in standalone mode, and device identification relies on
+blkhole seeing the TLS handshake itself. iOS, macOS, and browsers all use
+DoH, so a proxy setup covers them; Android Private DNS won't work.
+
+A minimal Caddyfile (the wildcard is needed for the device subdomains and
+requires a DNS-challenge plugin in Caddy):
+
+```
+yourdomain.com, *.yourdomain.com {
+    reverse_proxy localhost:8080
+}
+```
+
+### Flags
+
 | Flag | Env var | Description | Default |
 |---|---|---|---|
-| `-d <domain>` | `BLKHOLE_DOMAIN` | Production mode: HTTPS with autocert | none |
-| `-p <port>` | `BLKHOLE_PORT` | Local mode: plain HTTP | none |
+| `-d <domain>` | `BLKHOLE_DOMAIN` | Standalone mode: HTTPS with autocert, DoT on 853 | none |
+| `-p <port>` | `BLKHOLE_PORT` | Plain HTTP mode | none |
 | `-u <host:port>` | `BLKHOLE_UPSTREAM_DNS` | Upstream DNS server | `9.9.9.9:53` |
 | `-s <hex>` | `BLKHOLE_SECRET` | JWT secret (hex-encoded, 32 bytes) | none, required |
 
 `-d` and `-p` are mutually exclusive. One is required.
-
-Production mode needs ports 80 and 443 reachable and your domain's DNS
-(including a wildcard for the device subdomains) pointing at the server, or
-autocert can't issue certificates.
 
 ## First steps
 
