@@ -112,6 +112,9 @@ func initConfig() (*Config, error) {
 	if cfg.Domain == "" && cfg.Port == "" {
 		return nil, fmt.Errorf("either -p (local mode) or -d (production mode) is required")
 	}
+	if cfg.Port != "" && cfg.Domain != "" && cfg.Domain != "localhost" {
+		return nil, fmt.Errorf("-p (local mode) and -d (production mode) are mutually exclusive")
+	}
 
 	// Validate common required flags
 	var missing []string

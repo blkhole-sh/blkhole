@@ -68,11 +68,15 @@ func (sc *scheduleController) requireSchedule(w http.ResponseWriter, r *http.Req
 }
 
 // reloadBlocker rebuilds the content blocker cache so schedule changes take
-// effect on DNS blocking immediately.
-func (sc *scheduleController) reloadBlocker() {
+// effect on DNS blocking immediately. On failure it writes an error response
+// and returns false; the schedule change is already persisted at that point.
+func (sc *scheduleController) reloadBlocker(w http.ResponseWriter) bool {
 	if err := sc.contentBlocker.Reload(); err != nil {
 		log.Printf("failed to reload content blocker: %v", err)
+		http.Error(w, "Schedule was saved but could not be applied to DNS blocking", http.StatusInternalServerError)
+		return false
 	}
+	return true
 }
 
 // IsBlocked handles GET requests to check if a domain is blocked
@@ -117,7 +121,9 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sc.reloadBlocker()
+	if !sc.reloadBlocker(w) {
+		return
+	}
 
 	// Respond with JSON encoded schedule DTO
 	json.NewEncoder(w).Encode(s.ToDTO(nil, nil))
@@ -229,7 +235,9 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sc.reloadBlocker()
+	if !sc.reloadBlocker(w) {
+		return
+	}
 
 	// Fetch the updated schedule from database
 	updatedSchedule, err := sc.schedules.FindByID(id)
@@ -281,7 +289,9 @@ func (sc *scheduleController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sc.reloadBlocker()
+	if !sc.reloadBlocker(w) {
+		return
+	}
 
 	// Respond with status no content
 	w.WriteHeader(http.StatusNoContent)

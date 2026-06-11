@@ -22,7 +22,8 @@ func deviceHashFromSNI(w dns.ResponseWriter, domain string) string {
 	if state == nil {
 		return ""
 	}
-	host := state.ServerName
+	host := strings.TrimSuffix(strings.ToLower(state.ServerName), ".")
+	domain = strings.TrimSuffix(strings.ToLower(domain), ".")
 	if host != domain && strings.HasSuffix(host, "."+domain) {
 		return strings.TrimSuffix(host, "."+domain)
 	}

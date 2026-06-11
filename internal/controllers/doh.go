@@ -86,9 +86,11 @@ func (dc *dohController) DNSQuery(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("failed to resolve dns query: %v", err)
 	}
+
+	// If no response is available, reply with SERVFAIL
 	if resp == nil {
-		http.Error(w, "Failed to resolve DNS query", http.StatusInternalServerError)
-		return
+		resp = new(dns.Msg)
+		resp.SetRcode(msg, dns.RcodeServerFailure)
 	}
 
 	// Pack and send the DNS response
