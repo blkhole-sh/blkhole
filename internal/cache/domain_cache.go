@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // DomainCache provides fast domain-to-rule lookups using a radix tree

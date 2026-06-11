@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	schema "github.com/lemon3studio/blkhole/internal/db"
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	schema "github.com/blkhole-sh/blkhole/internal/db"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver for in-memory test database
 )

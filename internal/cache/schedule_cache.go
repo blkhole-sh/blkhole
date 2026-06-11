@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 const slotsPerHour = 12 // 5-minute slots per hour (60/5)

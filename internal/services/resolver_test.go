@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/model"
 	"github.com/miekg/dns"
 )
 

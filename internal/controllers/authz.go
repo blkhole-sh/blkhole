@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/lemon3studio/blkhole/internal/model"
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // currentUser extracts the authenticated user from the request context.

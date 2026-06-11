@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/lemon3studio/blkhole/internal/controllers"
-	"github.com/lemon3studio/blkhole/internal/middleware"
+	"github.com/blkhole-sh/blkhole/internal/controllers"
+	"github.com/blkhole-sh/blkhole/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"

@@ -1,4 +1,4 @@
-module github.com/lemon3studio/blkhole
+module github.com/blkhole-sh/blkhole
 
 go 1.25.0
 

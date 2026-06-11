@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // setupTestCache creates a DeviceCache with a predefined device and a new StatsCache

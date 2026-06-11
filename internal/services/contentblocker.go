@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
-	"github.com/lemon3studio/blkhole/internal/repos"
+	"github.com/blkhole-sh/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 )
 
 // domainRegex is used to check for valid domain format

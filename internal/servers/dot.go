@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/services"
 	"github.com/miekg/dns"
 )
 

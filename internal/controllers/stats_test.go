@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/model"
 )
 
 // MockQueryLogRepo is a no-op QueryLogRepo for tests that don't need DB stats.

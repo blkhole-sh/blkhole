@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/services"
+	"github.com/blkhole-sh/blkhole/internal/services"
 )
 
 // AuthController defines the interface for authentication operations

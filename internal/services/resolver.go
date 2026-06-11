@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lemon3studio/blkhole/internal/cache"
+	"github.com/blkhole-sh/blkhole/internal/cache"
 	"github.com/miekg/dns"
 )
 
