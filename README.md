@@ -41,8 +41,6 @@ resolver (Cloudflare by default, configurable).
 Queries from hashes it doesn't know get refused, so the server can't be
 used as an open resolver.
 
-![Schedules screen with two schedules, each with its own timing, devices, and blocklists](docs/schedules.png)
-
 ## Installation
 
 ### go install
