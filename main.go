@@ -296,13 +296,14 @@ func initTLS(domain string) *tls.Config {
 	tlsConfig := m.TLSConfig()
 	originalGetCert := tlsConfig.GetCertificate
 	tlsConfig.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		log.Printf("TLS: GetCertificate called for domain: %s", hello.ServerName)
+		remote := hello.Conn.RemoteAddr()
+		log.Printf("TLS: GetCertificate called for domain: %s (remote: %s)", hello.ServerName, remote)
 		cert, err := originalGetCert(hello)
 		if err != nil {
-			log.Printf("TLS: GetCertificate error for %s: %v", hello.ServerName, err)
+			log.Printf("TLS: GetCertificate error for %s (remote: %s): %v", hello.ServerName, remote, err)
 			return nil, err
 		}
-		log.Printf("TLS: GetCertificate success for %s", hello.ServerName)
+		log.Printf("TLS: GetCertificate success for %s (remote: %s)", hello.ServerName, remote)
 		return cert, nil
 	}
 
