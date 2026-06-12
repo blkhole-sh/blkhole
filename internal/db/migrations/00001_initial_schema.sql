@@ -1,3 +1,4 @@
+-- +goose Up
 -- Create user table:
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS list (
     source TEXT,
     user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
     count INTEGER NOT NULL DEFAULT 0,
+    is_default INTEGER NOT NULL DEFAULT 0,
     UNIQUE(name, user_id)
 );
 
@@ -110,3 +112,16 @@ CREATE INDEX IF NOT EXISTS idx_list_schedule_schedule_id ON list_schedule(schedu
 CREATE INDEX IF NOT EXISTS idx_list_rule_rule_id ON list_rule(rule_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_rule_rule_id ON schedule_rule(rule_id);
 CREATE INDEX IF NOT EXISTS idx_query_log_device ON query_log(device_hash, timestamp);
+
+-- +goose Down
+DROP TABLE IF EXISTS query_log;
+DROP TABLE IF EXISTS schedule_rule;
+DROP TABLE IF EXISTS list_rule;
+DROP TABLE IF EXISTS list_schedule;
+DROP TABLE IF EXISTS device_schedule;
+DROP TABLE IF EXISTS schedule;
+DROP TABLE IF EXISTS list;
+DROP TABLE IF EXISTS rule;
+DROP TABLE IF EXISTS domain;
+DROP TABLE IF EXISTS device;
+DROP TABLE IF EXISTS user;

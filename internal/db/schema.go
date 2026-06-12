@@ -3,14 +3,14 @@ package db
 
 import (
 	"database/sql"
-	_ "embed"
-	"strings"
+	"embed"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose/v3"
 )
 
-//go:embed schema.sql
-var schemaSQL string
+//go:embed migrations/*.sql
+var migrations embed.FS
 
 func Init(db *sql.DB) error {
 	// Enable foreign keys
@@ -25,142 +25,9 @@ func Init(db *sql.DB) error {
 		return err
 	}
 
-	// Execute the embedded SQL script
-	_, err = db.Exec(schemaSQL)
-	if err != nil {
+	goose.SetBaseFS(migrations)
+	if err := goose.SetDialect("sqlite3"); err != nil {
 		return err
 	}
-
-	// Migration: Add count column to list table if it doesn't exist (for existing DBs)
-	// Since SQLite doesn't support IF NOT EXISTS in ADD COLUMN, we'll try and ignore the error
-	// if it says duplicate column name.
-	_, err = db.Exec("ALTER TABLE list ADD COLUMN count INTEGER NOT NULL DEFAULT 0;")
-	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return err
-	}
-
-	// Calculate and update count for all lists to ensure consistency
-	_, err = db.Exec("UPDATE list SET count = (SELECT COUNT(*) FROM list_rule WHERE list_id = list.id);")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("ALTER TABLE list ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0;")
-	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return err
-	}
-
-	_, err = db.Exec("ALTER TABLE schedule ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0;")
-	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return err
-	}
-
-	// Migration: change list.name unique constraint from global to per-user UNIQUE(name, user_id).
-	// SQLite can't drop constraints, so we recreate the table when the old definition is detected.
-	var listSQL string
-	err = db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='list'`).Scan(&listSQL)
-	if err != nil {
-		return err
-	}
-	if strings.Contains(listSQL, "name TEXT UNIQUE") {
-		_, err = db.Exec(`PRAGMA foreign_keys = OFF`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`
-			CREATE TABLE list_new (
-				id INTEGER PRIMARY KEY,
-				name TEXT NOT NULL,
-				description TEXT,
-				source TEXT,
-				user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
-				count INTEGER NOT NULL DEFAULT 0,
-				UNIQUE(name, user_id)
-			)
-		`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`INSERT INTO list_new SELECT id, name, description, source, user_id, count FROM list`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`DROP TABLE list`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`ALTER TABLE list_new RENAME TO list`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`PRAGMA foreign_keys = ON`)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Migration: remove CHECK (start_time < end_time) constraint to allow all-day schedules (00:00–00:00).
-	// SQLite can't drop constraints, so we detect the old definition and recreate the table.
-	var schedSQL string
-	err = db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='schedule'`).Scan(&schedSQL)
-	if err != nil {
-		return err
-	}
-	if strings.Contains(schedSQL, "start_time < end_time") {
-		_, err = db.Exec(`PRAGMA foreign_keys = OFF`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`
-			CREATE TABLE schedule_new (
-				id INTEGER PRIMARY KEY,
-				name TEXT NOT NULL,
-				start_time TEXT NOT NULL,
-				end_time TEXT NOT NULL,
-				days INTEGER NOT NULL CHECK (days >= 0 AND days < 128),
-				active INTEGER NOT NULL DEFAULT 1,
-				is_default INTEGER NOT NULL DEFAULT 0,
-				user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
-				CHECK (start_time GLOB '[0-2][0-9]:[0-5][0-9]'),
-				CHECK (end_time GLOB '[0-2][0-9]:[0-5][0-9]'),
-				CHECK (CAST(SUBSTR(start_time, 4, 2) AS INTEGER) % 5 = 0),
-				CHECK (CAST(SUBSTR(end_time, 4, 2) AS INTEGER) % 5 = 0),
-				CHECK (CAST(SUBSTR(start_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(start_time, 1, 2) AS INTEGER) <= 23),
-				CHECK (CAST(SUBSTR(end_time, 1, 2) AS INTEGER) >= 0 AND CAST(SUBSTR(end_time, 1, 2) AS INTEGER) <= 23)
-			)
-		`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`INSERT INTO schedule_new SELECT id, name, start_time, end_time, days, active, is_default, user_id FROM schedule`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`DROP TABLE schedule`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`ALTER TABLE schedule_new RENAME TO schedule`)
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(`PRAGMA foreign_keys = ON`)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Migration: mark existing default lists as is_default=1 by their known names.
-	_, err = db.Exec(`UPDATE list SET is_default = 1 WHERE name IN ('Ads & Trackers', 'Social Media', 'Gambling', 'Fake News', 'Adult Content')`)
-	if err != nil {
-		return err
-	}
-
-	// Migration: rename existing "Base Protection" default schedules to "Always" and set end_time to 00:00.
-	_, err = db.Exec(`UPDATE schedule SET name = 'Always', end_time = '00:00' WHERE is_default = 1 AND name = 'Base Protection'`)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return goose.Up(db, "migrations")
 }
