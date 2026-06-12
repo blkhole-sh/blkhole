@@ -14,7 +14,7 @@ for everything else.
 
 ## Features
 
-- DNS-over-HTTPS and DNS-over-TLS (port 853), with per-device endpoints
+- DNS-over-HTTPS, DNS-over-TLS, and DNS-over-QUIC (port 853), with per-device endpoints
 - Blocklists: import any hosts/adblock-format URL or add domains by hand
 - Five curated lists seeded on signup (ads and trackers, social media, gambling, fake news, adult content)
 - Schedules: block by time of day and day of week, per device, with 5-minute precision
@@ -32,8 +32,9 @@ personal DoH endpoint:
 https://{deviceHash}.yourdomain.com/dns-query
 ```
 
-DoT works the same way, with `{deviceHash}.yourdomain.com` as the TLS
-hostname on port 853. blkhole reads the hash from the subdomain, looks up
+DoT and DoQ work the same way, with `{deviceHash}.yourdomain.com` as the
+TLS hostname on port 853 (DoT listens on TCP, DoQ on UDP). blkhole reads
+the hash from the subdomain, looks up
 which schedules and blocklists apply to that device right now, and answers
 NXDOMAIN for blocked domains. Everything else is forwarded to the upstream
 resolver (Quad9 by default, configurable).
@@ -59,7 +60,7 @@ The default image is distroless, a few MB of attack surface in total:
 docker build -t blkhole .
 docker run -d \
   -v blkhole-data:/root/.config/blkhole \
-  -p 80:80 -p 443:443 -p 853:853 \
+  -p 80:80 -p 443:443 -p 853:853 -p 853:853/udp \
   blkhole -d yourdomain.com -s $(openssl rand -hex 32)
 ```
 
@@ -99,9 +100,10 @@ Private DNS setting requires.
 blkhole -d yourdomain.com -s $(openssl rand -hex 32)
 ```
 
-Ports 80, 443, and 853 must be reachable, and your domain's DNS (including
-a wildcard for the device subdomains) must point at the server, or autocert
-can't issue certificates.
+Ports 80, 443, and 853 (TCP and UDP) must be reachable, and your domain's
+DNS (including
+a wildcard for the device subdomains) must point at the server, or
+autocert can't issue certificates.
 
 ### Plain HTTP (testing, reverse proxy)
 
@@ -111,8 +113,8 @@ For local testing, or behind a reverse proxy that terminates TLS:
 blkhole -p 8080 -s $(openssl rand -hex 32)
 ```
 
-The web UI and DoH work fine through a proxy. DoT does not: the DoT
-listener only runs in standalone mode, and device identification relies on
+The web UI and DoH work fine through a proxy. DoT and DoQ do not: their
+listeners only run in standalone mode, and device identification relies on
 blkhole seeing the TLS handshake itself. iOS, macOS, and browsers all use
 DoH, so a proxy setup covers them; Android Private DNS won't work.
 
@@ -129,7 +131,7 @@ yourdomain.com, *.yourdomain.com {
 
 | Flag | Env var | Description | Default |
 |---|---|---|---|
-| `-d <domain>` | `BLKHOLE_DOMAIN` | Standalone mode: HTTPS with autocert, DoT on 853 | none |
+| `-d <domain>` | `BLKHOLE_DOMAIN` | Standalone mode: HTTPS with autocert, DoT/DoQ on 853 | none |
 | `-p <port>` | `BLKHOLE_PORT` | Plain HTTP mode | none |
 | `-u <host:port>` | `BLKHOLE_UPSTREAM_DNS` | Upstream DNS server | `9.9.9.9:53` |
 | `-s <hex>` | `BLKHOLE_SECRET` | JWT secret (hex-encoded, 32 bytes) | none, required |

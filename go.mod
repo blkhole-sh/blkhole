@@ -11,7 +11,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.38
 	github.com/miekg/dns v1.1.72
 	github.com/pressly/goose/v3 v3.27.1
-	golang.org/x/crypto v0.50.0
+	github.com/quic-go/quic-go v0.60.0
+	golang.org/x/crypto v0.51.0
 	golang.org/x/sync v0.20.0
 )
 
@@ -30,9 +31,9 @@ require (
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 )
