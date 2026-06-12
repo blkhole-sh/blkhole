@@ -1,6 +1,6 @@
 module github.com/blkhole-sh/blkhole
 
-go 1.25.0
+go 1.26.4
 
 require (
 	github.com/armon/go-radix v1.0.0
@@ -10,7 +10,8 @@ require (
 	github.com/go-chi/jwtauth/v5 v5.4.0
 	github.com/mattn/go-sqlite3 v1.14.38
 	github.com/miekg/dns v1.1.72
-	golang.org/x/crypto v0.49.0
+	github.com/pressly/goose/v3 v3.27.1
+	golang.org/x/crypto v0.50.0
 	golang.org/x/sync v0.20.0
 )
 
@@ -24,11 +25,14 @@ require (
 	github.com/lestrrat-go/httprc/v3 v3.0.5 // indirect
 	github.com/lestrrat-go/jwx/v3 v3.0.13 // indirect
 	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
+	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
+	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.34.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 )
