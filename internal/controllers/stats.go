@@ -115,28 +115,27 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 
 	stats := model.QueryStatsDTO{Total: total, Blocked: blocked}
 
-	// The QPS series (peak queries/sec per 5-minute window) is only defined
-	// for the 24h range, which is what the dashboard chart shows.
-	if timeRange == cache.Range24h {
-		totalSec := sc.statsCache.GetUserSecondCounts(deviceHashes)
-		blockedSec := sc.statsCache.GetUserBlockedSecondCounts(deviceHashes)
+	// QPS series: peak queries/sec per tumbling window over the range. The
+	// cache only holds the last 24h of seconds; for longer ranges the query
+	// log reconstruction below supplies the older history.
+	totalSec := sc.statsCache.GetUserSecondCounts(deviceHashes)
+	blockedSec := sc.statsCache.GetUserBlockedSecondCounts(deviceHashes)
 
-		// Reconstruct per-second counts from the query log to recover history
-		// lost across restarts. Where both have a sample the larger count wins,
-		// same rule as mergeCounts: the cache leads while flushes lag, the DB
-		// leads for seconds straddling a restart.
-		qpsEnd := time.Now().UTC().Truncate(time.Second).Add(time.Second)
-		dbTotalSec, dbBlockedSec, err := sc.queryLogs.GetAggregatedStats(deviceHashes, qpsEnd.Add(-24*time.Hour), qpsEnd, 1)
-		if err != nil {
-			log.Printf("failed to get db qps stats: %v", err)
-		} else {
-			mergeSeconds(totalSec, dbTotalSec)
-			mergeSeconds(blockedSec, dbBlockedSec)
-		}
-
-		stats.QPS = cache.WindowQPSMaxima(totalSec)
-		stats.BlockedQPS = cache.WindowQPSMaxima(blockedSec)
+	// Reconstruct per-second counts from the query log to recover history
+	// lost across restarts. Where both have a sample the larger count wins,
+	// same rule as mergeCounts: the cache leads while flushes lag, the DB
+	// leads for seconds straddling a restart.
+	qpsEnd := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+	dbTotalSec, dbBlockedSec, err := sc.queryLogs.GetAggregatedStats(deviceHashes, qpsEnd.Add(-span), qpsEnd, 1)
+	if err != nil {
+		log.Printf("failed to get db qps stats: %v", err)
+	} else {
+		mergeSeconds(totalSec, dbTotalSec)
+		mergeSeconds(blockedSec, dbBlockedSec)
 	}
+
+	stats.QPS = cache.WindowQPSMaxima(totalSec, timeRange)
+	stats.BlockedQPS = cache.WindowQPSMaxima(blockedSec, timeRange)
 
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
