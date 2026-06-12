@@ -12,14 +12,19 @@ type WebController interface {
 	Serve(w http.ResponseWriter, r *http.Request)
 }
 
+// revisionPlaceholder is the token baked into index.html at build time and
+// replaced with the running binary's revision when served.
+const revisionPlaceholder = "__BLKHOLE_REVISION__"
+
 // webController implements the WebController interface
 type webController struct {
-	webFS fs.FS
+	webFS    fs.FS
+	revision string
 }
 
 // NewWebController creates a new WebController instance
-func NewWebController(webFS fs.FS) WebController {
-	return &webController{webFS: webFS}
+func NewWebController(webFS fs.FS, revision string) WebController {
+	return &webController{webFS: webFS, revision: revision}
 }
 
 func (wc *webController) Serve(w http.ResponseWriter, r *http.Request) {
@@ -35,9 +40,7 @@ func (wc *webController) Serve(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "File not found", http.StatusNotFound)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(content)
-		return
+		path = "index.html"
 	}
 
 	switch filepath.Ext(path) {
@@ -47,6 +50,10 @@ func (wc *webController) Serve(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
 	default:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	}
+
+	if path == "index.html" {
+		content = []byte(strings.Replace(string(content), revisionPlaceholder, wc.revision, 1))
 	}
 
 	w.Write(content)
