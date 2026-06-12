@@ -14,7 +14,7 @@ for everything else.
 
 ## Features
 
-- DNS-over-HTTPS, DNS-over-TLS, and DNS-over-QUIC (port 853), with per-device endpoints
+- DNS-over-HTTPS, DNS-over-TLS, and DNS-over-QUIC, with per-device endpoints
 - Blocklists: import any hosts/adblock-format URL or add domains by hand
 - Five curated lists seeded on signup (ads and trackers, social media, gambling, fake news, adult content)
 - Schedules: block by time of day and day of week, per device, with 5-minute precision
