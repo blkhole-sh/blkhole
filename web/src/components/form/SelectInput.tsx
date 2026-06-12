@@ -4,7 +4,7 @@ import ChevronDown from "../icons/ChevronDown";
 import { cx } from "~/lib/utils";
 
 interface Props extends ParentProps {
-	label: string;
+	label?: string;
 	value: string;
 	onChange?: JSX.EventHandlerUnion<HTMLSelectElement, Event>;
 	placeholder?: string;
@@ -15,12 +15,14 @@ interface Props extends ParentProps {
 export default function SelectInput(props: Props) {
 	return (
 		<div class={cx("flex flex-col gap-1", props.class)}>
-			<label
-				for={props.label}
-				class="font-medium text-zinc-700 text-sm tracking-wider"
-			>
-				{props.label}
-			</label>
+			<Show when={props.label}>
+				<label
+					for={props.label}
+					class="font-medium text-zinc-700 text-sm tracking-wider"
+				>
+					{props.label}
+				</label>
+			</Show>
 			<div class="relative w-full">
 				<select
 					id={props.label}
