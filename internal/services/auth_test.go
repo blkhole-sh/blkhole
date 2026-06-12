@@ -51,8 +51,8 @@ func TestAuthService_Register(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for duplicate email, got nil")
 	}
-	if err.Error() != "email already registered" {
-		t.Errorf("Expected error 'email already registered', got '%v'", err)
+	if err.Error() != "Email already registered" {
+		t.Errorf("Expected error 'Email already registered', got '%v'", err)
 	}
 }
 

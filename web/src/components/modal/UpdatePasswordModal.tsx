@@ -22,7 +22,7 @@ export default function UpdatePasswordModal(props: Props) {
 
 	const isInvalid = () =>
 		!currentPassword() ||
-		!!compose(required(), minLength(8))(newPassword()) ||
+		!!compose(required(), minLength(12))(newPassword()) ||
 		!!passwordsMatch();
 
 	const resetForm = () => {
@@ -84,7 +84,7 @@ export default function UpdatePasswordModal(props: Props) {
 					placeholder="••••••••"
 					value={newPassword()}
 					onInput={(e) => setNewPassword(e.currentTarget.value)}
-					validate={compose(required(), minLength(8))}
+					validate={compose(required(), minLength(12))}
 					showError={submitted()}
 				/>
 				<TextInput

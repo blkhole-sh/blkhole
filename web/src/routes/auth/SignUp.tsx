@@ -17,7 +17,7 @@ export default function SignUp() {
 	const handleSignUp = async (e: Event) => {
 		e.preventDefault();
 		setSubmitted(true);
-		if (!email().trim() || !password() || password().length < 8) return;
+		if (!email().trim() || !password() || password().length < 12) return;
 
 		try {
 			setError(undefined);
@@ -49,7 +49,7 @@ export default function SignUp() {
 				placeholder="••••••••"
 				value={password()}
 				onInput={(e) => setPassword(e.currentTarget.value)}
-				validate={compose(required(), minLength(8))}
+				validate={compose(required(), minLength(12))}
 				showError={submitted()}
 			/>
 			<Show when={error()}>

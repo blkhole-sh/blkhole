@@ -177,6 +177,32 @@ func TestUserController_Update_Success(t *testing.T) {
 	}
 }
 
+func TestUserController_Update_PasswordTooShort(t *testing.T) {
+	mockAuth := &mockUserAuthService{
+		user: &model.User{ID: 1},
+	}
+	mockUserRepo := &mockUserRepo{}
+	mockCrypto := &mockCryptoService{}
+
+	uc := NewUserController(mockUserRepo, mockAuth, mockCrypto)
+
+	r := httptest.NewRequest("PATCH", "/users/1", strings.NewReader(`{"currentPassword":"oldpassword12","newPassword":"short"}`))
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "1")
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	uc.Update(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status Bad Request (400), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Password must be at least 12 characters") {
+		t.Errorf("Expected length error message, got %q", w.Body.String())
+	}
+}
+
 func TestUserController_Delete_Success(t *testing.T) {
 	mockAuth := &mockUserAuthService{
 		user: &model.User{ID: 1},
