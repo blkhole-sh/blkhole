@@ -8,10 +8,14 @@ type StatCount struct {
 	Count     int       `json:"count"`
 }
 
-// QueryStatsDTO represents combined query statistics
+// QueryStatsDTO represents combined query statistics. QPS and BlockedQPS hold
+// the peak queries-per-second sample of each 5-minute window over the last
+// 24 hours, at the timestamp of the second where the peak occurred.
 type QueryStatsDTO struct {
-	Total   []StatCount `json:"total"`
-	Blocked []StatCount `json:"blocked"`
+	Total      []StatCount `json:"total"`
+	Blocked    []StatCount `json:"blocked"`
+	QPS        []StatCount `json:"qps,omitempty"`
+	BlockedQPS []StatCount `json:"blockedQps,omitempty"`
 }
 
 // UserDTO represents a user data transfer object

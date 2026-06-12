@@ -43,6 +43,8 @@ func (m *mockStatsCache) GetCounts(h, r string) []model.StatCount               
 func (m *mockStatsCache) GetBlockedCounts(h, r string) []model.StatCount               { return nil }
 func (m *mockStatsCache) GetUserCounts(hs []string, r string) []model.StatCount        { return nil }
 func (m *mockStatsCache) GetUserBlockedCounts(hs []string, r string) []model.StatCount { return nil }
+func (m *mockStatsCache) GetUserSecondCounts(hs []string) map[int64]int                 { return nil }
+func (m *mockStatsCache) GetUserBlockedSecondCounts(hs []string) map[int64]int          { return nil }
 func (m *mockStatsCache) Start()                                                       {}
 func (m *mockStatsCache) Cleanup()                                                     {}
 

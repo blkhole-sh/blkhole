@@ -8,27 +8,41 @@ interface Props {
 }
 
 export default function QueriesPanel(props: Props) {
-	// Map data without rounding
+	// Each series carries the peak QPS of every 5-minute window at the peak's
+	// original timestamp, so total and blocked points rarely share a timestamp.
+	// Rows where one series has no point leave that key undefined; the chart
+	// skips undefined values and connects the surrounding points.
 	const data = () => {
 		if (!props.stats) return [];
 
-		const blockedMap = new Map(
-			props.stats.blocked.map((s) => [s.timestamp, s.count]),
-		);
+		const rows = new Map<
+			number,
+			{ timestamp: number; total?: number; blocked?: number }
+		>();
+		for (const stat of props.stats.qps ?? []) {
+			const ts = new Date(stat.timestamp).getTime();
+			rows.set(ts, { timestamp: ts, total: stat.count });
+		}
+		for (const stat of props.stats.blockedQps ?? []) {
+			const ts = new Date(stat.timestamp).getTime();
+			const row = rows.get(ts) ?? { timestamp: ts };
+			row.blocked = stat.count;
+			rows.set(ts, row);
+		}
 
-		return props.stats.total.map((stat) => ({
-			timestamp: stat.timestamp,
-			xAxis: new Date(stat.timestamp).toLocaleTimeString([], {
-				hour: "2-digit",
-				minute: "2-digit",
-			}),
-			total: stat.count,
-			blocked: blockedMap.get(stat.timestamp) || 0,
-		}));
+		return [...rows.values()]
+			.sort((a, b) => a.timestamp - b.timestamp)
+			.map((row) => ({
+				...row,
+				xAxis: new Date(row.timestamp).toLocaleTimeString([], {
+					hour: "2-digit",
+					minute: "2-digit",
+				}),
+			}));
 	};
 
 	const hasData = () =>
-		data().some((point) => point.total > 0 || point.blocked > 0);
+		data().some((point) => (point.total ?? 0) > 0 || (point.blocked ?? 0) > 0);
 
 	// Generate parameterized x-axis ticks without rounding
 	const getXAxisTicks = (count: number = 4) => {
@@ -50,7 +64,7 @@ export default function QueriesPanel(props: Props) {
 		<div class="pt-8 flex flex-col flex-1">
 			<div class="flex flex-row items-center pb-4">
 				<p class="font-medium text-zinc-500 text-sm tracking-wider flex-1">
-					QUERIES OVER TIME
+					QUERIES PER SECOND
 				</p>
 				<div class="flex flex-row items-center gap-5">
 					<div class="flex flex-row items-center gap-2">

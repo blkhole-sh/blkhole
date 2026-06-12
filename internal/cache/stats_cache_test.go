@@ -337,3 +337,94 @@ func TestStatsCache_Cleanup(t *testing.T) {
 		t.Errorf("Expected 5 valid blocked 30d buckets after cleanup, got %d", nonZeroBuckets(blockedCounts30d))
 	}
 }
+
+func TestSecondCountsAggregation(t *testing.T) {
+	dc := NewDeviceCache()
+	dc.LoadDevices([]*model.Device{{ID: 1, Hash: "dev-a"}, {ID: 2, Hash: "dev-b"}})
+	sc := NewStatsCache(dc)
+
+	now := time.Date(2026, 6, 13, 12, 0, 0, 0, time.UTC)
+	setTestNow(t, now)
+
+	// Same second across two devices must be summed before any windowing
+	sc.IncrementAt("dev-a", now, 3)
+	sc.IncrementAt("dev-b", now, 2)
+	sc.IncrementAt("dev-a", now.Add(time.Second), 1)
+	sc.IncrementBlockedAt("dev-a", now, 4)
+
+	seconds := sc.GetUserSecondCounts([]string{"dev-a", "dev-b"})
+	if got := seconds[now.Unix()]; got != 5 {
+		t.Errorf("expected 5 queries in shared second, got %d", got)
+	}
+	if got := seconds[now.Unix()+1]; got != 1 {
+		t.Errorf("expected 1 query in next second, got %d", got)
+	}
+
+	blocked := sc.GetUserBlockedSecondCounts([]string{"dev-a", "dev-b"})
+	if got := blocked[now.Unix()]; got != 4 {
+		t.Errorf("expected 4 blocked queries, got %d", got)
+	}
+}
+
+func TestWindowQPSMaxima(t *testing.T) {
+	now := time.Date(2026, 6, 13, 12, 2, 30, 0, time.UTC)
+	setTestNow(t, now)
+
+	windowStart := time.Date(2026, 6, 13, 11, 50, 0, 0, time.UTC).Unix()
+	seconds := map[int64]int{
+		windowStart + 10:  3,
+		windowStart + 70:  9, // peak of the 11:50 window
+		windowStart + 200: 4,
+		windowStart + 310: 2, // 11:55 window, tie ...
+		windowStart + 320: 2, // ... must resolve to the earlier second
+	}
+
+	result := WindowQPSMaxima(seconds)
+
+	// 24h of 5-minute windows
+	if len(result) != 288 {
+		t.Fatalf("expected 288 windows, got %d", len(result))
+	}
+
+	byTimestamp := make(map[int64]int)
+	for _, p := range result {
+		byTimestamp[p.Timestamp.Unix()] = p.Count
+	}
+
+	// Peak kept at its original second, not the window boundary
+	if got := byTimestamp[windowStart+70]; got != 9 {
+		t.Errorf("expected peak 9 at original second, got %d", got)
+	}
+	// Tie resolved to the earliest second
+	if got := byTimestamp[windowStart+310]; got != 2 {
+		t.Errorf("expected tie peak 2 at earliest second, got %d", got)
+	}
+	if _, ok := byTimestamp[windowStart+320]; ok {
+		t.Error("tie must not be plotted at the later second")
+	}
+	// Empty windows are zero-filled at the window start
+	emptyWindow := time.Date(2026, 6, 13, 11, 40, 0, 0, time.UTC).Unix()
+	if got, ok := byTimestamp[emptyWindow]; !ok || got != 0 {
+		t.Errorf("expected zero-filled empty window at %d, got %d (present: %v)", emptyWindow, got, ok)
+	}
+}
+
+func TestSecondCountsCleanup(t *testing.T) {
+	sc := setupTestCache("device1", 1).(*statsCache)
+
+	now := time.Date(2026, 6, 13, 12, 0, 0, 0, time.UTC)
+	setTestNow(t, now)
+
+	sc.IncrementAt("device1", now.Add(-25*time.Hour), 1) // expired
+	sc.IncrementAt("device1", now.Add(-time.Hour), 1)    // kept
+
+	sc.Cleanup()
+
+	seconds := sc.GetUserSecondCounts([]string{"device1"})
+	if len(seconds) != 1 {
+		t.Errorf("expected 1 second sample after cleanup, got %d", len(seconds))
+	}
+	if _, ok := seconds[now.Add(-time.Hour).Unix()]; !ok {
+		t.Error("recent second sample should survive cleanup")
+	}
+}
