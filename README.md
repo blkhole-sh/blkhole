@@ -2,8 +2,8 @@
 
 Self-hosted, encrypted DNS blocking with a ruleset per device and a clock.
 
-blkhole serves DNS over HTTPS and TLS, so queries are encrypted on the wire
-instead of readable by everyone between you and your resolver. Each device
+blkhole serves DNS over HTTPS, TLS, and QUIC, so queries are encrypted on
+the wire instead of readable by everyone between you and your resolver. Each device
 gets its own endpoint and its own rules: which blocklists apply, and on
 which days and hours they do.
 
@@ -93,8 +93,8 @@ blkhole runs in one of two modes.
 ### Standalone (recommended)
 
 blkhole terminates TLS itself, with automatic certificates from Let's
-Encrypt. This is the only mode that serves DNS-over-TLS, which Android's
-Private DNS setting requires.
+Encrypt. This is the only mode that serves DNS-over-TLS and DNS-over-QUIC;
+Android's Private DNS setting requires DoT.
 
 ```sh
 blkhole -d yourdomain.com -s $(openssl rand -hex 32)
