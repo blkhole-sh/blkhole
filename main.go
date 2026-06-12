@@ -445,6 +445,15 @@ func main() {
 
 			return err
 		})
+
+		g.Go(func() error {
+			err := servers.StartDoQ(ctx, resolver, cfg.Domain, cfg.TLSConfig)
+			if err != nil {
+				log.Printf("doq server error: %v", err)
+			}
+
+			return err
+		})
 	}
 
 	// Catch server errors
