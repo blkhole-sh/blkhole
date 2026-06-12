@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -227,7 +228,29 @@ func initWeb() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	webController = controllers.NewWebController(webSubFS)
+	webController = controllers.NewWebController(webSubFS, buildRevision())
+}
+
+// buildRevision reports the revision of the running binary. For `go install`
+// builds it is the module version (tag or pseudo-version); for local builds
+// from the repo it is the short VCS revision. Empty when unavailable.
+func buildRevision() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		return v
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" {
+			if len(s.Value) > 7 {
+				return s.Value[:7]
+			}
+			return s.Value
+		}
+	}
+	return ""
 }
 
 func initTLS(domain string) *tls.Config {
