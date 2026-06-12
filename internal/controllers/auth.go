@@ -174,6 +174,10 @@ func (c *authController) setSecureCookie(w http.ResponseWriter, name, value stri
 // network call to the HIBP API.
 var checkPasswordPwned = isPasswordPwned
 
+// hibpClient bounds how long registration waits for HIBP. Fail-open also has
+// to cover a hanging API, not just a refused connection.
+var hibpClient = &http.Client{Timeout: 5 * time.Second}
+
 // isPasswordPwned checks the HIBP Pwned Passwords API using k-anonymity.
 // Returns (true, nil) if the password appears in known breaches.
 // Returns (false, nil) if it does not, or (false, err) if the API is unreachable (fail open).
@@ -188,7 +192,7 @@ func isPasswordPwned(password string) (bool, error) {
 	}
 	req.Header.Set("Add-Padding", "true")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := hibpClient.Do(req)
 	if err != nil {
 		return false, err
 	}

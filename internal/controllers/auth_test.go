@@ -107,10 +107,10 @@ func TestAuthController_Login(t *testing.T) {
 				"password": "wrong",
 			},
 			mockLogin: func(email, password string) (*services.LoginResult, error) {
-				return nil, fmt.Errorf("invalid credentials")
+				return nil, fmt.Errorf("Invalid credentials")
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   "invalid credentials",
+			expectedBody:   "Invalid credentials",
 			checkCookies:   false,
 		},
 	}
@@ -229,10 +229,10 @@ func TestAuthController_Register(t *testing.T) {
 				"password": "password123456",
 			},
 			mockRegister: func(email, password string) (*services.LoginResult, error) {
-				return nil, fmt.Errorf("email already registered")
+				return nil, fmt.Errorf("Email already registered")
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   "email already registered",
+			expectedBody:   "Email already registered",
 			checkCookies:   false,
 		},
 	}

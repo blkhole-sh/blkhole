@@ -54,16 +54,16 @@ func NewAuthService(userRepo repos.UserRepo, scheduleRepo repos.ScheduleRepo, cr
 func (as *authService) Login(email, password string) (*LoginResult, error) {
 	user, err := as.userRepo.FindByEmail(email)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, fmt.Errorf("Invalid credentials")
 	}
 
 	valid, err := as.cryptoService.VerifyPassword(password, user.PasswordHash)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, fmt.Errorf("Invalid credentials")
 	}
 
 	if !valid {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, fmt.Errorf("Invalid credentials")
 	}
 
 	return as.generateTokens(user)
@@ -74,7 +74,7 @@ func (as *authService) Register(email, password string) (*LoginResult, error) {
 	// Check if user already exists
 	existingUser, err := as.userRepo.FindByEmail(email)
 	if err == nil && existingUser != nil {
-		return nil, fmt.Errorf("email already registered")
+		return nil, fmt.Errorf("Email already registered")
 	}
 
 	// Hash password
