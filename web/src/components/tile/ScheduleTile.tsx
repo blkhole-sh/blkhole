@@ -78,6 +78,7 @@ export default function ScheduleTile(props: Props) {
 					{props.schedule.active ? "Active" : "Inactive"}
 				</p>
 			</div>
+
 			<div class="flex flex-row">
 				<div
 					class="flex-1 grid grid-cols-3 items-start text-zinc-500"

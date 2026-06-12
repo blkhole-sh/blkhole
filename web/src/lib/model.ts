@@ -79,8 +79,12 @@ export interface StatCount {
 	count: number;
 }
 
-// Define QueryStats interface - API response for query statistics
+// Define QueryStats interface - API response for query statistics.
+// qps/blockedQps hold the peak queries-per-second sample of each 5-minute
+// window over the last 24h, at the original timestamp of the peak second.
 export interface QueryStats {
 	total: StatCount[];
 	blocked: StatCount[];
+	qps?: StatCount[];
+	blockedQps?: StatCount[];
 }

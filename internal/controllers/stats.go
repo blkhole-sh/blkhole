@@ -115,10 +115,44 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 
 	stats := model.QueryStatsDTO{Total: total, Blocked: blocked}
 
+	// The QPS series (peak queries/sec per 5-minute window) is only defined
+	// for the 24h range, which is what the dashboard chart shows.
+	if timeRange == cache.Range24h {
+		totalSec := sc.statsCache.GetUserSecondCounts(deviceHashes)
+		blockedSec := sc.statsCache.GetUserBlockedSecondCounts(deviceHashes)
+
+		// Reconstruct per-second counts from the query log to recover history
+		// lost across restarts. Where both have a sample the larger count wins,
+		// same rule as mergeCounts: the cache leads while flushes lag, the DB
+		// leads for seconds straddling a restart.
+		qpsEnd := time.Now().UTC().Truncate(time.Second).Add(time.Second)
+		dbTotalSec, dbBlockedSec, err := sc.queryLogs.GetAggregatedStats(deviceHashes, qpsEnd.Add(-24*time.Hour), qpsEnd, 1)
+		if err != nil {
+			log.Printf("failed to get db qps stats: %v", err)
+		} else {
+			mergeSeconds(totalSec, dbTotalSec)
+			mergeSeconds(blockedSec, dbBlockedSec)
+		}
+
+		stats.QPS = cache.WindowQPSMaxima(totalSec)
+		stats.BlockedQPS = cache.WindowQPSMaxima(blockedSec)
+	}
+
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Printf("failed to encode response: %v", err)
+	}
+}
+
+// mergeSeconds folds DB-reconstructed per-second counts into the cache's,
+// taking the larger count where both have a sample for the same second.
+func mergeSeconds(cacheSec map[int64]int, dbSec map[time.Time]int) {
+	for ts, count := range dbSec {
+		sec := ts.Unix()
+		if count > cacheSec[sec] {
+			cacheSec[sec] = count
+		}
 	}
 }
 

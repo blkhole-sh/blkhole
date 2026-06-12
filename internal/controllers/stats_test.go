@@ -29,6 +29,7 @@ type fullStatsCache struct {
 	MockStatsCache
 	GetUserCountsFn        func(deviceHashes []string, timeRange string) []model.StatCount
 	GetUserBlockedCountsFn func(deviceHashes []string, timeRange string) []model.StatCount
+	secondCounts           map[int64]int
 }
 
 func (m *fullStatsCache) GetUserCounts(hs []string, r string) []model.StatCount {
@@ -43,6 +44,13 @@ func (m *fullStatsCache) GetUserBlockedCounts(hs []string, r string) []model.Sta
 	}
 	return []model.StatCount{}
 }
+func (m *fullStatsCache) GetUserSecondCounts(hs []string) map[int64]int {
+	if m.secondCounts != nil {
+		return m.secondCounts
+	}
+	return map[int64]int{}
+}
+func (m *fullStatsCache) GetUserBlockedSecondCounts(hs []string) map[int64]int { return map[int64]int{} }
 
 func TestStatsController_GetQueryStats_Success(t *testing.T) {
 	deviceRepo := &MockDeviceRepo{
@@ -147,5 +155,61 @@ func TestStatsController_GetQueryStats_DeviceRepoError(t *testing.T) {
 
 	if rr.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500 on repo error, got %d", rr.Code)
+	}
+}
+
+func TestStatsController_GetQueryStats_QPSSeries(t *testing.T) {
+	deviceRepo := &MockDeviceRepo{
+		FindByUserFunc: func(userID int) ([]*model.Device, error) {
+			return []*model.Device{{ID: 1, Hash: "device-hash"}}, nil
+		},
+	}
+	peakSec := time.Now().UTC().Truncate(time.Second).Add(-time.Minute)
+	statsCache := &fullStatsCache{
+		secondCounts: map[int64]int{peakSec.Unix(): 7, peakSec.Unix() - 1: 2},
+	}
+	controller := NewStatsController(statsCache, deviceRepo, &MockQueryLogRepo{}, mockAuth(1))
+
+	req := withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats?range=24h", nil), "userId", "1")
+	rr := httptest.NewRecorder()
+	controller.GetQueryStats(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var result model.QueryStatsDTO
+	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// 24h of 5-minute windows
+	if len(result.QPS) != 288 {
+		t.Fatalf("expected 288 qps windows, got %d", len(result.QPS))
+	}
+	// The window containing the peak must report it at its original second
+	found := false
+	for _, p := range result.QPS {
+		if p.Timestamp.Equal(peakSec) && p.Count == 7 {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected peak qps 7 at %v in series", peakSec)
+	}
+	if len(result.BlockedQPS) != 288 {
+		t.Errorf("expected 288 blocked qps windows, got %d", len(result.BlockedQPS))
+	}
+
+	// Non-24h ranges carry no qps series
+	req = withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats?range=7d", nil), "userId", "1")
+	rr = httptest.NewRecorder()
+	controller.GetQueryStats(rr, req)
+	var weekly model.QueryStatsDTO
+	if err := json.NewDecoder(rr.Body).Decode(&weekly); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(weekly.QPS) != 0 {
+		t.Errorf("expected no qps series for 7d range, got %d points", len(weekly.QPS))
 	}
 }
