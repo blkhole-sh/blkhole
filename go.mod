@@ -1,6 +1,6 @@
 module github.com/blkhole-sh/blkhole
 
-go 1.25.7
+go 1.26.4
 
 require (
 	github.com/armon/go-radix v1.0.0
