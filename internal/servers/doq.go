@@ -110,9 +110,16 @@ func handleDoQStream(conn *quic.Conn, stream *quic.Stream, resolver services.Res
 		conn.CloseWithError(doqInternalError, "failed to pack dns response")
 		return
 	}
+	if len(respBytes) > 0xFFFF {
+		log.Printf("dns response too large for doq frame: %d bytes", len(respBytes))
+		conn.CloseWithError(doqInternalError, "dns response too large")
+		return
+	}
 
 	if err := binary.Write(stream, binary.BigEndian, uint16(len(respBytes))); err != nil {
 		return
 	}
-	stream.Write(respBytes)
+	if _, err := stream.Write(respBytes); err != nil {
+		log.Printf("failed to write dns response: %v", err)
+	}
 }

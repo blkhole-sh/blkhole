@@ -12,6 +12,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,18 +20,28 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-// mockResolver records the device hash it was called with.
+// mockResolver records the device hash it was called with. Resolve runs on a
+// server goroutine while the tests read the hash, hence the mutex.
 type mockResolver struct {
+	mu         sync.Mutex
 	deviceHash string
 }
 
 func (m *mockResolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
+	m.mu.Lock()
 	m.deviceHash = deviceHash
+	m.mu.Unlock()
 	resp := new(dns.Msg)
 	resp.SetReply(msg)
 	rr, _ := dns.NewRR(msg.Question[0].Name + " 300 IN A 127.0.0.1")
 	resp.Answer = append(resp.Answer, rr)
 	return resp, nil
+}
+
+func (m *mockResolver) DeviceHash() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.deviceHash
 }
 
 func selfSignedTLSConfig(t *testing.T) *tls.Config {
@@ -153,8 +164,8 @@ func TestDoQResolvesQuery(t *testing.T) {
 	if resp.Id != 0 {
 		t.Errorf("expected response message id 0, got %d", resp.Id)
 	}
-	if resolver.deviceHash != "abc123" {
-		t.Errorf("expected device hash 'abc123' from SNI, got %q", resolver.deviceHash)
+	if hash := resolver.DeviceHash(); hash != "abc123" {
+		t.Errorf("expected device hash 'abc123' from SNI, got %q", hash)
 	}
 }
 
@@ -170,8 +181,8 @@ func TestDoQBareDomainHasNoDeviceHash(t *testing.T) {
 	if _, err := exchange(conn, msg); err != nil {
 		t.Fatalf("doq exchange failed: %v", err)
 	}
-	if resolver.deviceHash != "" {
-		t.Errorf("expected empty device hash for bare domain, got %q", resolver.deviceHash)
+	if hash := resolver.DeviceHash(); hash != "" {
+		t.Errorf("expected empty device hash for bare domain, got %q", hash)
 	}
 }
 
