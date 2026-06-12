@@ -1,6 +1,6 @@
 # blkhole
 
-Self-hosted, encrypted DNS blocking with a ruleset per device and a clock.
+Self-hosted encrypted DNS that blocks ads, trackers and distractions. Per device. On a schedule.
 
 blkhole serves DNS over HTTPS, TLS, and QUIC, so queries are encrypted on
 the wire instead of readable by everyone between you and your resolver. Each device
