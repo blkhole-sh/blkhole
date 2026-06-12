@@ -60,7 +60,7 @@ Commits must read as if written by the human developer. No exceptions.
 ## Stack
 
 **Backend** — Go (`internal/`):
-- SQLite via `modernc.org/sqlite`
+- SQLite via `github.com/mattn/go-sqlite3`
 - Migrations via goose (`internal/db/migrations/`)
 - DNS resolver, content blocker, stats cache
 
@@ -75,7 +75,9 @@ Commits must read as if written by the human developer. No exceptions.
 # Backend
 go test ./...                  # run all tests
 go build ./...                 # verify build
-
+# create a new migration (requires goose installed)
+goose -dir internal/db/migrations create name_of_migration sql
+```
 # Frontend (run from web/)
 bun run dev                    # dev server
 bun run build                  # production build
