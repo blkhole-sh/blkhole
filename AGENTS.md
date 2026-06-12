@@ -41,8 +41,8 @@ The repository lives at `blkhole-sh/blkhole` (moved from `Lemon3Studio/blkhole`;
 | Branch | Purpose |
 |--------|---------|
 | `main` | Production — all PRs target this |
-| `feat/*` | New features |
-| `fix/*` | Bug fixes |
+| `feat/<issue-nr>-<description>` | New features |
+| `fix/<issue-nr>-<description>` | Bug fixes |
 
 - Always branch from `main`
 - Always submit work via PR — never push directly to any branch
