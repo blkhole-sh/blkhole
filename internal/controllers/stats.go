@@ -122,7 +122,9 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 		blockedSec := sc.statsCache.GetUserBlockedSecondCounts(deviceHashes)
 
 		// Reconstruct per-second counts from the query log to recover history
-		// lost across restarts; the cache wins where both have a sample.
+		// lost across restarts. Where both have a sample the larger count wins,
+		// same rule as mergeCounts: the cache leads while flushes lag, the DB
+		// leads for seconds straddling a restart.
 		qpsEnd := time.Now().UTC().Truncate(time.Second).Add(time.Second)
 		dbTotalSec, dbBlockedSec, err := sc.queryLogs.GetAggregatedStats(deviceHashes, qpsEnd.Add(-24*time.Hour), qpsEnd, 1)
 		if err != nil {
