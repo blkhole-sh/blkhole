@@ -1,4 +1,4 @@
-import { ParentProps, Show } from "solid-js";
+import { JSX, ParentProps, Show } from "solid-js";
 import ButtonSolid from "../ui/ButtonSolid";
 import Divider from "../ui/Divider";
 
@@ -7,6 +7,7 @@ interface Props extends ParentProps {
 	description: string;
 	cta?: string;
 	onCTA?: () => void;
+	actions?: JSX.Element;
 }
 
 export default function PageShell(props: Props) {
@@ -20,6 +21,7 @@ export default function PageShell(props: Props) {
 				<Show when={props.cta}>
 					<ButtonSolid onclick={() => props.onCTA?.()}>{props.cta}</ButtonSolid>
 				</Show>
+				<Show when={props.actions}>{props.actions}</Show>
 			</div>
 			<Divider class="mt-12" />
 			{props.children}
