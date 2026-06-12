@@ -511,14 +511,38 @@ func aggregateSeconds(secondMap map[string]map[int64]int, deviceHashes []string)
 	return aggregated
 }
 
+// qpsWindow returns the tumbling window length for the QPS series of a range:
+// 5 minutes for 24h, 30 for 7d, 120 for 30d.
+func qpsWindow(timeRange string) (time.Duration, bool) {
+	switch timeRange {
+	case Range24h:
+		return 5 * time.Minute, true
+	case Range7d:
+		return 30 * time.Minute, true
+	case Range30d:
+		return 120 * time.Minute, true
+	default:
+		return 0, false
+	}
+}
+
 // WindowQPSMaxima reduces per-second query counts to one point per tumbling
-// 5-minute window over the last 24 hours: the window's highest QPS sample,
-// plotted at the timestamp of the second where the peak occurred. The earliest
-// second wins ties; windows without queries yield zero at the window start.
-func WindowQPSMaxima(seconds map[int64]int) []model.StatCount {
-	const windowSec int64 = 5 * 60
+// window over the given range: the window's highest QPS sample, plotted at
+// the timestamp of the second where the peak occurred. The earliest second
+// wins ties; windows without queries yield zero at the window start.
+func WindowQPSMaxima(seconds map[int64]int, timeRange string) []model.StatCount {
+	config, ok := getTimeRangeConfig(timeRange)
+	if !ok {
+		return []model.StatCount{}
+	}
+	window, ok := qpsWindow(timeRange)
+	if !ok {
+		return []model.StatCount{}
+	}
+	windowSec := int64(window / time.Second)
+	spanSec := int64(config.span / time.Second)
 	end := timeNow().Unix()/windowSec*windowSec + windowSec
-	start := end - 24*60*60
+	start := end - spanSec
 
 	type peak struct {
 		sec   int64

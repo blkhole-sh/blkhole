@@ -4,8 +4,17 @@ import type { QueryStats } from "~/lib/model";
 
 interface Props {
 	stats: QueryStats | undefined;
+	range?: "24h" | "7d" | "30d";
 	tickCount?: number; // number of x-axis ticks, default 4
 }
+
+// X-axis label formats per range: time of day for 24h, weekday plus time
+// for 7d, calendar date for 30d.
+const labelFormats: Record<string, Intl.DateTimeFormatOptions> = {
+	"24h": { hour: "2-digit", minute: "2-digit" },
+	"7d": { weekday: "short", hour: "2-digit", minute: "2-digit" },
+	"30d": { month: "short", day: "numeric" },
+};
 
 export default function QueriesPanel(props: Props) {
 	// Each series carries the peak QPS of every 5-minute window at the peak's
@@ -30,14 +39,12 @@ export default function QueriesPanel(props: Props) {
 			rows.set(ts, row);
 		}
 
+		const format = labelFormats[props.range ?? "24h"] ?? labelFormats["24h"];
 		return [...rows.values()]
 			.sort((a, b) => a.timestamp - b.timestamp)
 			.map((row) => ({
 				...row,
-				xAxis: new Date(row.timestamp).toLocaleTimeString([], {
-					hour: "2-digit",
-					minute: "2-digit",
-				}),
+				xAxis: new Date(row.timestamp).toLocaleString([], format),
 			}));
 	};
 

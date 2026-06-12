@@ -379,7 +379,7 @@ func TestWindowQPSMaxima(t *testing.T) {
 		windowStart + 320: 2, // ... must resolve to the earlier second
 	}
 
-	result := WindowQPSMaxima(seconds)
+	result := WindowQPSMaxima(seconds, Range24h)
 
 	// 24h of 5-minute windows
 	if len(result) != 288 {

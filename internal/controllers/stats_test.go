@@ -201,7 +201,7 @@ func TestStatsController_GetQueryStats_QPSSeries(t *testing.T) {
 		t.Errorf("expected 288 blocked qps windows, got %d", len(result.BlockedQPS))
 	}
 
-	// Non-24h ranges carry no qps series
+	// Longer ranges window the same samples with scaled windows (30 min for 7d)
 	req = withParam(httptest.NewRequest(http.MethodGet, "/users/1/stats?range=7d", nil), "userId", "1")
 	rr = httptest.NewRecorder()
 	controller.GetQueryStats(rr, req)
@@ -209,7 +209,16 @@ func TestStatsController_GetQueryStats_QPSSeries(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&weekly); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if len(weekly.QPS) != 0 {
-		t.Errorf("expected no qps series for 7d range, got %d points", len(weekly.QPS))
+	if len(weekly.QPS) != 336 {
+		t.Errorf("expected 336 qps windows for 7d range, got %d points", len(weekly.QPS))
+	}
+	found = false
+	for _, p := range weekly.QPS {
+		if p.Timestamp.Equal(peakSec) && p.Count == 7 {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected peak qps 7 at %v in 7d series", peakSec)
 	}
 }
