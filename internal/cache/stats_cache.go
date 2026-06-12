@@ -33,6 +33,8 @@ type StatsCache interface {
 	GetBlockedCounts(deviceHash string, timeRange string) []model.StatCount
 	GetUserCounts(deviceHashes []string, timeRange string) []model.StatCount
 	GetUserBlockedCounts(deviceHashes []string, timeRange string) []model.StatCount
+	GetUserSecondCounts(deviceHashes []string) map[int64]int
+	GetUserBlockedSecondCounts(deviceHashes []string) map[int64]int
 	Start()
 	Cleanup()
 }
@@ -47,6 +49,8 @@ type statsCache struct {
 	minuteBlockedCounts  map[string]map[time.Time]int // deviceHash -> 1-min blocked buckets (24h)
 	fiveMinBlockedCounts map[string]map[time.Time]int // deviceHash -> 5-min blocked buckets (7d)
 	hourBlockedCounts    map[string]map[time.Time]int // deviceHash -> 1-hour blocked buckets (30d)
+	secondCounts         map[string]map[int64]int     // deviceHash -> unix-second counts (24h), QPS samples
+	secondBlockedCounts  map[string]map[int64]int     // deviceHash -> unix-second blocked counts (24h)
 }
 
 // NewStatsCache creates a new stats cache instance
@@ -59,6 +63,8 @@ func NewStatsCache(deviceCache DeviceCache) StatsCache {
 		minuteBlockedCounts:  make(map[string]map[time.Time]int),
 		fiveMinBlockedCounts: make(map[string]map[time.Time]int),
 		hourBlockedCounts:    make(map[string]map[time.Time]int),
+		secondCounts:         make(map[string]map[int64]int),
+		secondBlockedCounts:  make(map[string]map[int64]int),
 	}
 }
 
@@ -128,6 +134,12 @@ func (sc *statsCache) Increment(deviceHash string) {
 		sc.hourCounts[deviceHash] = make(map[time.Time]int)
 	}
 	sc.hourCounts[deviceHash][hourBucket]++
+
+	// Increment per-second counter (QPS sample)
+	if sc.secondCounts[deviceHash] == nil {
+		sc.secondCounts[deviceHash] = make(map[int64]int)
+	}
+	sc.secondCounts[deviceHash][now.Unix()]++
 }
 
 // IncrementBlocked increments the blocked query count for a device across all time buckets
@@ -162,6 +174,12 @@ func (sc *statsCache) IncrementBlocked(deviceHash string) {
 		sc.hourBlockedCounts[deviceHash] = make(map[time.Time]int)
 	}
 	sc.hourBlockedCounts[deviceHash][hourBucket]++
+
+	// Increment per-second blocked counter (QPS sample)
+	if sc.secondBlockedCounts[deviceHash] == nil {
+		sc.secondBlockedCounts[deviceHash] = make(map[int64]int)
+	}
+	sc.secondBlockedCounts[deviceHash][now.Unix()]++
 }
 
 // IncrementAt adds query count for a device at a specific timestamp (for testing)
@@ -194,6 +212,12 @@ func (sc *statsCache) IncrementAt(deviceHash string, timestamp time.Time, count 
 		sc.hourCounts[deviceHash] = make(map[time.Time]int)
 	}
 	sc.hourCounts[deviceHash][hourBucket] += count
+
+	// Increment per-second counter (QPS sample)
+	if sc.secondCounts[deviceHash] == nil {
+		sc.secondCounts[deviceHash] = make(map[int64]int)
+	}
+	sc.secondCounts[deviceHash][timestamp.Unix()] += count
 }
 
 // IncrementBlockedAt adds blocked query count for a device at a specific timestamp (for testing)
@@ -226,6 +250,12 @@ func (sc *statsCache) IncrementBlockedAt(deviceHash string, timestamp time.Time,
 		sc.hourBlockedCounts[deviceHash] = make(map[time.Time]int)
 	}
 	sc.hourBlockedCounts[deviceHash][hourBucket] += count
+
+	// Increment per-second blocked counter (QPS sample)
+	if sc.secondBlockedCounts[deviceHash] == nil {
+		sc.secondBlockedCounts[deviceHash] = make(map[int64]int)
+	}
+	sc.secondBlockedCounts[deviceHash][timestamp.Unix()] += count
 }
 
 // selectBucket returns the appropriate bucket map based on time range
@@ -361,6 +391,21 @@ func (sc *statsCache) Cleanup() {
 
 	now := timeNow()
 
+	// Clean per-second counts: remove entries older than 24 hours
+	cutoffSec := now.Add(-24 * time.Hour).Unix()
+	for _, secondMap := range []map[string]map[int64]int{sc.secondCounts, sc.secondBlockedCounts} {
+		for deviceHash, counts := range secondMap {
+			for sec := range counts {
+				if sec < cutoffSec {
+					delete(counts, sec)
+				}
+			}
+			if len(counts) == 0 {
+				delete(secondMap, deviceHash)
+			}
+		}
+	}
+
 	// Clean minuteCounts: remove entries older than 24 hours
 	cutoff24h := now.Add(-24 * time.Hour)
 	for deviceHash, counts := range sc.minuteCounts {
@@ -436,4 +481,68 @@ func (sc *statsCache) Cleanup() {
 			delete(sc.hourBlockedCounts, deviceHash)
 		}
 	}
+}
+
+// GetUserSecondCounts aggregates per-second query counts (QPS samples) across
+// the given devices, keyed by unix second.
+func (sc *statsCache) GetUserSecondCounts(deviceHashes []string) map[int64]int {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	return aggregateSeconds(sc.secondCounts, deviceHashes)
+}
+
+// GetUserBlockedSecondCounts aggregates per-second blocked query counts across
+// the given devices, keyed by unix second.
+func (sc *statsCache) GetUserBlockedSecondCounts(deviceHashes []string) map[int64]int {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	return aggregateSeconds(sc.secondBlockedCounts, deviceHashes)
+}
+
+func aggregateSeconds(secondMap map[string]map[int64]int, deviceHashes []string) map[int64]int {
+	aggregated := make(map[int64]int)
+	for _, deviceHash := range deviceHashes {
+		for sec, count := range secondMap[deviceHash] {
+			aggregated[sec] += count
+		}
+	}
+	return aggregated
+}
+
+// WindowQPSMaxima reduces per-second query counts to one point per tumbling
+// 5-minute window over the last 24 hours: the window's highest QPS sample,
+// plotted at the timestamp of the second where the peak occurred. The earliest
+// second wins ties; windows without queries yield zero at the window start.
+func WindowQPSMaxima(seconds map[int64]int) []model.StatCount {
+	const windowSec int64 = 5 * 60
+	end := timeNow().Unix()/windowSec*windowSec + windowSec
+	start := end - 24*60*60
+
+	type peak struct {
+		sec   int64
+		count int
+	}
+	peaks := make(map[int64]peak)
+	for sec, count := range seconds {
+		if sec < start || sec >= end {
+			continue
+		}
+		w := sec / windowSec * windowSec
+		p, ok := peaks[w]
+		if !ok || count > p.count || (count == p.count && sec < p.sec) {
+			peaks[w] = peak{sec: sec, count: count}
+		}
+	}
+
+	result := make([]model.StatCount, 0, (end-start)/windowSec)
+	for w := start; w < end; w += windowSec {
+		if p, ok := peaks[w]; ok {
+			result = append(result, model.StatCount{Timestamp: time.Unix(p.sec, 0).UTC(), Count: p.count})
+		} else {
+			result = append(result, model.StatCount{Timestamp: time.Unix(w, 0).UTC(), Count: 0})
+		}
+	}
+	return result
 }
