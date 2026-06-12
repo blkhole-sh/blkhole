@@ -112,6 +112,11 @@ func (uc *userController) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if len(req.NewPassword) < 12 {
+			http.Error(w, "Password must be at least 12 characters", http.StatusBadRequest)
+			return
+		}
+
 		valid, err := uc.cryptoService.VerifyPassword(req.CurrentPassword, currentUser.PasswordHash)
 		if err != nil || !valid {
 			http.Error(w, "Current password is incorrect", http.StatusBadRequest)
