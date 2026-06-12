@@ -39,7 +39,6 @@ export default function Dashboard() {
 			description={`Your DNS universe, observed on ${formatDate()}.`}
 			actions={
 				<SelectInput
-					label="TIME RANGE"
 					value={range()}
 					onChange={(e) => setRange(e.currentTarget.value as TimeRange)}
 					class="w-40"
