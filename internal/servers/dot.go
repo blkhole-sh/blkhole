@@ -22,7 +22,13 @@ func deviceHashFromSNI(w dns.ResponseWriter, domain string) string {
 	if state == nil {
 		return ""
 	}
-	host := strings.TrimSuffix(strings.ToLower(state.ServerName), ".")
+	return deviceHashFromServerName(state.ServerName, domain)
+}
+
+// deviceHashFromServerName extracts the device hash from a TLS server name
+// of the form <hash>.<domain>; the bare domain carries no device.
+func deviceHashFromServerName(serverName, domain string) string {
+	host := strings.TrimSuffix(strings.ToLower(serverName), ".")
 	domain = strings.TrimSuffix(strings.ToLower(domain), ".")
 	if host != domain && strings.HasSuffix(host, "."+domain) {
 		return strings.TrimSuffix(host, "."+domain)
