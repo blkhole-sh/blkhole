@@ -13,7 +13,7 @@ func TestWebController_Serve_ExistingFile(t *testing.T) {
 		"app.js":     &fstest.MapFile{Data: []byte("console.log('hi')")},
 		"style.css":  &fstest.MapFile{Data: []byte("body{}")},
 	}
-	controller := NewWebController(mockFS)
+	controller := NewWebController(mockFS, "")
 
 	tests := []struct {
 		path            string
@@ -49,7 +49,7 @@ func TestWebController_Serve_RootFallsBackToIndex(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html>root</html>")},
 	}
-	controller := NewWebController(mockFS)
+	controller := NewWebController(mockFS, "")
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
@@ -67,7 +67,7 @@ func TestWebController_Serve_UnknownPathFallsBackToIndex(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html>spa</html>")},
 	}
-	controller := NewWebController(mockFS)
+	controller := NewWebController(mockFS, "")
 
 	req := httptest.NewRequest(http.MethodGet, "/some/spa/route", nil)
 	rr := httptest.NewRecorder()
@@ -81,9 +81,24 @@ func TestWebController_Serve_UnknownPathFallsBackToIndex(t *testing.T) {
 	}
 }
 
+func TestWebController_Serve_InjectsRevision(t *testing.T) {
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte(`<meta content="__BLKHOLE_REVISION__" />`)},
+	}
+	controller := NewWebController(mockFS, "abc1234")
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	controller.Serve(rr, req)
+
+	if body := rr.Body.String(); body != `<meta content="abc1234" />` {
+		t.Errorf("expected revision injected, got %q", body)
+	}
+}
+
 func TestWebController_Serve_NoIndexReturns404(t *testing.T) {
 	mockFS := fstest.MapFS{}
-	controller := NewWebController(mockFS)
+	controller := NewWebController(mockFS, "")
 
 	req := httptest.NewRequest(http.MethodGet, "/missing", nil)
 	rr := httptest.NewRecorder()

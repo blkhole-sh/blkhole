@@ -1,0 +1,4 @@
+# Built frontend bundle — produced by `vite build`, embedded via //go:embed.
+# Tracked (the embed needs it) but suppressed from diffs: no textual hunks
+# locally, collapsed and excluded from language stats on GitHub.
+static/** -diff linguist-generated=true
