@@ -17,30 +17,42 @@ const labelFormats: Record<string, Intl.DateTimeFormatOptions> = {
 };
 
 export default function QueriesPanel(props: Props) {
-	// Each series carries the peak QPS of every 5-minute window at the peak's
-	// original timestamp, so total and blocked points rarely share a timestamp.
-	// Rows where one series has no point leave that key undefined; the chart
-	// skips undefined values and connects the surrounding points.
+	// Both series have identical window counts. For each window we emit two
+	// rows — one at the total peak timestamp and one at the blocked peak
+	// timestamp — so every row carries both values and the renderer never sees
+	// undefined (which would produce NaN in the SVG path).
 	const data = () => {
 		if (!props.stats) return [];
 
-		const rows = new Map<
-			number,
-			{ timestamp: number; total?: number; blocked?: number }
-		>();
-		for (const stat of props.stats.qps ?? []) {
-			const ts = new Date(stat.timestamp).getTime();
-			rows.set(ts, { timestamp: ts, total: stat.count });
-		}
-		for (const stat of props.stats.blockedQps ?? []) {
-			const ts = new Date(stat.timestamp).getTime();
-			const row = rows.get(ts) ?? { timestamp: ts };
-			row.blocked = stat.count;
-			rows.set(ts, row);
+		const qps = props.stats.qps ?? [];
+		const blockedQps = props.stats.blockedQps ?? [];
+		const n = Math.min(qps.length, blockedQps.length);
+
+		const rows: Array<{
+			timestamp: number;
+			total: number;
+			blocked: number;
+		}> = [];
+
+		for (let i = 0; i < n; i++) {
+			const ts1 = new Date(qps[i].timestamp).getTime();
+			const ts2 = new Date(blockedQps[i].timestamp).getTime();
+			rows.push({
+				timestamp: ts1,
+				total: qps[i].count,
+				blocked: blockedQps[i].count,
+			});
+			if (ts2 !== ts1) {
+				rows.push({
+					timestamp: ts2,
+					total: qps[i].count,
+					blocked: blockedQps[i].count,
+				});
+			}
 		}
 
 		const format = labelFormats[props.range ?? "24h"] ?? labelFormats["24h"];
-		return [...rows.values()]
+		return rows
 			.sort((a, b) => a.timestamp - b.timestamp)
 			.map((row) => ({
 				...row,
