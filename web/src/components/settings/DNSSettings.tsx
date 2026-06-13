@@ -8,7 +8,7 @@ export default function DNSSettings() {
 	
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-display text-2xl">DNS Configuration</h2>
+			<h2 class="font-medium tracking-wider">DNS Configuration</h2>
 			<div class="flex flex-col gap-1">
 				<p class="font-medium text-zinc-700 text-sm tracking-wider">
 					UPSTREAM DNS SERVER

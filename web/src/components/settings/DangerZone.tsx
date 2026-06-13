@@ -5,7 +5,7 @@ interface Props {
 export default function DangerZone(props: Props) {
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-display text-2xl">Danger Zone</h2>
+			<h2 class="font-medium tracking-wider">Danger Zone</h2>
 			<div class="flex flex-col gap-2">
 				<button
 					type="button"

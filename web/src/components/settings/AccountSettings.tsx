@@ -9,7 +9,7 @@ export default function AccountSettings() {
 
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-display text-2xl">Account</h2>
+			<h2 class="font-medium tracking-wider">Account</h2>
 			<div class="flex flex-col gap-1">
 				<p class="font-medium text-zinc-700 text-sm tracking-wider">EMAIL</p>
 				<p class="py-2 text-sm leading-snug tracking-wider text-zinc-500">
