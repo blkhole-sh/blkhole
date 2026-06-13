@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
-import Divider from "../ui/Divider";
 import { useAuth } from "~/context/AuthContext";
 import UpdatePasswordModal from "../modal/UpdatePasswordModal";
+import Divider from "../ui/Divider";
 
 export default function AccountSettings() {
 	const { user } = useAuth();
@@ -9,7 +9,7 @@ export default function AccountSettings() {
 
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-medium tracking-wider">Account</h2>
+			<h2 class="font-medium tracking-wider">ACCOUNT</h2>
 			<div class="flex flex-col gap-1">
 				<p class="font-medium text-zinc-700 text-sm tracking-wider">EMAIL</p>
 				<p class="py-2 text-sm leading-snug tracking-wider text-zinc-500">
