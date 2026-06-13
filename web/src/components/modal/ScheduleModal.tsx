@@ -84,18 +84,8 @@ export default function ScheduleModal(props: Props) {
 				saturday: props.schedule.saturday,
 				sunday: props.schedule.sunday,
 			});
-			// Match list names to list IDs
-			const listArray = lists() || [];
-			const selectedListIds = listArray
-				.filter((l) => props.schedule!.listNames.includes(l.name))
-				.map((l) => l.id);
-			setListIds(selectedListIds);
-			// Match device names to device IDs
-			const deviceList = devices() || [];
-			const selectedDeviceIds = deviceList
-				.filter((d) => props.schedule!.deviceNames.includes(d.name))
-				.map((d) => d.id);
-			setDeviceIds(selectedDeviceIds);
+			setListIds(props.schedule.listIds);
+			setDeviceIds(props.schedule.deviceIds);
 		} else if (!props.open) {
 			// Reset when modal closes
 			setName("");
