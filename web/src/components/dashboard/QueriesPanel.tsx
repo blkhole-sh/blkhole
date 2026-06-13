@@ -17,30 +17,41 @@ const labelFormats: Record<string, Intl.DateTimeFormatOptions> = {
 };
 
 export default function QueriesPanel(props: Props) {
-	// Each series carries the peak QPS of every 5-minute window at the peak's
-	// original timestamp, so total and blocked points rarely share a timestamp.
-	// Rows where one series has no point leave that key undefined; the chart
-	// skips undefined values and connects the surrounding points.
+	// Build a map keyed by timestamp so every point carries both series values
+	// as concrete numbers. Series that have no point at a given second default
+	// to 0 — never undefined, so the chart renderer never produces NaN.
 	const data = () => {
 		if (!props.stats) return [];
 
-		const rows = new Map<
+		const byTimestamp = new Map<
 			number,
-			{ timestamp: number; total?: number; blocked?: number }
+			{ timestamp: number; total: number; blocked: number }
 		>();
-		for (const stat of props.stats.qps ?? []) {
-			const ts = new Date(stat.timestamp).getTime();
-			rows.set(ts, { timestamp: ts, total: stat.count });
+
+		for (const p of props.stats.qps ?? []) {
+			const ts = new Date(p.timestamp).getTime();
+			const row = byTimestamp.get(ts) ?? {
+				timestamp: ts,
+				total: 0,
+				blocked: 0,
+			};
+			row.total = p.count;
+			byTimestamp.set(ts, row);
 		}
-		for (const stat of props.stats.blockedQps ?? []) {
-			const ts = new Date(stat.timestamp).getTime();
-			const row = rows.get(ts) ?? { timestamp: ts };
-			row.blocked = stat.count;
-			rows.set(ts, row);
+
+		for (const p of props.stats.blockedQps ?? []) {
+			const ts = new Date(p.timestamp).getTime();
+			const row = byTimestamp.get(ts) ?? {
+				timestamp: ts,
+				total: 0,
+				blocked: 0,
+			};
+			row.blocked = p.count;
+			byTimestamp.set(ts, row);
 		}
 
 		const format = labelFormats[props.range ?? "24h"] ?? labelFormats["24h"];
-		return [...rows.values()]
+		return [...byTimestamp.values()]
 			.sort((a, b) => a.timestamp - b.timestamp)
 			.map((row) => ({
 				...row,
