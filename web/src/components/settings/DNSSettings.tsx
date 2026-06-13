@@ -1,14 +1,13 @@
 import { createResource, Show } from "solid-js";
-import Divider from "../ui/Divider";
 import { getSettings } from "~/lib/api";
+import Divider from "../ui/Divider";
 
 export default function DNSSettings() {
-
 	const [settings] = createResource(getSettings);
-	
+
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-medium tracking-wider">DNS Configuration</h2>
+			<h2 class="font-medium tracking-wider">DNS CONFIGURATION</h2>
 			<div class="flex flex-col gap-1">
 				<p class="font-medium text-zinc-700 text-sm tracking-wider">
 					UPSTREAM DNS SERVER
