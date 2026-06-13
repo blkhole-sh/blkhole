@@ -31,27 +31,38 @@ export default function ScheduleTile(props: Props) {
 	const navigate = useNavigate();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
+	const [optimisticActive, setOptimisticActive] = createSignal<boolean | undefined>();
+
+	const active = () => optimisticActive() ?? props.schedule.active;
+
 	const handleToggleActive = async () => {
-		const days = {
-			monday: props.schedule.monday,
-			tuesday: props.schedule.tuesday,
-			wednesday: props.schedule.wednesday,
-			thursday: props.schedule.thursday,
-			friday: props.schedule.friday,
-			saturday: props.schedule.saturday,
-			sunday: props.schedule.sunday,
-		};
-		await updateSchedule(
-			props.schedule.id,
-			props.schedule.name,
-			props.schedule.startTime,
-			props.schedule.endTime,
-			!props.schedule.active,
-			days,
-			props.schedule.listIds,
-			props.schedule.deviceIds,
-		);
-		props.onUpdated();
+		const next = !active();
+		setOptimisticActive(next);
+		try {
+			const days = {
+				monday: props.schedule.monday,
+				tuesday: props.schedule.tuesday,
+				wednesday: props.schedule.wednesday,
+				thursday: props.schedule.thursday,
+				friday: props.schedule.friday,
+				saturday: props.schedule.saturday,
+				sunday: props.schedule.sunday,
+			};
+			await updateSchedule(
+				props.schedule.id,
+				props.schedule.name,
+				props.schedule.startTime,
+				props.schedule.endTime,
+				next,
+				days,
+				props.schedule.listIds,
+				props.schedule.deviceIds,
+			);
+			setOptimisticActive(undefined);
+			props.onUpdated();
+		} catch {
+			setOptimisticActive(undefined);
+		}
 	};
 
 	return (
@@ -60,28 +71,28 @@ export default function ScheduleTile(props: Props) {
 				<div class="flex flex-row justify-between items-center">
 					<p
 						class="font-medium tracking-wider"
-						classList={{ "opacity-50": !props.schedule.active }}
+						classList={{ "opacity-50": !active() }}
 					>
 						{props.schedule.name}
 					</p>
 					<Show when={!props.schedule.isDefault}>
 						<Switch
-							checked={props.schedule.active}
+							checked={active()}
 							onChange={handleToggleActive}
 						/>
 					</Show>
 				</div>
 				<p
 					class="text-zinc-500 text-sm"
-					classList={{ "opacity-50": !props.schedule.active }}
+					classList={{ "opacity-50": !active() }}
 				>
-					{props.schedule.active ? "Active" : "Inactive"}
+					{active() ? "Active" : "Inactive"}
 				</p>
 			</div>
 
 			<table
 				class="w-full table-fixed text-zinc-500"
-				classList={{ "opacity-50": !props.schedule.active }}
+				classList={{ "opacity-50": !active() }}
 			>
 				<thead>
 					<tr class="text-sm tracking-wider">
