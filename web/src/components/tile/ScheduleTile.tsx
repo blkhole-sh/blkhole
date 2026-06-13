@@ -1,4 +1,4 @@
-import { For, Show, createSignal, Index } from "solid-js";
+import { For, Show, createEffect, createSignal, Index } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Schedule } from "~/lib/model";
 import ActionButton from "~/components/ui/ActionButton";
@@ -35,6 +35,13 @@ export default function ScheduleTile(props: Props) {
 
 	const active = () => optimisticActive() ?? props.schedule.active;
 
+	createEffect(() => {
+		const pa = props.schedule.active;
+		if (optimisticActive() !== undefined && pa === optimisticActive()) {
+			setOptimisticActive(undefined);
+		}
+	});
+
 	const handleToggleActive = async () => {
 		const next = !active();
 		setOptimisticActive(next);
@@ -58,7 +65,6 @@ export default function ScheduleTile(props: Props) {
 				props.schedule.listIds,
 				props.schedule.deviceIds,
 			);
-			setOptimisticActive(undefined);
 			props.onUpdated();
 		} catch {
 			setOptimisticActive(undefined);
