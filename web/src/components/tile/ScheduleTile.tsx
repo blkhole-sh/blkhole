@@ -85,10 +85,12 @@ export default function ScheduleTile(props: Props) {
 			>
 				<thead>
 					<tr class="text-sm tracking-wider">
-						<th class="w-5/12 pb-2 text-left font-normal">TIMING</th>
-						<th class="w-3/12 pb-2 text-left font-normal">DEVICES</th>
-						<th class="w-[22%] pb-2 text-left font-normal">BLOCKLISTS</th>
-						<th class="w-[11%] pb-2"></th>
+						<th scope="col" class="w-5/12 pb-2 text-left font-normal">TIMING</th>
+						<th scope="col" class="w-3/12 pb-2 text-left font-normal">DEVICES</th>
+						<th scope="col" class="w-[22%] pb-2 text-left font-normal">BLOCKLISTS</th>
+						<th scope="col" class="w-[11%] pb-2">
+							<span class="sr-only">ACTIONS</span>
+						</th>
 					</tr>
 				</thead>
 				<tbody>
