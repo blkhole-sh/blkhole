@@ -98,8 +98,8 @@ export default function ScheduleTile(props: Props) {
 					<tr class="text-sm tracking-wider">
 						<th scope="col" class="w-5/12 pb-2 text-left font-normal">TIMING</th>
 						<th scope="col" class="w-3/12 pb-2 text-left font-normal">DEVICES</th>
-						<th scope="col" class="w-[22%] pb-2 text-left font-normal">BLOCKLISTS</th>
-						<th scope="col" class="w-[11%] pb-2">
+						<th scope="col" class="w-[16%] pb-2 text-left font-normal">BLOCKLISTS</th>
+						<th scope="col" class="w-[17%] pb-2">
 							<span class="sr-only">ACTIONS</span>
 						</th>
 					</tr>
@@ -162,8 +162,8 @@ export default function ScheduleTile(props: Props) {
 								</Show>
 							</div>
 						</td>
-						<td class="pb-4 whitespace-nowrap align-top">
-							<div class="flex flex-row gap-6">
+						<td class="pb-4 whitespace-nowrap align-top pl-6">
+							<div class="flex flex-row gap-6 justify-end">
 								<ActionButton onclick={() => props.onEdit(props.schedule)}>
 									EDIT
 								</ActionButton>
