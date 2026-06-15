@@ -81,7 +81,15 @@ func (cb *contentBlocker) initScheduleRules() error {
 	if err != nil {
 		return fmt.Errorf("failed to load schedule rules: %w", err)
 	}
-	cb.scheduleCache.LoadScheduleRules(scheduleRules)
+	scheduleLists, err := cb.schedules.FindScheduleList()
+	if err != nil {
+		return fmt.Errorf("failed to load schedule lists: %w", err)
+	}
+	listRules, err := cb.schedules.FindListRule()
+	if err != nil {
+		return fmt.Errorf("failed to load list rules: %w", err)
+	}
+	cb.scheduleCache.LoadScheduleRules(scheduleRules, scheduleLists, listRules)
 	return nil
 }
 
