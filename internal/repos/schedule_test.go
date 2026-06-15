@@ -201,3 +201,56 @@ func TestScheduleRepo_FindByUser_Empty(t *testing.T) {
 		t.Errorf("expected empty slice, got %d", len(schedules))
 	}
 }
+
+func TestScheduleRepo_FindScheduleRelationships(t *testing.T) {
+	db := setupScheduleTestDB(t)
+	defer db.Close()
+	userID := insertSchedUser(t, db)
+
+	repo := NewScheduleRepo(db)
+	s := newTestSchedule(userID)
+	scheduleID, err := repo.Create(s)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if _, err := db.Exec("INSERT INTO list (id, name, user_id) VALUES (10, 'Shared', ?)", userID); err != nil {
+		t.Fatalf("insert list: %v", err)
+	}
+	if _, err := db.Exec("INSERT INTO rule (id, allowed, domain_id) VALUES (100, 0, 1), (200, 0, 2)"); err != nil {
+		t.Fatalf("insert rules: %v", err)
+	}
+	if err := repo.LinkRule(scheduleID, 100); err != nil {
+		t.Fatalf("LinkRule: %v", err)
+	}
+	if err := repo.LinkList(scheduleID, 10); err != nil {
+		t.Fatalf("LinkList: %v", err)
+	}
+	if _, err := db.Exec("INSERT INTO list_rule (list_id, rule_id) VALUES (10, 200)"); err != nil {
+		t.Fatalf("insert list_rule: %v", err)
+	}
+
+	scheduleRules, err := repo.FindScheduleRule()
+	if err != nil {
+		t.Fatalf("FindScheduleRule: %v", err)
+	}
+	if len(scheduleRules) != 1 || scheduleRules[0].ScheduleID != scheduleID || scheduleRules[0].RuleID != 100 {
+		t.Fatalf("FindScheduleRule() = %+v; want only direct rule 100", scheduleRules)
+	}
+
+	scheduleLists, err := repo.FindScheduleList()
+	if err != nil {
+		t.Fatalf("FindScheduleList: %v", err)
+	}
+	if len(scheduleLists) != 1 || scheduleLists[0].ScheduleID != scheduleID || scheduleLists[0].ListID != 10 {
+		t.Fatalf("FindScheduleList() = %+v; want schedule %d list 10", scheduleLists, scheduleID)
+	}
+
+	listRules, err := repo.FindListRule()
+	if err != nil {
+		t.Fatalf("FindListRule: %v", err)
+	}
+	if len(listRules) != 1 || listRules[0].ListID != 10 || listRules[0].RuleID != 200 {
+		t.Fatalf("FindListRule() = %+v; want list 10 rule 200", listRules)
+	}
+}

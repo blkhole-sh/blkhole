@@ -91,40 +91,58 @@ func TestScheduleWindow_CoversSlot(t *testing.T) {
 	}
 }
 
-func TestScheduleCache_LoadAndGetRules(t *testing.T) {
-	sc := NewScheduleCache()
-	rules := []*model.ScheduleRule{
+func TestScheduleCache_LoadScheduleRules(t *testing.T) {
+	sc := NewScheduleCache().(*scheduleCache)
+	directRules := []*model.ScheduleRule{
 		{ScheduleID: 1, RuleID: 100},
 		{ScheduleID: 1, RuleID: 101},
-		{ScheduleID: 2, RuleID: 200},
+	}
+	scheduleLists := []*model.ScheduleList{
+		{ScheduleID: 1, ListID: 10},
+		{ScheduleID: 2, ListID: 10},
+	}
+	listRules := []*model.ListRule{
+		{ListID: 10, RuleID: 200},
+		{ListID: 10, RuleID: 201},
 	}
 
-	sc.LoadScheduleRules(rules)
+	sc.LoadScheduleRules(directRules, scheduleLists, listRules)
 
-	got1 := sc.GetRules(1)
-	if len(got1) != 2 || got1[0] != 100 || got1[1] != 101 {
-		t.Errorf("GetRules(1) = %v; want [100 101]", got1)
+	if len(sc.scheduleRuleSet[1]) != 2 {
+		t.Errorf("scheduleRuleSet[1] has %d entries; want 2", len(sc.scheduleRuleSet[1]))
 	}
-
-	got2 := sc.GetRules(2)
-	if len(got2) != 1 || got2[0] != 200 {
-		t.Errorf("GetRules(2) = %v; want [200]", got2)
+	if len(sc.scheduleRuleSet[2]) != 0 {
+		t.Errorf("scheduleRuleSet[2] has %d entries; want 0", len(sc.scheduleRuleSet[2]))
 	}
-
-	got3 := sc.GetRules(3)
-	if len(got3) != 0 {
-		t.Errorf("GetRules(3) = %v; want empty", got3)
+	if len(sc.scheduleToLists[1]) != 1 || sc.scheduleToLists[1][0] != 10 {
+		t.Errorf("scheduleToLists[1] = %v; want [10]", sc.scheduleToLists[1])
+	}
+	if len(sc.scheduleToLists[2]) != 1 || sc.scheduleToLists[2][0] != 10 {
+		t.Errorf("scheduleToLists[2] = %v; want [10]", sc.scheduleToLists[2])
+	}
+	if len(sc.listRuleSet[10]) != 2 {
+		t.Errorf("listRuleSet[10] has %d entries; want 2", len(sc.listRuleSet[10]))
 	}
 }
 
 func TestScheduleCache_HasRuleIntersection(t *testing.T) {
 	sc := NewScheduleCache()
-	rules := []*model.ScheduleRule{
+	directRules := []*model.ScheduleRule{
 		{ScheduleID: 1, RuleID: 10},
 		{ScheduleID: 1, RuleID: 20},
 		{ScheduleID: 2, RuleID: 30},
 	}
-	sc.LoadScheduleRules(rules)
+	scheduleLists := []*model.ScheduleList{
+		{ScheduleID: 3, ListID: 100},
+		{ScheduleID: 4, ListID: 100},
+		{ScheduleID: 4, ListID: 200},
+	}
+	listRules := []*model.ListRule{
+		{ListID: 100, RuleID: 40},
+		{ListID: 100, RuleID: 50},
+		{ListID: 200, RuleID: 60},
+	}
+	sc.LoadScheduleRules(directRules, scheduleLists, listRules)
 
 	tests := []struct {
 		name        string
@@ -138,6 +156,9 @@ func TestScheduleCache_HasRuleIntersection(t *testing.T) {
 		{"Intersection with schedule 1", []int{1}, []int{20, 99}, true},
 		{"No intersection with schedule 1", []int{1}, []int{30, 99}, false},
 		{"Intersection with multiple schedules", []int{1, 2}, []int{99, 30}, true},
+		{"Intersection through shared list", []int{3}, []int{50, 99}, true},
+		{"Intersection through second subscribed list", []int{4}, []int{60, 99}, true},
+		{"No intersection through shared list", []int{3}, []int{60, 99}, false},
 		{"Unknown schedule ID", []int{99}, []int{10}, false},
 	}
 
