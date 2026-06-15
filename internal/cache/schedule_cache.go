@@ -15,8 +15,7 @@ const slotsPerHour = 12 // 5-minute slots per hour (60/5)
 // ScheduleCache provides fast schedule-to-rule lookups and rule intersection checks
 type ScheduleCache interface {
 	LoadSchedules(schedules []*model.Schedule)
-	LoadScheduleRules(scheduleRules []*model.ScheduleRule)
-	GetRules(scheduleID int) []int
+	LoadScheduleRules(scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule)
 	HasRuleIntersection(scheduleIDs []int, domainRules []int) bool
 	FilterActiveSchedules(scheduleIDs []int) []int
 }
@@ -34,16 +33,18 @@ type scheduleWindow struct {
 // scheduleCache implements the ScheduleCache interface
 type scheduleCache struct {
 	mu              sync.RWMutex
-	scheduleToRule  map[int][]int            // Schedule ID → Rule IDs
-	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → Rule IDs as hash set for O(1) lookup
+	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → directly attached Rule IDs
+	scheduleToLists map[int][]int            // Schedule ID → subscribed List IDs
+	listRuleSet     map[int]map[int]struct{} // List ID → shared Rule IDs
 	scheduleWindows map[int]scheduleWindow   // Schedule ID → Pre-computed window for time filtering
 }
 
 // NewScheduleCache creates a new schedule cache instance
 func NewScheduleCache() ScheduleCache {
 	return &scheduleCache{
-		scheduleToRule:  make(map[int][]int),
 		scheduleRuleSet: make(map[int]map[int]struct{}),
+		scheduleToLists: make(map[int][]int),
+		listRuleSet:     make(map[int]map[int]struct{}),
 		scheduleWindows: make(map[int]scheduleWindow),
 	}
 }
@@ -127,29 +128,32 @@ func timeStringToSlot(timeStr string) uint16 {
 	return uint16(hour*slotsPerHour + minute/5)
 }
 
-// LoadScheduleRules populates the schedule-to-rule mapping
-func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule) {
+// LoadScheduleRules populates direct schedule rules and shared list rule mappings
+func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	for _, sr := range scheduleRules {
-		// Add to slice (keep for compatibility)
-		sc.scheduleToRule[sr.ScheduleID] = append(sc.scheduleToRule[sr.ScheduleID], sr.RuleID)
+	sc.scheduleRuleSet = make(map[int]map[int]struct{})
+	sc.scheduleToLists = make(map[int][]int)
+	sc.listRuleSet = make(map[int]map[int]struct{})
 
-		// Add to hash set for O(1) lookup
+	for _, sr := range scheduleRules {
 		if sc.scheduleRuleSet[sr.ScheduleID] == nil {
 			sc.scheduleRuleSet[sr.ScheduleID] = make(map[int]struct{})
 		}
 		sc.scheduleRuleSet[sr.ScheduleID][sr.RuleID] = struct{}{}
 	}
-}
 
-// GetRules returns all rule IDs for a given schedule ID
-func (sc *scheduleCache) GetRules(scheduleID int) []int {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
+	for _, sl := range scheduleLists {
+		sc.scheduleToLists[sl.ScheduleID] = append(sc.scheduleToLists[sl.ScheduleID], sl.ListID)
+	}
 
-	return sc.scheduleToRule[scheduleID]
+	for _, lr := range listRules {
+		if sc.listRuleSet[lr.ListID] == nil {
+			sc.listRuleSet[lr.ListID] = make(map[int]struct{})
+		}
+		sc.listRuleSet[lr.ListID][lr.RuleID] = struct{}{}
+	}
 }
 
 // hasMatchingRule checks if any rule in domainRules exists in the provided ruleSet
@@ -171,11 +175,18 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
-	// Use schedule rule sets for O(1) lookup
 	for _, schedID := range scheduleIDs {
 		if ruleSet := sc.scheduleRuleSet[schedID]; ruleSet != nil {
 			if hasMatchingRule(ruleSet, domainRules) {
 				return true
+			}
+		}
+
+		for _, listID := range sc.scheduleToLists[schedID] {
+			if ruleSet := sc.listRuleSet[listID]; ruleSet != nil {
+				if hasMatchingRule(ruleSet, domainRules) {
+					return true
+				}
 			}
 		}
 	}

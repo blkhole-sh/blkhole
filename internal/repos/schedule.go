@@ -30,6 +30,8 @@ type ScheduleRepo interface {
 	FindByList(listID int) ([]*model.Schedule, error)
 	FindAll() ([]*model.Schedule, error)
 	FindScheduleRule() ([]*model.ScheduleRule, error)
+	FindScheduleList() ([]*model.ScheduleList, error)
+	FindListRule() ([]*model.ListRule, error)
 	HasDefaultsForUser(userID int) (bool, error)
 	SeedDefaults(userID int) error
 }
@@ -492,12 +494,7 @@ func (sr *scheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 
 // FindScheduleRule returns all existing entries from schedule rule many-to-many table
 func (sr *scheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
-	query := `SELECT schedule_id, rule_id FROM schedule_rule
-		        UNION
-	          SELECT ls.schedule_id, lr.rule_id
-	          FROM list_schedule ls
-	          JOIN list_rule lr ON ls.list_id = lr.list_id
-	          ORDER BY schedule_id, rule_id`
+	query := `SELECT schedule_id, rule_id FROM schedule_rule ORDER BY schedule_id, rule_id`
 
 	var scheduleRule []*model.ScheduleRule
 
@@ -507,4 +504,32 @@ func (sr *scheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
 	}
 
 	return scheduleRule, nil
+}
+
+// FindScheduleList returns all existing entries from schedule list many-to-many table
+func (sr *scheduleRepo) FindScheduleList() ([]*model.ScheduleList, error) {
+	query := `SELECT schedule_id, list_id FROM list_schedule ORDER BY schedule_id, list_id`
+
+	var scheduleList []*model.ScheduleList
+
+	err := sqlscan.Select(sr.ctx, sr.db, &scheduleList, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return scheduleList, nil
+}
+
+// FindListRule returns all existing entries from list rule many-to-many table
+func (sr *scheduleRepo) FindListRule() ([]*model.ListRule, error) {
+	query := `SELECT list_id, rule_id FROM list_rule ORDER BY list_id, rule_id`
+
+	var listRule []*model.ListRule
+
+	err := sqlscan.Select(sr.ctx, sr.db, &listRule, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return listRule, nil
 }

@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/go-chi/chi/v5"
 )
 
 // MockDeviceRepo satisfies repos.DeviceRepo
@@ -121,6 +121,12 @@ func (m *MockScheduleRepo) FindByList(listID int) ([]*model.Schedule, error) {
 func (m *MockScheduleRepo) FindAll() ([]*model.Schedule, error) { return []*model.Schedule{}, nil }
 func (m *MockScheduleRepo) FindScheduleRule() ([]*model.ScheduleRule, error) {
 	return []*model.ScheduleRule{}, nil
+}
+func (m *MockScheduleRepo) FindScheduleList() ([]*model.ScheduleList, error) {
+	return []*model.ScheduleList{}, nil
+}
+func (m *MockScheduleRepo) FindListRule() ([]*model.ListRule, error) {
+	return []*model.ListRule{}, nil
 }
 func (m *MockScheduleRepo) HasDefaultsForUser(userID int) (bool, error) { return false, nil }
 func (m *MockScheduleRepo) SeedDefaults(userID int) error               { return nil }
