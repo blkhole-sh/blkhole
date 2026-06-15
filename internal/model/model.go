@@ -102,6 +102,18 @@ type ScheduleRule struct {
 	RuleID     int `json:"ruleId"`
 }
 
+// ScheduleList represents the many-to-many relationship between schedules and lists
+type ScheduleList struct {
+	ScheduleID int `json:"scheduleId"`
+	ListID     int `json:"listId"`
+}
+
+// ListRule represents the many-to-many relationship between lists and rules
+type ListRule struct {
+	ListID int `json:"listId"`
+	RuleID int `json:"ruleId"`
+}
+
 // Quote represents a quote with author
 type Quote struct {
 	Quote  string `json:"quote"`
