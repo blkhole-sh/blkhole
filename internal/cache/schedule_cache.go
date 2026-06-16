@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/blkhole-sh/blkhole/internal/model"
@@ -14,6 +15,7 @@ const slotsPerHour = 12 // 5-minute slots per hour (60/5)
 
 // ScheduleCache provides fast schedule-to-rule lookups and rule intersection checks
 type ScheduleCache interface {
+	Load(schedules []*model.Schedule, scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule)
 	LoadSchedules(schedules []*model.Schedule)
 	LoadScheduleRules(scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule)
 	HasRuleIntersection(scheduleIDs []int, domainRules []int) bool
@@ -30,18 +32,28 @@ type scheduleWindow struct {
 	endSlot   uint16 // inclusive, 0-287
 }
 
-// scheduleCache implements the ScheduleCache interface
-type scheduleCache struct {
-	mu              sync.RWMutex
+type scheduleSnapshot struct {
 	scheduleRuleSet map[int]map[int]struct{} // Schedule ID → directly attached Rule IDs
 	scheduleToLists map[int][]int            // Schedule ID → subscribed List IDs
 	listRuleSet     map[int]map[int]struct{} // List ID → shared Rule IDs
 	scheduleWindows map[int]scheduleWindow   // Schedule ID → Pre-computed window for time filtering
 }
 
+// scheduleCache implements the ScheduleCache interface
+type scheduleCache struct {
+	writeMu  sync.Mutex
+	snapshot atomic.Pointer[scheduleSnapshot]
+}
+
 // NewScheduleCache creates a new schedule cache instance
 func NewScheduleCache() ScheduleCache {
-	return &scheduleCache{
+	sc := &scheduleCache{}
+	sc.snapshot.Store(newScheduleSnapshot())
+	return sc
+}
+
+func newScheduleSnapshot() *scheduleSnapshot {
+	return &scheduleSnapshot{
 		scheduleRuleSet: make(map[int]map[int]struct{}),
 		scheduleToLists: make(map[int][]int),
 		listRuleSet:     make(map[int]map[int]struct{}),
@@ -49,14 +61,76 @@ func NewScheduleCache() ScheduleCache {
 	}
 }
 
+func buildScheduleWindows(schedules []*model.Schedule) map[int]scheduleWindow {
+	scheduleWindows := make(map[int]scheduleWindow)
+	for _, schedule := range schedules {
+		scheduleWindows[schedule.ID] = convertToWindow(schedule)
+	}
+	return scheduleWindows
+}
+
+func buildScheduleRuleSet(scheduleRules []*model.ScheduleRule) map[int]map[int]struct{} {
+	scheduleRuleSet := make(map[int]map[int]struct{})
+	for _, sr := range scheduleRules {
+		if scheduleRuleSet[sr.ScheduleID] == nil {
+			scheduleRuleSet[sr.ScheduleID] = make(map[int]struct{})
+		}
+		scheduleRuleSet[sr.ScheduleID][sr.RuleID] = struct{}{}
+	}
+	return scheduleRuleSet
+}
+
+func buildScheduleToLists(scheduleLists []*model.ScheduleList) map[int][]int {
+	scheduleToLists := make(map[int][]int)
+	for _, sl := range scheduleLists {
+		scheduleToLists[sl.ScheduleID] = append(scheduleToLists[sl.ScheduleID], sl.ListID)
+	}
+	return scheduleToLists
+}
+
+func buildListRuleSet(listRules []*model.ListRule) map[int]map[int]struct{} {
+	listRuleSet := make(map[int]map[int]struct{})
+	for _, lr := range listRules {
+		if listRuleSet[lr.ListID] == nil {
+			listRuleSet[lr.ListID] = make(map[int]struct{})
+		}
+		listRuleSet[lr.ListID][lr.RuleID] = struct{}{}
+	}
+	return listRuleSet
+}
+
+func (sc *scheduleCache) current() *scheduleSnapshot {
+	if snapshot := sc.snapshot.Load(); snapshot != nil {
+		return snapshot
+	}
+	return newScheduleSnapshot()
+}
+
+// Load publishes a complete schedule cache snapshot.
+func (sc *scheduleCache) Load(schedules []*model.Schedule, scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule) {
+	sc.writeMu.Lock()
+	defer sc.writeMu.Unlock()
+
+	sc.snapshot.Store(&scheduleSnapshot{
+		scheduleRuleSet: buildScheduleRuleSet(scheduleRules),
+		scheduleToLists: buildScheduleToLists(scheduleLists),
+		listRuleSet:     buildListRuleSet(listRules),
+		scheduleWindows: buildScheduleWindows(schedules),
+	})
+}
+
 // LoadSchedules populates the schedule cache with pre-computed windows for active filtering
 func (sc *scheduleCache) LoadSchedules(schedules []*model.Schedule) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
+	sc.writeMu.Lock()
+	defer sc.writeMu.Unlock()
 
-	for _, schedule := range schedules {
-		sc.scheduleWindows[schedule.ID] = convertToWindow(schedule)
-	}
+	current := sc.current()
+	sc.snapshot.Store(&scheduleSnapshot{
+		scheduleRuleSet: current.scheduleRuleSet,
+		scheduleToLists: current.scheduleToLists,
+		listRuleSet:     current.listRuleSet,
+		scheduleWindows: buildScheduleWindows(schedules),
+	})
 }
 
 // convertToWindow converts Schedule boolean days and time strings to a scheduleWindow
@@ -130,30 +204,16 @@ func timeStringToSlot(timeStr string) uint16 {
 
 // LoadScheduleRules populates direct schedule rules and shared list rule mappings
 func (sc *scheduleCache) LoadScheduleRules(scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
+	sc.writeMu.Lock()
+	defer sc.writeMu.Unlock()
 
-	sc.scheduleRuleSet = make(map[int]map[int]struct{})
-	sc.scheduleToLists = make(map[int][]int)
-	sc.listRuleSet = make(map[int]map[int]struct{})
-
-	for _, sr := range scheduleRules {
-		if sc.scheduleRuleSet[sr.ScheduleID] == nil {
-			sc.scheduleRuleSet[sr.ScheduleID] = make(map[int]struct{})
-		}
-		sc.scheduleRuleSet[sr.ScheduleID][sr.RuleID] = struct{}{}
-	}
-
-	for _, sl := range scheduleLists {
-		sc.scheduleToLists[sl.ScheduleID] = append(sc.scheduleToLists[sl.ScheduleID], sl.ListID)
-	}
-
-	for _, lr := range listRules {
-		if sc.listRuleSet[lr.ListID] == nil {
-			sc.listRuleSet[lr.ListID] = make(map[int]struct{})
-		}
-		sc.listRuleSet[lr.ListID][lr.RuleID] = struct{}{}
-	}
+	current := sc.current()
+	sc.snapshot.Store(&scheduleSnapshot{
+		scheduleRuleSet: buildScheduleRuleSet(scheduleRules),
+		scheduleToLists: buildScheduleToLists(scheduleLists),
+		listRuleSet:     buildListRuleSet(listRules),
+		scheduleWindows: current.scheduleWindows,
+	})
 }
 
 // hasMatchingRule checks if any rule in domainRules exists in the provided ruleSet
@@ -172,18 +232,17 @@ func (sc *scheduleCache) HasRuleIntersection(scheduleIDs []int, domainRules []in
 		return false
 	}
 
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
+	snapshot := sc.current()
 
 	for _, schedID := range scheduleIDs {
-		if ruleSet := sc.scheduleRuleSet[schedID]; ruleSet != nil {
+		if ruleSet := snapshot.scheduleRuleSet[schedID]; ruleSet != nil {
 			if hasMatchingRule(ruleSet, domainRules) {
 				return true
 			}
 		}
 
-		for _, listID := range sc.scheduleToLists[schedID] {
-			if ruleSet := sc.listRuleSet[listID]; ruleSet != nil {
+		for _, listID := range snapshot.scheduleToLists[schedID] {
+			if ruleSet := snapshot.listRuleSet[listID]; ruleSet != nil {
 				if hasMatchingRule(ruleSet, domainRules) {
 					return true
 				}
@@ -199,8 +258,7 @@ func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 		return nil
 	}
 
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
+	snapshot := sc.current()
 
 	now := time.Now()
 
@@ -214,7 +272,7 @@ func (sc *scheduleCache) FilterActiveSchedules(scheduleIDs []int) []int {
 	activeScheduleIDs := make([]int, 0, len(scheduleIDs))
 
 	for _, scheduleID := range scheduleIDs {
-		if window, exists := sc.scheduleWindows[scheduleID]; exists && window.coversSlot(day, slot) {
+		if window, exists := snapshot.scheduleWindows[scheduleID]; exists && window.coversSlot(day, slot) {
 			activeScheduleIDs = append(activeScheduleIDs, scheduleID)
 		}
 	}
