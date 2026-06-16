@@ -414,6 +414,43 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 	}
 }
 
+func TestContentBlocker_ReloadFailureKeepsPublishedCache(t *testing.T) {
+	db := setupTestDB(t)
+
+	users := repos.NewUserRepo(db)
+	devices := repos.NewDeviceRepo(db)
+	lists := repos.NewListRepo(db)
+	rules := repos.NewRuleRepo(db)
+	schedules := repos.NewScheduleRepo(db)
+	domains := repos.NewDomainRepo(db)
+
+	contentBlocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
+	listID := createTestList(t, lists, rules, domains, userID, []string{"still-blocked.com"})
+	createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{listID}, nil, userID)
+
+	if err := contentBlocker.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	blocked, err := contentBlocker.IsBlocked("still-blocked.com", deviceHash)
+	if err != nil || !blocked {
+		t.Fatalf("IsBlocked before failed reload = (%v, %v); want (true, nil)", blocked, err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("close db: %v", err)
+	}
+	if err := contentBlocker.Reload(); err == nil {
+		t.Fatal("Reload after closing db succeeded; want error")
+	}
+
+	blocked, err = contentBlocker.IsBlocked("still-blocked.com", deviceHash)
+	if err != nil || !blocked {
+		t.Fatalf("IsBlocked after failed reload = (%v, %v); want (true, nil)", blocked, err)
+	}
+}
+
 // TestContentBlocker_TimeBasedBlocking tests that blocking only occurs during active schedule times.
 // This test verifies that schedules with inactive time windows don't block domains.
 func TestContentBlocker_TimeBasedBlocking(t *testing.T) {

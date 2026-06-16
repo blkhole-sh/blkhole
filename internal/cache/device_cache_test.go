@@ -80,6 +80,18 @@ func TestDeviceCache_GetSchedules_Hit(t *testing.T) {
 	}
 }
 
+func TestDeviceCache_GetSchedules_ReturnsCopy(t *testing.T) {
+	dc := NewDeviceCache()
+	dc.LoadDeviceSchedules([]*model.DeviceSchedule{{DeviceID: 1, ScheduleID: 10}})
+
+	schedules := dc.GetSchedules(1)
+	schedules[0] = 999
+
+	if got := dc.GetSchedules(1); len(got) != 1 || got[0] != 10 {
+		t.Errorf("GetSchedules(1) after caller mutation = %v; want [10]", got)
+	}
+}
+
 func TestDeviceCache_GetSchedules_EmptyCache(t *testing.T) {
 	dc := NewDeviceCache()
 	if schedules := dc.GetSchedules(1); len(schedules) != 0 {
@@ -92,5 +104,30 @@ func TestDeviceCache_GetSchedules_UnknownDevice(t *testing.T) {
 	dc.LoadDeviceSchedules([]*model.DeviceSchedule{{DeviceID: 1, ScheduleID: 10}})
 	if schedules := dc.GetSchedules(999); len(schedules) != 0 {
 		t.Errorf("GetSchedules(999) = %v; want empty", schedules)
+	}
+}
+
+func TestDeviceCache_LoadClearsStaleEntries(t *testing.T) {
+	dc := NewDeviceCache()
+	dc.Load(
+		[]*model.Device{{ID: 1, Hash: "old-hash"}},
+		[]*model.DeviceSchedule{{DeviceID: 1, ScheduleID: 10}},
+	)
+	dc.Load(
+		[]*model.Device{{ID: 2, Hash: "new-hash"}},
+		[]*model.DeviceSchedule{{DeviceID: 2, ScheduleID: 20}},
+	)
+
+	if _, ok := dc.GetDeviceID("old-hash"); ok {
+		t.Error("old device remained after reload")
+	}
+	if schedules := dc.GetSchedules(1); len(schedules) != 0 {
+		t.Errorf("old device schedules remained after reload: %v", schedules)
+	}
+	if id, ok := dc.GetDeviceID("new-hash"); !ok || id != 2 {
+		t.Errorf("new device lookup = (%d, %v); want (2, true)", id, ok)
+	}
+	if schedules := dc.GetSchedules(2); len(schedules) != 1 || schedules[0] != 20 {
+		t.Errorf("new device schedules = %v; want [20]", schedules)
 	}
 }
