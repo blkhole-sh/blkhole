@@ -107,21 +107,22 @@ func TestScheduleCache_LoadScheduleRules(t *testing.T) {
 	}
 
 	sc.LoadScheduleRules(directRules, scheduleLists, listRules)
+	snapshot := sc.current()
 
-	if len(sc.scheduleRuleSet[1]) != 2 {
-		t.Errorf("scheduleRuleSet[1] has %d entries; want 2", len(sc.scheduleRuleSet[1]))
+	if len(snapshot.scheduleRuleSet[1]) != 2 {
+		t.Errorf("scheduleRuleSet[1] has %d entries; want 2", len(snapshot.scheduleRuleSet[1]))
 	}
-	if len(sc.scheduleRuleSet[2]) != 0 {
-		t.Errorf("scheduleRuleSet[2] has %d entries; want 0", len(sc.scheduleRuleSet[2]))
+	if len(snapshot.scheduleRuleSet[2]) != 0 {
+		t.Errorf("scheduleRuleSet[2] has %d entries; want 0", len(snapshot.scheduleRuleSet[2]))
 	}
-	if len(sc.scheduleToLists[1]) != 1 || sc.scheduleToLists[1][0] != 10 {
-		t.Errorf("scheduleToLists[1] = %v; want [10]", sc.scheduleToLists[1])
+	if len(snapshot.scheduleToLists[1]) != 1 || snapshot.scheduleToLists[1][0] != 10 {
+		t.Errorf("scheduleToLists[1] = %v; want [10]", snapshot.scheduleToLists[1])
 	}
-	if len(sc.scheduleToLists[2]) != 1 || sc.scheduleToLists[2][0] != 10 {
-		t.Errorf("scheduleToLists[2] = %v; want [10]", sc.scheduleToLists[2])
+	if len(snapshot.scheduleToLists[2]) != 1 || snapshot.scheduleToLists[2][0] != 10 {
+		t.Errorf("scheduleToLists[2] = %v; want [10]", snapshot.scheduleToLists[2])
 	}
-	if len(sc.listRuleSet[10]) != 2 {
-		t.Errorf("listRuleSet[10] has %d entries; want 2", len(sc.listRuleSet[10]))
+	if len(snapshot.listRuleSet[10]) != 2 {
+		t.Errorf("listRuleSet[10] has %d entries; want 2", len(snapshot.listRuleSet[10]))
 	}
 }
 
@@ -169,6 +170,32 @@ func TestScheduleCache_HasRuleIntersection(t *testing.T) {
 				t.Errorf("HasRuleIntersection(%v, %v) = %v; want %v", tc.scheduleIDs, tc.domainRules, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestScheduleCache_LoadClearsStaleEntries(t *testing.T) {
+	sc := NewScheduleCache()
+	sc.Load(
+		[]*model.Schedule{{ID: 1, Active: true, Monday: true, StartTime: "00:00", EndTime: "00:00"}},
+		[]*model.ScheduleRule{{ScheduleID: 1, RuleID: 10}},
+		[]*model.ScheduleList{{ScheduleID: 1, ListID: 100}},
+		[]*model.ListRule{{ListID: 100, RuleID: 20}},
+	)
+	sc.Load(
+		[]*model.Schedule{{ID: 2, Active: true, Monday: true, StartTime: "00:00", EndTime: "00:00"}},
+		[]*model.ScheduleRule{{ScheduleID: 2, RuleID: 30}},
+		[]*model.ScheduleList{{ScheduleID: 2, ListID: 200}},
+		[]*model.ListRule{{ListID: 200, RuleID: 40}},
+	)
+
+	if sc.HasRuleIntersection([]int{1}, []int{10, 20}) {
+		t.Error("old schedule rules remained after reload")
+	}
+	if !sc.HasRuleIntersection([]int{2}, []int{30}) {
+		t.Error("new direct schedule rule missing after reload")
+	}
+	if !sc.HasRuleIntersection([]int{2}, []int{40}) {
+		t.Error("new list schedule rule missing after reload")
 	}
 }
 
