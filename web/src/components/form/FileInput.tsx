@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, createUniqueId, Show } from "solid-js";
 
 interface Props {
 	label: string;
@@ -12,6 +12,7 @@ interface Props {
 export default function FileInput(props: Props) {
 	const [dragOver, setDragOver] = createSignal(false);
 	const [fileName, setFileName] = createSignal("");
+	const inputId = createUniqueId();
 
 	const handleFile = async (file: File) => {
 		const text = await file.text();
@@ -37,7 +38,7 @@ export default function FileInput(props: Props) {
 				{props.label}
 			</p>
 			<label
-				for="file-input"
+				for={inputId}
 				class="border-2 border-dashed p-8 flex flex-col items-center gap-2 cursor-pointer"
 				classList={{
 					"border-black": dragOver(),
@@ -60,7 +61,7 @@ export default function FileInput(props: Props) {
 					<p class="text-xs text-zinc-400">Click to replace</p>
 				</Show>
 				<input
-					id="file-input"
+					id={inputId}
 					type="file"
 					accept={props.accept}
 					style="display: none;"
