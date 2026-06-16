@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -40,6 +41,8 @@ import (
 )
 
 var devMode = "false" // Set via ldflags
+
+var pseudoVersionHash = regexp.MustCompile(`^v\d+\.\d+\.\d+.*[-.]\d{8}(?:\d{6})?-([0-9a-fA-F]+)(?:\+incompatible)?$`)
 
 // Config defines the blkhole configuration
 type Config struct {
@@ -242,7 +245,10 @@ func buildRevision() string {
 }
 
 func revisionFromBuildInfo(info *debug.BuildInfo) string {
-	return revisionFromSettings(info.Settings)
+	if revision := revisionFromSettings(info.Settings); revision != "" {
+		return revision
+	}
+	return revisionFromModuleVersion(info.Main.Version)
 }
 
 func revisionFromSettings(settings []debug.BuildSetting) string {
@@ -255,6 +261,17 @@ func revisionFromSettings(settings []debug.BuildSetting) string {
 		}
 	}
 	return ""
+}
+
+func revisionFromModuleVersion(version string) string {
+	matches := pseudoVersionHash.FindStringSubmatch(version)
+	if len(matches) != 2 {
+		return ""
+	}
+	if len(matches[1]) > 7 {
+		return matches[1][:7]
+	}
+	return matches[1]
 }
 
 func initTLS(domain string) *tls.Config {
