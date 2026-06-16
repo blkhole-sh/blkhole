@@ -97,10 +97,41 @@ func TestDomainCache_GetRules(t *testing.T) {
 	}
 }
 
+func TestDomainCache_GetRules_ReturnsCopy(t *testing.T) {
+	dc := NewDomainCache()
+	dc.LoadRules([]*model.Rule{{ID: 100, DomainID: 1}})
+
+	rules := dc.GetRules(1)
+	rules[0] = 999
+
+	if got := dc.GetRules(1); len(got) != 1 || got[0] != 100 {
+		t.Errorf("GetRules(1) after caller mutation = %v; want [100]", got)
+	}
+}
+
 func TestDomainCache_GetRules_EmptyCache(t *testing.T) {
 	dc := NewDomainCache()
 	if rules := dc.GetRules(1); len(rules) != 0 {
 		t.Errorf("GetRules on empty cache = %v; want empty", rules)
+	}
+}
+
+func TestDomainCache_LoadClearsStaleEntries(t *testing.T) {
+	dc := NewDomainCache()
+	dc.Load([]*model.Domain{{ID: 1, Name: "old.example.com"}}, []*model.Rule{{ID: 100, DomainID: 1}})
+	dc.Load([]*model.Domain{{ID: 2, Name: "new.example.com"}}, []*model.Rule{{ID: 200, DomainID: 2}})
+
+	if _, ok := dc.LookupDomainID("old.example.com"); ok {
+		t.Error("old domain remained after reload")
+	}
+	if rules := dc.GetRules(1); len(rules) != 0 {
+		t.Errorf("old domain rules remained after reload: %v", rules)
+	}
+	if id, ok := dc.LookupDomainID("new.example.com"); !ok || id != 2 {
+		t.Errorf("new domain lookup = (%d, %v); want (2, true)", id, ok)
+	}
+	if rules := dc.GetRules(2); len(rules) != 1 || rules[0] != 200 {
+		t.Errorf("new domain rules = %v; want [200]", rules)
 	}
 }
 
