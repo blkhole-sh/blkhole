@@ -1,4 +1,4 @@
-import { ParentProps } from "solid-js";
+import type { ParentProps } from "solid-js";
 
 function Title(props: ParentProps) {
 	return <p class="text-sm text-zinc-700">{props.children}</p>;

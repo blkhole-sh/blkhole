@@ -1,6 +1,6 @@
-import { ParentProps, JSX } from "solid-js";
-import Logo from "~/components/ui/Logo";
+import type { JSX, ParentProps } from "solid-js";
 import ButtonSolid from "~/components/ui/ButtonSolid";
+import Logo from "~/components/ui/Logo";
 
 interface Props extends ParentProps {
 	onSubmit: (e: Event) => void;

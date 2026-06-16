@@ -1,6 +1,6 @@
+import { Route, Router } from "@solidjs/router";
+import { lazy, Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import { Router, Route } from "@solidjs/router";
-import { Suspense, lazy } from "solid-js";
 import "virtual:uno.css";
 import "./app.css";
 
@@ -20,7 +20,7 @@ import AuthProvider from "./context/AuthContext";
 
 const root = document.getElementById("root");
 
-if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
+if (!(root instanceof HTMLElement)) {
 	throw new Error(
 		"Root element not found. Did you forget to add it to your index.html? Or maybe the id attribute got misspelled?",
 	);
@@ -45,5 +45,5 @@ render(
 			</Router>
 		</AuthProvider>
 	),
-	root!,
+	root,
 );

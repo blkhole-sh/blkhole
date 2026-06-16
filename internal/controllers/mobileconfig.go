@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/blkhole-sh/blkhole/internal/repos"
 	"github.com/blkhole-sh/blkhole/internal/services"
+	"github.com/go-chi/chi/v5"
 )
 
 //go:embed mobileconfig.tmpl

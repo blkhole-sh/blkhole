@@ -16,10 +16,10 @@ func TestWebController_Serve_ExistingFile(t *testing.T) {
 	controller := NewWebController(mockFS, "")
 
 	tests := []struct {
-		path            string
-		expectedStatus  int
-		expectedBody    string
-		expectedCT      string
+		path           string
+		expectedStatus int
+		expectedBody   string
+		expectedCT     string
 	}{
 		{"/app.js", http.StatusOK, "console.log('hi')", "application/javascript"},
 		{"/style.css", http.StatusOK, "body{}", "text/css"},

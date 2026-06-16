@@ -1,8 +1,8 @@
-import { createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { useAuth } from "~/context/AuthContext";
-import AuthForm from "~/components/layout/AuthForm";
+import { createSignal, Show } from "solid-js";
 import TextInput from "~/components/form/TextInput";
+import AuthForm from "~/components/layout/AuthForm";
+import { useAuth } from "~/context/AuthContext";
 import { compose, email as isEmail, required } from "~/lib/validate";
 
 export default function SignIn() {

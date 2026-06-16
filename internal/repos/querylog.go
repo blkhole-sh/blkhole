@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/georgysavva/scany/v2/sqlscan"
 	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/georgysavva/scany/v2/sqlscan"
 )
 
 // QueryLogRepo defines the interface for query log repository operations

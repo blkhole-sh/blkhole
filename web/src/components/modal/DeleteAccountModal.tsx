@@ -1,6 +1,6 @@
-import Modal from "./Modal";
 import { useNavigate } from "@solidjs/router";
 import { deleteAccount, logout } from "~/lib/api";
+import Modal from "./Modal";
 
 interface Props {
 	open: boolean;
@@ -26,8 +26,7 @@ export default function DeleteAccountModal(props: Props) {
 		>
 			<p class="text-sm text-zinc-500">
 				Are you sure you want to delete your account? All your devices, lists,
-				and schedules will be permanently removed. This action cannot be
-				undone.
+				and schedules will be permanently removed. This action cannot be undone.
 			</p>
 		</Modal>
 	);

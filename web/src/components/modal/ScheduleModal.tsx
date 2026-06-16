@@ -3,26 +3,25 @@ import {
 	createResource,
 	createSignal,
 	For,
-	JSX,
-	Show,
+	type JSX,
 } from "solid-js";
-import MultiStepModal from "./MultiStepModal";
-import TextInput from "../form/TextInput";
-import TimeInput from "../form/TimeInput";
-import CheckboxInput from "../form/CheckboxInput";
-import DaysInput, { Days } from "../form/DaysInput";
 import {
 	createSchedule,
-	updateSchedule,
 	getDevices,
 	getLists,
+	updateSchedule,
 } from "~/lib/api";
+import type { Schedule } from "~/lib/model";
 import { required } from "~/lib/validate";
-import { Schedule } from "~/lib/model";
-import Apple from "../icons/Apple";
+import CheckboxInput from "../form/CheckboxInput";
+import DaysInput, { type Days } from "../form/DaysInput";
+import TextInput from "../form/TextInput";
+import TimeInput from "../form/TimeInput";
 import Android from "../icons/Android";
+import Apple from "../icons/Apple";
 import Linux from "../icons/Linux";
 import Windows from "../icons/Windows";
+import MultiStepModal from "./MultiStepModal";
 
 function osIcon(os: string): JSX.Element {
 	const lower = os.toLowerCase();
@@ -31,7 +30,7 @@ function osIcon(os: string): JSX.Element {
 	if (lower.includes("android")) return <Android class="size-5" />;
 	if (lower.includes("linux")) return <Linux class="size-5" />;
 	if (lower.includes("windows")) return <Windows class="size-5" />;
-	return <></>;
+	return null;
 }
 
 interface Props {
@@ -151,13 +150,14 @@ export default function ScheduleModal(props: Props) {
 	const handleSubmit = async () => {
 		try {
 			setError("");
-			if (isEditMode()) {
+			const schedule = props.schedule;
+			if (schedule) {
 				await updateSchedule(
-					props.schedule!.id,
+					schedule.id,
 					name(),
 					startTime(),
 					endTime(),
-					props.schedule!.active,
+					schedule.active,
 					days(),
 					listIds(),
 					deviceIds(),
@@ -232,7 +232,7 @@ export default function ScheduleModal(props: Props) {
 					</div>
 				</MultiStepModal.Step>
 			)}
-			{lists() && lists()!.length > 0 && (
+			{(lists()?.length ?? 0) > 0 && (
 				<MultiStepModal.Step>
 					<div class="flex flex-col gap-1">
 						<p class="font-medium text-zinc-700 text-sm tracking-wider">
@@ -256,7 +256,7 @@ export default function ScheduleModal(props: Props) {
 					</div>
 				</MultiStepModal.Step>
 			)}
-			{devices() && devices()!.length > 0 && (
+			{(devices()?.length ?? 0) > 0 && (
 				<MultiStepModal.Step>
 					<div class="flex flex-col gap-1">
 						<p class="font-medium text-zinc-700 text-sm tracking-wider">

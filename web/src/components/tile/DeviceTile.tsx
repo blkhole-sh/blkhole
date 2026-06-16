@@ -1,13 +1,13 @@
-import { Show, createSignal, Index } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Device } from "~/lib/model";
+import { createSignal, Index, Show } from "solid-js";
+import OSIcon from "~/components/icons/OSIcon";
 import ActionButton from "~/components/ui/ActionButton";
 import Tag from "~/components/ui/Tag";
-import OSIcon from "~/components/icons/OSIcon";
 import { deleteDevice } from "~/lib/api";
+import { useScrollToHash } from "~/lib/hooks";
+import type { Device } from "~/lib/model";
 import DeleteModal from "../modal/DeleteModal";
 import DeviceSetupModal from "../modal/DeviceSetupModal";
-import { useScrollToHash } from "~/lib/hooks";
 
 interface Props {
 	device: Device;

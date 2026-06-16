@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/georgysavva/scany/v2/sqlscan"
 	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/georgysavva/scany/v2/sqlscan"
 )
 
 // DomainRepo defines the interface for domain repository operations

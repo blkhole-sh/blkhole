@@ -1,4 +1,4 @@
-import { Device } from "~/lib/model";
+import type { Device } from "~/lib/model";
 import Instructions from "./Instructions";
 
 interface Props {

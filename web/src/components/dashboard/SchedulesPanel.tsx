@@ -1,12 +1,11 @@
-import { For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { For, Show } from "solid-js";
 import type { Schedule } from "~/lib/model";
 import { formatTime, isAllDay } from "~/lib/utils";
 
 interface Props {
 	schedules: Schedule[] | undefined;
 }
-
 
 export default function SchedulesPanel(props: Props) {
 	const navigate = useNavigate();

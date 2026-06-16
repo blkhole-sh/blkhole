@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/blkhole-sh/blkhole/internal/model"
 	"github.com/blkhole-sh/blkhole/internal/services"
+	"github.com/go-chi/chi/v5"
 )
 
 // MockAuthService

@@ -1,7 +1,14 @@
 /**
  * API client for authenticated requests to the blkhole server backend
  */
-import { Device, List, Quote, QueryStats, Schedule, Settings } from "./model";
+import type {
+	Device,
+	List,
+	QueryStats,
+	Quote,
+	Schedule,
+	Settings,
+} from "./model";
 
 const API_BASE = "/api";
 
@@ -110,7 +117,7 @@ export const refreshAuth = async () => {
  * @returns Parsed JSON response
  * @throws Error on API errors or authentication failure
  */
-const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
+const api = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
 	const makeRequest = async (includeRefresh = true) => {
 		const response = await fetch(`${API_BASE}${endpoint}`, {
 			headers: {
@@ -126,7 +133,7 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 				await refreshAuth();
 				// Retry the original request once
 				return makeRequest(false);
-			} catch (refreshError) {
+			} catch {
 				// Refresh failed, clear local data and redirect
 				localStorage.removeItem("user");
 				window.location.href = "/auth/signin";
@@ -143,10 +150,10 @@ const api = async (endpoint: string, options?: RequestInit): Promise<any> => {
 			return;
 		}
 
-		return response.json();
+		return response.json() as Promise<T>;
 	};
 
-	return makeRequest();
+	return makeRequest() as Promise<T>;
 };
 
 /**

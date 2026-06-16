@@ -1,11 +1,11 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import ScheduleTile from "~/components/tile/ScheduleTile";
 import PageShell from "~/components/layout/PageShell";
 import ScheduleModal from "~/components/modal/ScheduleModal";
+import ScheduleTile from "~/components/tile/ScheduleTile";
 import EmptyState from "~/components/ui/EmptyState";
 import { getSchedules } from "~/lib/api";
-import { Schedule } from "~/lib/model";
 import { useScrollToHash } from "~/lib/hooks";
+import type { Schedule } from "~/lib/model";
 
 export default function Schedules() {
 	useScrollToHash();
@@ -39,7 +39,7 @@ export default function Schedules() {
 			onCTA={handleCreate}
 		>
 			<Show
-				when={schedules() && schedules()!.length > 0}
+				when={(schedules()?.length ?? 0) > 0}
 				fallback={
 					<Show when={!schedules.loading}>
 						<EmptyState

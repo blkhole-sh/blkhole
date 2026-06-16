@@ -67,12 +67,15 @@ export default function QueriesPanel(props: Props) {
 		const d = data();
 		if (d.length === 0 || count <= 0) return [];
 
-		if (count === 1) return [d[0]?.xAxis];
+		const first = d[0];
+		if (!first) return [];
+		if (count === 1) return [first.xAxis];
 
 		const ticks: string[] = [];
 		for (let i = 0; i < count; i++) {
 			const idx = Math.floor((i * (d.length - 1)) / (count - 1));
-			ticks.push(d[idx]?.xAxis);
+			const point = d[idx];
+			if (point) ticks.push(point.xAxis);
 		}
 
 		return ticks;

@@ -1,7 +1,7 @@
-import { JSX, Show, createSignal } from "solid-js";
-import Divider from "../ui/Divider";
+import { createSignal, type JSX, Show } from "solid-js";
 import Eye from "../icons/Eye";
 import EyeSlash from "../icons/EyeSlash";
+import Divider from "../ui/Divider";
 
 interface Props {
 	label: string;

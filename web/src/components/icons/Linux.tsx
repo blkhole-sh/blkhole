@@ -7,6 +7,7 @@ export default function Linux(props: Props) {
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="0 0 24 24"
+			aria-hidden="true"
 			class={props.class ?? "size-6"}
 		>
 			{/* Main body — fills entire outer Tux silhouette */}

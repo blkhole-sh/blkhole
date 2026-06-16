@@ -1,4 +1,4 @@
-import { JSX, ParentProps } from "solid-js";
+import type { JSX, ParentProps } from "solid-js";
 import { cx } from "~/lib/utils";
 
 interface Props extends ParentProps {

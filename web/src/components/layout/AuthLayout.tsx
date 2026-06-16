@@ -1,8 +1,8 @@
-import { ParentProps, Show, createEffect } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { useAuth } from "~/context/AuthContext";
-import Navbar from "~/components/layout/Navbar";
+import { createEffect, type ParentProps, Show } from "solid-js";
 import Footer from "~/components/layout/Footer";
+import Navbar from "~/components/layout/Navbar";
+import { useAuth } from "~/context/AuthContext";
 
 export default function AuthLayout(props: ParentProps) {
 	const auth = useAuth();

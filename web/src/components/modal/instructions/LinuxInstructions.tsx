@@ -1,5 +1,5 @@
+import type { Device } from "~/lib/model";
 import Instructions from "./Instructions";
-import { Device } from "~/lib/model";
 
 interface Props {
 	device: Device;

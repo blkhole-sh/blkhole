@@ -1,9 +1,9 @@
 import { createSignal } from "solid-js";
 import PageShell from "~/components/layout/PageShell";
-import DNSSettings from "~/components/settings/DNSSettings";
-import DangerZone from "~/components/settings/DangerZone";
-import AccountSettings from "~/components/settings/AccountSettings";
 import DeleteAccountModal from "~/components/modal/DeleteAccountModal";
+import AccountSettings from "~/components/settings/AccountSettings";
+import DangerZone from "~/components/settings/DangerZone";
+import DNSSettings from "~/components/settings/DNSSettings";
 
 export default function Settings() {
 	const [deleteModalOpen, setDeleteModalOpen] = createSignal(false);

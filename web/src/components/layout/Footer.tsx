@@ -13,7 +13,7 @@ export default function Footer() {
 				<span>VERSION {version}</span>
 			</Show>
 			<Show when={hash}>
-				<span>{hash!.toUpperCase()}</span>
+				<span>{hash?.toUpperCase()}</span>
 			</Show>
 		</div>
 	);

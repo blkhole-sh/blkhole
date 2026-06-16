@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { Device } from "~/lib/model";
+import type { Device } from "~/lib/model";
 import { configUrl, isIOS, isMacOS } from "~/lib/utils";
 import Instructions from "./Instructions";
 

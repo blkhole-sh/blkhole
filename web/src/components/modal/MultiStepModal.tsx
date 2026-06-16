@@ -2,12 +2,12 @@ import {
 	children,
 	createEffect,
 	createSignal,
-	JSX,
-	ParentProps,
+	type JSX,
+	type ParentProps,
 	Show,
 } from "solid-js";
-import ActionButton from "../ui/ActionButton";
 import XMark from "../icons/XMark";
+import ActionButton from "../ui/ActionButton";
 import ButtonGhost from "../ui/ButtonGhost";
 import ButtonSolid from "../ui/ButtonSolid";
 

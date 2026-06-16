@@ -1,9 +1,21 @@
 name: Deploy blkhole
+
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-blkhole-main
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.0.3
@@ -16,5 +28,5 @@ jobs:
             export HOME=/home/arian
             export GOBIN=/home/arian/go/bin
             export GOPRIVATE=github.com/blkhole-sh/*
-            GOPROXY=direct CGO_ENABLED=1 /usr/local/go/bin/go install github.com/blkhole-sh/blkhole@main
+            GOPROXY=direct CGO_ENABLED=1 /usr/local/go/bin/go install github.com/blkhole-sh/blkhole@${{ github.event.workflow_run.head_sha }}
             sudo service blkhole restart

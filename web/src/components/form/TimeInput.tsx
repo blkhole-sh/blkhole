@@ -1,6 +1,6 @@
-import { JSX, Show } from "solid-js";
-import Divider from "../ui/Divider";
+import { type JSX, Show } from "solid-js";
 import { cx } from "~/lib/utils";
+import Divider from "../ui/Divider";
 
 interface Props {
 	label: string;

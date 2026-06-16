@@ -1,11 +1,11 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import ListTile from "~/components/tile/ListTile";
 import PageShell from "~/components/layout/PageShell";
 import ListModal from "~/components/modal/ListModal";
+import ListTile from "~/components/tile/ListTile";
 import EmptyState from "~/components/ui/EmptyState";
 import { getLists } from "~/lib/api";
-import { List } from "~/lib/model";
 import { useScrollToHash } from "~/lib/hooks";
+import type { List } from "~/lib/model";
 
 export default function Lists() {
 	useScrollToHash();
@@ -37,7 +37,7 @@ export default function Lists() {
 			onCTA={handleCreate}
 		>
 			<Show
-				when={lists() && lists()!.length > 0}
+				when={(lists()?.length ?? 0) > 0}
 				fallback={
 					<Show when={!lists.loading}>
 						<EmptyState

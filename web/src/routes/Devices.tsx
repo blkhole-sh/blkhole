@@ -1,11 +1,11 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import DeviceTile from "~/components/tile/DeviceTile";
 import PageShell from "~/components/layout/PageShell";
 import DeviceModal from "~/components/modal/DeviceModal";
+import DeviceTile from "~/components/tile/DeviceTile";
 import EmptyState from "~/components/ui/EmptyState";
 import { getDevices } from "~/lib/api";
-import { Device } from "~/lib/model";
 import { useScrollToHash } from "~/lib/hooks";
+import type { Device } from "~/lib/model";
 
 export default function Devices() {
 	useScrollToHash();
@@ -37,7 +37,7 @@ export default function Devices() {
 			onCTA={handleAdd}
 		>
 			<Show
-				when={devices() && devices()!.length > 0}
+				when={(devices()?.length ?? 0) > 0}
 				fallback={
 					<Show when={!devices.loading}>
 						<EmptyState
