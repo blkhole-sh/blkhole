@@ -1,14 +1,14 @@
 import { createEffect, createSignal } from "solid-js";
-import Modal from "./Modal";
+import { createDevice, updateDevice } from "~/lib/api";
+import type { Device } from "~/lib/model";
+import { required } from "~/lib/validate";
 import TextInput from "../form/TextInput";
-import TileInput, { TileOption } from "../form/TileInput";
+import TileInput, { type TileOption } from "../form/TileInput";
 import Android from "../icons/Android";
+import Apple from "../icons/Apple";
 import Linux from "../icons/Linux";
 import Windows from "../icons/Windows";
-import { createDevice, updateDevice } from "~/lib/api";
-import { required } from "~/lib/validate";
-import { Device } from "~/lib/model";
-import Apple from "../icons/Apple";
+import Modal from "./Modal";
 
 interface Props {
 	open: boolean;
@@ -73,8 +73,9 @@ export default function DeviceModal(props: Props) {
 
 		try {
 			setError("");
-			if (isEditMode()) {
-				await updateDevice(props.device!.id, name(), os());
+			const device = props.device;
+			if (device) {
+				await updateDevice(device.id, name(), os());
 			} else {
 				await createDevice(name(), os());
 			}

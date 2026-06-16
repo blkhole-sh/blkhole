@@ -36,7 +36,8 @@ export default function FileInput(props: Props) {
 			<p class="font-medium text-zinc-700 text-sm tracking-wider">
 				{props.label}
 			</p>
-			<div
+			<label
+				for="file-input"
 				class="border-2 border-dashed p-8 flex flex-col items-center gap-2 cursor-pointer"
 				classList={{
 					"border-black": dragOver(),
@@ -48,9 +49,6 @@ export default function FileInput(props: Props) {
 				}}
 				onDragLeave={() => setDragOver(false)}
 				onDrop={handleDrop}
-				onclick={() =>
-					(document.getElementById("file-input") as HTMLInputElement)?.click()
-				}
 			>
 				<Show
 					when={fileName()}
@@ -71,7 +69,7 @@ export default function FileInput(props: Props) {
 						if (file) handleFile(file);
 					}}
 				/>
-			</div>
+			</label>
 			<Show when={message()}>
 				<p class={`text-xs ${isError() ? "text-red-700" : "text-zinc-400"}`}>
 					{message()}

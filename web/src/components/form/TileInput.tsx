@@ -1,4 +1,4 @@
-import { For, JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 
 export interface TileOption {
 	value: string;

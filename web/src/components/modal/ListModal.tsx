@@ -1,12 +1,12 @@
 import { createEffect, createSignal, Show } from "solid-js";
-import Modal from "./Modal";
-import TextInput from "../form/TextInput";
-import TextAreaInput from "../form/TextAreaInput";
-import FileInput from "../form/FileInput";
-import TabBar from "../ui/TabBar";
 import { createList, updateList } from "~/lib/api";
-import { compose, required, url as isUrl } from "~/lib/validate";
-import { List } from "~/lib/model";
+import type { List } from "~/lib/model";
+import { compose, url as isUrl, required } from "~/lib/validate";
+import FileInput from "../form/FileInput";
+import TextAreaInput from "../form/TextAreaInput";
+import TextInput from "../form/TextInput";
+import TabBar from "../ui/TabBar";
+import Modal from "./Modal";
 
 type SourceTab = "url" | "file" | "manual";
 
@@ -83,8 +83,9 @@ export default function ListModal(props: Props) {
 		if (!name().trim() || !source().trim()) return;
 		try {
 			setError("");
-			if (isEditMode()) {
-				await updateList(props.list!.id, name(), description(), source());
+			const list = props.list;
+			if (list) {
+				await updateList(list.id, name(), description(), source());
 			} else {
 				await createList(name(), description(), source());
 			}

@@ -8,6 +8,7 @@ export default function LogoIcon(props: Props) {
 			class={props.class ?? ""}
 			viewBox="0 0 40 40"
 			fill="none"
+			aria-hidden="true"
 			xmlns="http://www.w3.org/2000/svg"
 		>
 			<rect

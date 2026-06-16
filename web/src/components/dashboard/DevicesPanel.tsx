@@ -1,7 +1,7 @@
-import { For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import type { Device } from "~/lib/model";
+import { For, Show } from "solid-js";
 import OSIcon from "~/components/icons/OSIcon";
+import type { Device } from "~/lib/model";
 
 interface Props {
 	devices: Device[] | undefined;

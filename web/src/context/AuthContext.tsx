@@ -1,11 +1,16 @@
-import { createContext, createSignal, ParentProps, useContext } from "solid-js";
-import { User } from "~/lib/model";
+import {
+	createContext,
+	createSignal,
+	type ParentProps,
+	useContext,
+} from "solid-js";
 import {
 	login as apiLogin,
-	register as apiRegister,
 	logout as apiLogout,
+	register as apiRegister,
 	refreshAuth,
 } from "~/lib/api";
+import type { User } from "~/lib/model";
 
 type AuthStore = {
 	user: () => User | null;

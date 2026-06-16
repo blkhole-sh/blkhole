@@ -8,6 +8,7 @@ export default function Eye(props: Props) {
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="0 0 24 24"
 			fill="currentColor"
+			aria-hidden="true"
 			class={props.class ?? "size-6"}
 		>
 			<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />

@@ -1,9 +1,9 @@
 import { createSignal, Show } from "solid-js";
-import { List } from "~/lib/model";
 import ActionButton from "~/components/ui/ActionButton";
 import { deleteList } from "~/lib/api";
-import DeleteModal from "../modal/DeleteModal";
 import { useScrollToHash } from "~/lib/hooks";
+import type { List } from "~/lib/model";
+import DeleteModal from "../modal/DeleteModal";
 
 interface Props {
 	list: List;

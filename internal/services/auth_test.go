@@ -3,8 +3,8 @@ package services
 import (
 	"testing"
 
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/blkhole-sh/blkhole/internal/repos"
+	"github.com/go-chi/jwtauth/v5"
 )
 
 func TestAuthService_Register(t *testing.T) {

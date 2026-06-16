@@ -50,7 +50,9 @@ func (m *fullStatsCache) GetUserSecondCounts(hs []string) map[int64]int {
 	}
 	return map[int64]int{}
 }
-func (m *fullStatsCache) GetUserBlockedSecondCounts(hs []string) map[int64]int { return map[int64]int{} }
+func (m *fullStatsCache) GetUserBlockedSecondCounts(hs []string) map[int64]int {
+	return map[int64]int{}
+}
 
 func TestStatsController_GetQueryStats_Success(t *testing.T) {
 	deviceRepo := &MockDeviceRepo{

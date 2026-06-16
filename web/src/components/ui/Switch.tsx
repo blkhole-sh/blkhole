@@ -19,7 +19,10 @@ export default function Switch(props: Props) {
 		>
 			<span
 				class="bg-white pointer-events-none block size-4 shrink-0 shadow transition-transform"
-				classList={{ "translate-x-4": props.checked, "translate-x-0": !props.checked }}
+				classList={{
+					"translate-x-4": props.checked,
+					"translate-x-0": !props.checked,
+				}}
 			/>
 		</button>
 	);

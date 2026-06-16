@@ -1,4 +1,4 @@
-import { JSX, ParentProps, Show } from "solid-js";
+import { type JSX, type ParentProps, Show } from "solid-js";
 import ButtonSolid from "../ui/ButtonSolid";
 import Divider from "../ui/Divider";
 

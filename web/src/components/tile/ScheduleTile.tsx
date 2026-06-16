@@ -1,13 +1,12 @@
-import { For, Show, createEffect, createSignal, Index } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Schedule } from "~/lib/model";
-import ActionButton from "~/components/ui/ActionButton";
-import Tag from "~/components/ui/Tag";
-import Switch from "~/components/ui/Switch";
-import { deleteSchedule, updateSchedule } from "~/lib/api";
-import { formatTime, isAllDay } from "~/lib/utils";
+import { createEffect, createSignal, For, Index, Show } from "solid-js";
 import DeleteModal from "~/components/modal/DeleteModal";
-import { useScrollToHash } from "~/lib/hooks";
+import ActionButton from "~/components/ui/ActionButton";
+import Switch from "~/components/ui/Switch";
+import Tag from "~/components/ui/Tag";
+import { deleteSchedule, updateSchedule } from "~/lib/api";
+import type { Schedule } from "~/lib/model";
+import { formatTime, isAllDay } from "~/lib/utils";
 
 interface Props {
 	schedule: Schedule;
@@ -26,12 +25,13 @@ const days = [
 	{ label: "S", key: "sunday" },
 ] as const;
 
-
 export default function ScheduleTile(props: Props) {
 	const navigate = useNavigate();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
-	const [optimisticActive, setOptimisticActive] = createSignal<boolean | undefined>();
+	const [optimisticActive, setOptimisticActive] = createSignal<
+		boolean | undefined
+	>();
 
 	const active = () => optimisticActive() ?? props.schedule.active;
 
@@ -82,10 +82,7 @@ export default function ScheduleTile(props: Props) {
 						{props.schedule.name}
 					</p>
 					<Show when={!props.schedule.isDefault}>
-						<Switch
-							checked={active()}
-							onChange={handleToggleActive}
-						/>
+						<Switch checked={active()} onChange={handleToggleActive} />
 					</Show>
 				</div>
 				<p
@@ -102,9 +99,15 @@ export default function ScheduleTile(props: Props) {
 			>
 				<thead>
 					<tr class="text-sm tracking-wider">
-						<th scope="col" class="w-5/12 pb-2 text-left font-normal">TIMING</th>
-						<th scope="col" class="w-3/12 pb-2 text-left font-normal">DEVICES</th>
-						<th scope="col" class="w-[16%] pb-2 text-left font-normal">BLOCKLISTS</th>
+						<th scope="col" class="w-5/12 pb-2 text-left font-normal">
+							TIMING
+						</th>
+						<th scope="col" class="w-3/12 pb-2 text-left font-normal">
+							DEVICES
+						</th>
+						<th scope="col" class="w-[16%] pb-2 text-left font-normal">
+							BLOCKLISTS
+						</th>
 						<th scope="col" class="w-[17%] pb-2">
 							<span class="sr-only">ACTIONS</span>
 						</th>
@@ -138,7 +141,9 @@ export default function ScheduleTile(props: Props) {
 										{(name, i) => (
 											<Tag
 												onclick={() =>
-													navigate(`/devices#device-${props.schedule.deviceIds[i]}`)
+													navigate(
+														`/devices#device-${props.schedule.deviceIds[i]}`,
+													)
 												}
 											>
 												{name()}

@@ -1,6 +1,6 @@
-import { ParentProps, createEffect } from "solid-js";
-import ActionButton from "../ui/ActionButton";
+import { createEffect, type ParentProps } from "solid-js";
 import XMark from "../icons/XMark";
+import ActionButton from "../ui/ActionButton";
 import ButtonGhost from "../ui/ButtonGhost";
 import ButtonSolid from "../ui/ButtonSolid";
 

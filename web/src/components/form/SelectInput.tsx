@@ -1,7 +1,7 @@
-import { JSX, ParentProps, Show } from "solid-js";
-import Divider from "../ui/Divider";
-import ChevronDown from "../icons/ChevronDown";
+import { type JSX, type ParentProps, Show } from "solid-js";
 import { cx } from "~/lib/utils";
+import ChevronDown from "../icons/ChevronDown";
+import Divider from "../ui/Divider";
 
 interface Props extends ParentProps {
 	label?: string;

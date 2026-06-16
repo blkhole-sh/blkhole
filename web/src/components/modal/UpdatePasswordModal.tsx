@@ -1,8 +1,8 @@
 import { createSignal, Show } from "solid-js";
-import Modal from "./Modal";
-import TextInput from "../form/TextInput";
-import { compose, minLength, required } from "~/lib/validate";
 import { changePassword } from "~/lib/api";
+import { compose, minLength, required } from "~/lib/validate";
+import TextInput from "../form/TextInput";
+import Modal from "./Modal";
 
 interface Props {
 	open: boolean;

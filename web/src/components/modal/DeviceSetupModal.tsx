@@ -1,11 +1,11 @@
 import { Match, Switch } from "solid-js";
-import Modal from "./Modal";
-import { Device } from "~/lib/model";
+import type { Device } from "~/lib/model";
 import { isAndroid, isApple, isLinux, isWindows } from "~/lib/utils";
-import AppleInstructions from "./instructions/AppleInstructions";
 import AndroidInstructions from "./instructions/AndroidInstructions";
+import AppleInstructions from "./instructions/AppleInstructions";
 import LinuxInstructions from "./instructions/LinuxInstructions";
 import WindowsInstructions from "./instructions/WindowsInstructions";
+import Modal from "./Modal";
 
 interface Props {
 	open: boolean;

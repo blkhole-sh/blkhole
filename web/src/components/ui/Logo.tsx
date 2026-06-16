@@ -8,6 +8,8 @@ export default function Logo(props: Props) {
 			class={props.class ?? ""}
 			viewBox="0 0 239 59"
 			fill="none"
+			role="img"
+			aria-label="blkhole"
 			xmlns="http://www.w3.org/2000/svg"
 		>
 			<path
