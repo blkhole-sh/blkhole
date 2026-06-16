@@ -231,18 +231,22 @@ func initWeb() {
 	webController = controllers.NewWebController(webSubFS, buildRevision())
 }
 
-// buildRevision reports the revision of the running binary. For `go install`
-// builds it is the module version (tag or pseudo-version); for local builds
-// from the repo it is the short VCS revision. Empty when unavailable.
+// buildRevision reports the short VCS revision of the running binary. Empty
+// when unavailable.
 func buildRevision() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return ""
 	}
-	if v := info.Main.Version; v != "" && v != "(devel)" {
-		return v
-	}
-	for _, s := range info.Settings {
+	return revisionFromBuildInfo(info)
+}
+
+func revisionFromBuildInfo(info *debug.BuildInfo) string {
+	return revisionFromSettings(info.Settings)
+}
+
+func revisionFromSettings(settings []debug.BuildSetting) string {
+	for _, s := range settings {
 		if s.Key == "vcs.revision" {
 			if len(s.Value) > 7 {
 				return s.Value[:7]
