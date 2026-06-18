@@ -39,32 +39,122 @@ type StatsCache interface {
 	Cleanup()
 }
 
+// bucketSeries holds per-device counts truncated to a fixed step, retained for
+// the given window. One series backs one resolution (e.g. 1-minute buckets).
+type bucketSeries struct {
+	step   time.Duration
+	retain time.Duration
+	counts map[string]map[time.Time]int // deviceHash -> bucket -> count
+}
+
+func newBucketSeries(step, retain time.Duration) *bucketSeries {
+	return &bucketSeries{step: step, retain: retain, counts: make(map[string]map[time.Time]int)}
+}
+
+func (b *bucketSeries) add(deviceHash string, t time.Time, count int) {
+	bucket := t.Truncate(b.step)
+	device := b.counts[deviceHash]
+	if device == nil {
+		device = make(map[time.Time]int)
+		b.counts[deviceHash] = device
+	}
+	device[bucket] += count
+}
+
+// cleanup drops buckets older than the retention window and empty device entries.
+func (b *bucketSeries) cleanup(now time.Time) {
+	cutoff := now.Add(-b.retain)
+	for deviceHash, counts := range b.counts {
+		for timestamp := range counts {
+			if timestamp.Before(cutoff) {
+				delete(counts, timestamp)
+			}
+		}
+		if len(counts) == 0 {
+			delete(b.counts, deviceHash)
+		}
+	}
+}
+
+// statSeries bundles the three chart resolutions plus the per-second QPS samples
+// for one stream of queries (total or blocked).
+type statSeries struct {
+	minute  *bucketSeries
+	fiveMin *bucketSeries
+	hour    *bucketSeries
+	seconds map[string]map[int64]int // deviceHash -> unix-second -> count (24h)
+}
+
+func newStatSeries() *statSeries {
+	return &statSeries{
+		minute:  newBucketSeries(time.Minute, 24*time.Hour),
+		fiveMin: newBucketSeries(5*time.Minute, 7*24*time.Hour),
+		hour:    newBucketSeries(time.Hour, 30*24*time.Hour),
+		seconds: make(map[string]map[int64]int),
+	}
+}
+
+// add records count for a device at t across every resolution.
+func (s *statSeries) add(deviceHash string, t time.Time, count int) {
+	s.minute.add(deviceHash, t, count)
+	s.fiveMin.add(deviceHash, t, count)
+	s.hour.add(deviceHash, t, count)
+
+	device := s.seconds[deviceHash]
+	if device == nil {
+		device = make(map[int64]int)
+		s.seconds[deviceHash] = device
+	}
+	device[t.Unix()] += count
+}
+
+// bucketsFor returns the resolution backing the given time range, or nil.
+func (s *statSeries) bucketsFor(timeRange string) *bucketSeries {
+	switch timeRange {
+	case Range24h:
+		return s.minute
+	case Range7d:
+		return s.fiveMin
+	case Range30d:
+		return s.hour
+	default:
+		return nil
+	}
+}
+
+func (s *statSeries) cleanup(now time.Time) {
+	s.minute.cleanup(now)
+	s.fiveMin.cleanup(now)
+	s.hour.cleanup(now)
+
+	// Per-second samples are kept for 24 hours.
+	cutoff := now.Add(-24 * time.Hour).Unix()
+	for deviceHash, counts := range s.seconds {
+		for sec := range counts {
+			if sec < cutoff {
+				delete(counts, sec)
+			}
+		}
+		if len(counts) == 0 {
+			delete(s.seconds, deviceHash)
+		}
+	}
+}
+
 // statsCache implements the StatsCache interface
 type statsCache struct {
-	mu                   sync.RWMutex
-	deviceCache          DeviceCache
-	minuteCounts         map[string]map[time.Time]int // deviceHash -> 1-min buckets (24h)
-	fiveMinCounts        map[string]map[time.Time]int // deviceHash -> 5-min buckets (7d)
-	hourCounts           map[string]map[time.Time]int // deviceHash -> 1-hour buckets (30d)
-	minuteBlockedCounts  map[string]map[time.Time]int // deviceHash -> 1-min blocked buckets (24h)
-	fiveMinBlockedCounts map[string]map[time.Time]int // deviceHash -> 5-min blocked buckets (7d)
-	hourBlockedCounts    map[string]map[time.Time]int // deviceHash -> 1-hour blocked buckets (30d)
-	secondCounts         map[string]map[int64]int     // deviceHash -> unix-second counts (24h), QPS samples
-	secondBlockedCounts  map[string]map[int64]int     // deviceHash -> unix-second blocked counts (24h)
+	mu          sync.RWMutex
+	deviceCache DeviceCache
+	total       *statSeries
+	blocked     *statSeries
 }
 
 // NewStatsCache creates a new stats cache instance
 func NewStatsCache(deviceCache DeviceCache) StatsCache {
 	return &statsCache{
-		deviceCache:          deviceCache,
-		minuteCounts:         make(map[string]map[time.Time]int),
-		fiveMinCounts:        make(map[string]map[time.Time]int),
-		hourCounts:           make(map[string]map[time.Time]int),
-		minuteBlockedCounts:  make(map[string]map[time.Time]int),
-		fiveMinBlockedCounts: make(map[string]map[time.Time]int),
-		hourBlockedCounts:    make(map[string]map[time.Time]int),
-		secondCounts:         make(map[string]map[int64]int),
-		secondBlockedCounts:  make(map[string]map[int64]int),
+		deviceCache: deviceCache,
+		total:       newStatSeries(),
+		blocked:     newStatSeries(),
 	}
 }
 
@@ -102,9 +192,8 @@ func fillSeries(counts map[time.Time]int, timeRange string) []model.StatCount {
 	return result
 }
 
-// Increment increments the query count for a device across all time buckets
-func (sc *statsCache) Increment(deviceHash string) {
-	// Validate device exists before caching stats
+// record adds count for a device to a series, ignoring unknown devices.
+func (sc *statsCache) record(series *statSeries, deviceHash string, t time.Time, count int) {
 	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
 		return
 	}
@@ -112,264 +201,84 @@ func (sc *statsCache) Increment(deviceHash string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	now := timeNow()
+	series.add(deviceHash, t, count)
+}
 
-	// Increment 1-minute bucket
-	minuteBucket := now.Truncate(time.Minute)
-	if sc.minuteCounts[deviceHash] == nil {
-		sc.minuteCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.minuteCounts[deviceHash][minuteBucket]++
-
-	// Increment 5-minute bucket
-	fiveMinBucket := now.Truncate(5 * time.Minute)
-	if sc.fiveMinCounts[deviceHash] == nil {
-		sc.fiveMinCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.fiveMinCounts[deviceHash][fiveMinBucket]++
-
-	// Increment 1-hour bucket
-	hourBucket := now.Truncate(time.Hour)
-	if sc.hourCounts[deviceHash] == nil {
-		sc.hourCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.hourCounts[deviceHash][hourBucket]++
-
-	// Increment per-second counter (QPS sample)
-	if sc.secondCounts[deviceHash] == nil {
-		sc.secondCounts[deviceHash] = make(map[int64]int)
-	}
-	sc.secondCounts[deviceHash][now.Unix()]++
+// Increment increments the query count for a device across all time buckets
+func (sc *statsCache) Increment(deviceHash string) {
+	sc.record(sc.total, deviceHash, timeNow(), 1)
 }
 
 // IncrementBlocked increments the blocked query count for a device across all time buckets
 func (sc *statsCache) IncrementBlocked(deviceHash string) {
-	// Validate device exists before caching stats
-	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
-		return
-	}
-
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-
-	now := timeNow()
-
-	// Increment 1-minute blocked bucket
-	minuteBucket := now.Truncate(time.Minute)
-	if sc.minuteBlockedCounts[deviceHash] == nil {
-		sc.minuteBlockedCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.minuteBlockedCounts[deviceHash][minuteBucket]++
-
-	// Increment 5-minute blocked bucket
-	fiveMinBucket := now.Truncate(5 * time.Minute)
-	if sc.fiveMinBlockedCounts[deviceHash] == nil {
-		sc.fiveMinBlockedCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.fiveMinBlockedCounts[deviceHash][fiveMinBucket]++
-
-	// Increment 1-hour blocked bucket
-	hourBucket := now.Truncate(time.Hour)
-	if sc.hourBlockedCounts[deviceHash] == nil {
-		sc.hourBlockedCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.hourBlockedCounts[deviceHash][hourBucket]++
-
-	// Increment per-second blocked counter (QPS sample)
-	if sc.secondBlockedCounts[deviceHash] == nil {
-		sc.secondBlockedCounts[deviceHash] = make(map[int64]int)
-	}
-	sc.secondBlockedCounts[deviceHash][now.Unix()]++
+	sc.record(sc.blocked, deviceHash, timeNow(), 1)
 }
 
 // IncrementAt adds query count for a device at a specific timestamp (for testing)
 func (sc *statsCache) IncrementAt(deviceHash string, timestamp time.Time, count int) {
-	// Validate device exists before caching stats
-	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
-		return
-	}
-
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-
-	// Increment 1-minute bucket
-	minuteBucket := timestamp.Truncate(time.Minute)
-	if sc.minuteCounts[deviceHash] == nil {
-		sc.minuteCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.minuteCounts[deviceHash][minuteBucket] += count
-
-	// Increment 5-minute bucket
-	fiveMinBucket := timestamp.Truncate(5 * time.Minute)
-	if sc.fiveMinCounts[deviceHash] == nil {
-		sc.fiveMinCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.fiveMinCounts[deviceHash][fiveMinBucket] += count
-
-	// Increment 1-hour bucket
-	hourBucket := timestamp.Truncate(time.Hour)
-	if sc.hourCounts[deviceHash] == nil {
-		sc.hourCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.hourCounts[deviceHash][hourBucket] += count
-
-	// Increment per-second counter (QPS sample)
-	if sc.secondCounts[deviceHash] == nil {
-		sc.secondCounts[deviceHash] = make(map[int64]int)
-	}
-	sc.secondCounts[deviceHash][timestamp.Unix()] += count
+	sc.record(sc.total, deviceHash, timestamp, count)
 }
 
 // IncrementBlockedAt adds blocked query count for a device at a specific timestamp (for testing)
 func (sc *statsCache) IncrementBlockedAt(deviceHash string, timestamp time.Time, count int) {
-	// Validate device exists before caching stats
+	sc.record(sc.blocked, deviceHash, timestamp, count)
+}
+
+// deviceCounts returns the padded series for a single, known device.
+func (sc *statsCache) deviceCounts(series *statSeries, deviceHash, timeRange string) []model.StatCount {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
 	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
-		return
+		return []model.StatCount{}
 	}
 
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-
-	// Increment 1-minute blocked bucket
-	minuteBucket := timestamp.Truncate(time.Minute)
-	if sc.minuteBlockedCounts[deviceHash] == nil {
-		sc.minuteBlockedCounts[deviceHash] = make(map[time.Time]int)
+	buckets := series.bucketsFor(timeRange)
+	if buckets == nil {
+		return []model.StatCount{}
 	}
-	sc.minuteBlockedCounts[deviceHash][minuteBucket] += count
 
-	// Increment 5-minute blocked bucket
-	fiveMinBucket := timestamp.Truncate(5 * time.Minute)
-	if sc.fiveMinBlockedCounts[deviceHash] == nil {
-		sc.fiveMinBlockedCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.fiveMinBlockedCounts[deviceHash][fiveMinBucket] += count
-
-	// Increment 1-hour blocked bucket
-	hourBucket := timestamp.Truncate(time.Hour)
-	if sc.hourBlockedCounts[deviceHash] == nil {
-		sc.hourBlockedCounts[deviceHash] = make(map[time.Time]int)
-	}
-	sc.hourBlockedCounts[deviceHash][hourBucket] += count
-
-	// Increment per-second blocked counter (QPS sample)
-	if sc.secondBlockedCounts[deviceHash] == nil {
-		sc.secondBlockedCounts[deviceHash] = make(map[int64]int)
-	}
-	sc.secondBlockedCounts[deviceHash][timestamp.Unix()] += count
+	return fillSeries(buckets.counts[deviceHash], timeRange)
 }
 
-// selectBucket returns the appropriate bucket map based on time range
-func (sc *statsCache) selectBucket(timeRange string) map[string]map[time.Time]int {
-	switch timeRange {
-	case Range24h:
-		return sc.minuteCounts
-	case Range7d:
-		return sc.fiveMinCounts
-	case Range30d:
-		return sc.hourCounts
-	default:
-		return nil
-	}
-}
+// userCounts returns the padded series aggregated across the given devices.
+func (sc *statsCache) userCounts(series *statSeries, deviceHashes []string, timeRange string) []model.StatCount {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
 
-// selectBlockedBucket returns the appropriate blocked bucket map based on time range
-func (sc *statsCache) selectBlockedBucket(timeRange string) map[string]map[time.Time]int {
-	switch timeRange {
-	case Range24h:
-		return sc.minuteBlockedCounts
-	case Range7d:
-		return sc.fiveMinBlockedCounts
-	case Range30d:
-		return sc.hourBlockedCounts
-	default:
-		return nil
+	buckets := series.bucketsFor(timeRange)
+	if buckets == nil {
+		return []model.StatCount{}
 	}
+
+	aggregated := make(map[time.Time]int)
+	for _, deviceHash := range deviceHashes {
+		for timestamp, count := range buckets.counts[deviceHash] {
+			aggregated[timestamp] += count
+		}
+	}
+
+	return fillSeries(aggregated, timeRange)
 }
 
 // GetCounts returns query counts for a single device based on time range
 func (sc *statsCache) GetCounts(deviceHash string, timeRange string) []model.StatCount {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-
-	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
-		return []model.StatCount{}
-	}
-
-	bucketMap := sc.selectBucket(timeRange)
-	if bucketMap == nil {
-		return []model.StatCount{}
-	}
-
-	return fillSeries(bucketMap[deviceHash], timeRange)
-}
-
-// GetUserCounts aggregates query counts for all user devices based on time range
-func (sc *statsCache) GetUserCounts(deviceHashes []string, timeRange string) []model.StatCount {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-
-	bucketMap := sc.selectBucket(timeRange)
-	if bucketMap == nil {
-		return []model.StatCount{}
-	}
-
-	// Aggregate counts from all devices by timestamp
-	aggregated := make(map[time.Time]int)
-	for _, deviceHash := range deviceHashes {
-		deviceCounts := bucketMap[deviceHash]
-		if deviceCounts == nil {
-			continue
-		}
-
-		for timestamp, count := range deviceCounts {
-			aggregated[timestamp] += count
-		}
-	}
-
-	return fillSeries(aggregated, timeRange)
+	return sc.deviceCounts(sc.total, deviceHash, timeRange)
 }
 
 // GetBlockedCounts returns blocked query counts for a single device based on time range
 func (sc *statsCache) GetBlockedCounts(deviceHash string, timeRange string) []model.StatCount {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
+	return sc.deviceCounts(sc.blocked, deviceHash, timeRange)
+}
 
-	if _, ok := sc.deviceCache.GetDeviceID(deviceHash); !ok {
-		return []model.StatCount{}
-	}
-
-	bucketMap := sc.selectBlockedBucket(timeRange)
-	if bucketMap == nil {
-		return []model.StatCount{}
-	}
-
-	return fillSeries(bucketMap[deviceHash], timeRange)
+// GetUserCounts aggregates query counts for all user devices based on time range
+func (sc *statsCache) GetUserCounts(deviceHashes []string, timeRange string) []model.StatCount {
+	return sc.userCounts(sc.total, deviceHashes, timeRange)
 }
 
 // GetUserBlockedCounts aggregates blocked query counts for all user devices based on time range
 func (sc *statsCache) GetUserBlockedCounts(deviceHashes []string, timeRange string) []model.StatCount {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-
-	bucketMap := sc.selectBlockedBucket(timeRange)
-	if bucketMap == nil {
-		return []model.StatCount{}
-	}
-
-	// Aggregate counts from all devices by timestamp
-	aggregated := make(map[time.Time]int)
-	for _, deviceHash := range deviceHashes {
-		deviceCounts := bucketMap[deviceHash]
-		if deviceCounts == nil {
-			continue
-		}
-
-		for timestamp, count := range deviceCounts {
-			aggregated[timestamp] += count
-		}
-	}
-
-	return fillSeries(aggregated, timeRange)
+	return sc.userCounts(sc.blocked, deviceHashes, timeRange)
 }
 
 // Start begins the background cleanup goroutine
@@ -390,97 +299,8 @@ func (sc *statsCache) Cleanup() {
 	defer sc.mu.Unlock()
 
 	now := timeNow()
-
-	// Clean per-second counts: remove entries older than 24 hours
-	cutoffSec := now.Add(-24 * time.Hour).Unix()
-	for _, secondMap := range []map[string]map[int64]int{sc.secondCounts, sc.secondBlockedCounts} {
-		for deviceHash, counts := range secondMap {
-			for sec := range counts {
-				if sec < cutoffSec {
-					delete(counts, sec)
-				}
-			}
-			if len(counts) == 0 {
-				delete(secondMap, deviceHash)
-			}
-		}
-	}
-
-	// Clean minuteCounts: remove entries older than 24 hours
-	cutoff24h := now.Add(-24 * time.Hour)
-	for deviceHash, counts := range sc.minuteCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff24h) {
-				delete(counts, timestamp)
-			}
-		}
-		// Remove device entry if no counts left
-		if len(counts) == 0 {
-			delete(sc.minuteCounts, deviceHash)
-		}
-	}
-
-	// Clean minuteBlockedCounts: remove entries older than 24 hours
-	for deviceHash, counts := range sc.minuteBlockedCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff24h) {
-				delete(counts, timestamp)
-			}
-		}
-		if len(counts) == 0 {
-			delete(sc.minuteBlockedCounts, deviceHash)
-		}
-	}
-
-	// Clean fiveMinCounts: remove entries older than 7 days
-	cutoff7d := now.Add(-7 * 24 * time.Hour)
-	for deviceHash, counts := range sc.fiveMinCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff7d) {
-				delete(counts, timestamp)
-			}
-		}
-		if len(counts) == 0 {
-			delete(sc.fiveMinCounts, deviceHash)
-		}
-	}
-
-	// Clean fiveMinBlockedCounts: remove entries older than 7 days
-	for deviceHash, counts := range sc.fiveMinBlockedCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff7d) {
-				delete(counts, timestamp)
-			}
-		}
-		if len(counts) == 0 {
-			delete(sc.fiveMinBlockedCounts, deviceHash)
-		}
-	}
-
-	// Clean hourCounts: remove entries older than 30 days
-	cutoff30d := now.Add(-30 * 24 * time.Hour)
-	for deviceHash, counts := range sc.hourCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff30d) {
-				delete(counts, timestamp)
-			}
-		}
-		if len(counts) == 0 {
-			delete(sc.hourCounts, deviceHash)
-		}
-	}
-
-	// Clean hourBlockedCounts: remove entries older than 30 days
-	for deviceHash, counts := range sc.hourBlockedCounts {
-		for timestamp := range counts {
-			if timestamp.Before(cutoff30d) {
-				delete(counts, timestamp)
-			}
-		}
-		if len(counts) == 0 {
-			delete(sc.hourBlockedCounts, deviceHash)
-		}
-	}
+	sc.total.cleanup(now)
+	sc.blocked.cleanup(now)
 }
 
 // GetUserSecondCounts aggregates per-second query counts (QPS samples) across
@@ -489,7 +309,7 @@ func (sc *statsCache) GetUserSecondCounts(deviceHashes []string) map[int64]int {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
-	return aggregateSeconds(sc.secondCounts, deviceHashes)
+	return aggregateSeconds(sc.total.seconds, deviceHashes)
 }
 
 // GetUserBlockedSecondCounts aggregates per-second blocked query counts across
@@ -498,7 +318,7 @@ func (sc *statsCache) GetUserBlockedSecondCounts(deviceHashes []string) map[int6
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
-	return aggregateSeconds(sc.secondBlockedCounts, deviceHashes)
+	return aggregateSeconds(sc.blocked.seconds, deviceHashes)
 }
 
 func aggregateSeconds(secondMap map[string]map[int64]int, deviceHashes []string) map[int64]int {
