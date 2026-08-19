@@ -2,6 +2,8 @@
  * API client for authenticated requests to the blkhole server backend
  */
 import type {
+	BrowserClient,
+	BrowserPairing,
 	Device,
 	List,
 	QueryStats,
@@ -217,6 +219,23 @@ export const updateDevice = (
 /** Delete a device by ID */
 export const deleteDevice = (id: string): Promise<void> =>
 	api(`/devices/${id}`, { method: "DELETE" });
+
+/** Create a short-lived browser extension pairing for a device. */
+export const createBrowserPairing = (id: string): Promise<BrowserPairing> =>
+	api(`/devices/${id}/browser-pairings`, { method: "POST" });
+
+/** List browser installations paired with a device. */
+export const getBrowserClients = (id: string): Promise<BrowserClient[]> =>
+	api(`/devices/${id}/browser-clients`);
+
+/** Revoke a browser installation paired with a device. */
+export const revokeBrowserClient = (
+	deviceId: string,
+	clientId: string,
+): Promise<void> =>
+	api(`/devices/${deviceId}/browser-clients/${clientId}`, {
+		method: "DELETE",
+	});
 
 /** Update a blocklist by ID */
 export const updateList = (

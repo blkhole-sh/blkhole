@@ -33,6 +33,29 @@ type Device struct {
 	ScheduleIDs []int  `json:"scheduleIds"`
 }
 
+// BrowserClient represents a paired browser installation.
+type BrowserClient struct {
+	ID         int    `json:"id"`
+	DeviceID   int    `json:"-"`
+	Name       string `json:"name"`
+	Browser    string `json:"browser"`
+	TokenHash  string `json:"-"`
+	CreatedAt  int64  `json:"-"`
+	LastUsedAt int64  `json:"-"`
+	RevokedAt  *int64 `json:"-"`
+	DeviceName string `json:"-"`
+	DeviceHash string `json:"-"`
+}
+
+// BrowserClientDTO is the non-secret browser client metadata returned by the API.
+type BrowserClientDTO struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Browser      string `json:"browser"`
+	CreatedAt    string `json:"createdAt"`
+	LastActiveAt string `json:"lastActiveAt"`
+}
+
 // Domain represents a domain with its id in the system
 type Domain struct {
 	ID   int    `json:"id"`

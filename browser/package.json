@@ -1,0 +1,23 @@
+{
+	"name": "blkhole-browser-extension",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "bun run scripts/build.ts all",
+		"build:chromium": "bun run scripts/build.ts chromium",
+		"build:firefox": "bun run scripts/build.ts firefox",
+		"build:safari": "bun run scripts/build.ts safari",
+		"check": "biome check src tests scripts package.json tsconfig.json platforms static",
+		"package:safari": "./scripts/package-safari.sh",
+		"test": "bun test",
+		"typecheck": "tsc -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.10",
+		"typescript": "5.9.3"
+	},
+	"engines": {
+		"bun": ">=1.2.19"
+	}
+}

@@ -1,6 +1,7 @@
 import { Match, Switch } from "solid-js";
 import type { Device } from "~/lib/model";
 import { isAndroid, isApple, isLinux, isWindows } from "~/lib/utils";
+import BrowserExtensionSetup from "./BrowserExtensionSetup";
 import AndroidInstructions from "./instructions/AndroidInstructions";
 import AppleInstructions from "./instructions/AppleInstructions";
 import LinuxInstructions from "./instructions/LinuxInstructions";
@@ -51,6 +52,7 @@ export default function DeviceSetupModal(props: Props) {
 						<WindowsInstructions device={props.device} />
 					</Match>
 				</Switch>
+				<BrowserExtensionSetup device={props.device} open={props.open} />
 			</div>
 		</Modal>
 	);

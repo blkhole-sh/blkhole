@@ -19,6 +19,19 @@ export interface Device {
 	scheduleNames: string[];
 }
 
+export interface BrowserClient {
+	id: string;
+	name: string;
+	browser: string;
+	createdAt: string;
+	lastActiveAt: string | null;
+}
+
+export interface BrowserPairing {
+	pairingToken: string;
+	expiresAt: string;
+}
+
 // Define Rule interface
 export interface Rule {
 	id: number;

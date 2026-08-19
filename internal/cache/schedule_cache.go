@@ -19,7 +19,30 @@ type ScheduleCache interface {
 	LoadSchedules(schedules []*model.Schedule)
 	LoadScheduleRules(scheduleRules []*model.ScheduleRule, scheduleLists []*model.ScheduleList, listRules []*model.ListRule)
 	HasRuleIntersection(scheduleIDs []int, domainRules []int) bool
+	EffectiveRuleIDs(scheduleIDs []int) []int
 	FilterActiveSchedules(scheduleIDs []int) []int
+}
+
+// EffectiveRuleIDs returns the union of direct and list rules attached to schedules.
+func (sc *scheduleCache) EffectiveRuleIDs(scheduleIDs []int) []int {
+	snapshot := sc.current()
+	ruleIDs := make(map[int]struct{})
+	for _, scheduleID := range scheduleIDs {
+		for ruleID := range snapshot.scheduleRuleSet[scheduleID] {
+			ruleIDs[ruleID] = struct{}{}
+		}
+		for _, listID := range snapshot.scheduleToLists[scheduleID] {
+			for ruleID := range snapshot.listRuleSet[listID] {
+				ruleIDs[ruleID] = struct{}{}
+			}
+		}
+	}
+
+	result := make([]int, 0, len(ruleIDs))
+	for ruleID := range ruleIDs {
+		result = append(result, ruleID)
+	}
+	return result
 }
 
 // scheduleWindow holds a schedule's active days and time-of-day window with

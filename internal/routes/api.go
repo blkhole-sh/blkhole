@@ -22,6 +22,7 @@ func InitAPI(
 	settingsController controllers.SettingsController,
 	webController controllers.WebController,
 	queryLogController controllers.QueryLogController,
+	browserController controllers.BrowserController,
 	tokenAuth *jwtauth.JWTAuth,
 ) {
 	// API routes group
@@ -36,6 +37,12 @@ func InitAPI(
 		r.Post("/auth/logout", authController.Logout)
 		r.Get("/quote", quoteController.Random)
 		r.Get("/settings", settingsController.GetSettings)
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.BrowserExtensionCORS)
+			r.Post("/browser/v1/pair", browserController.Pair)
+			r.Get("/browser/v1/rules", browserController.Rules)
+		})
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
@@ -57,6 +64,9 @@ func InitAPI(
 			r.Put("/devices", deviceController.Create)
 			r.Patch("/devices/{id}", deviceController.Update)
 			r.Delete("/devices/{id}", deviceController.Delete)
+			r.Post("/devices/{id}/browser-pairings", browserController.CreatePairing)
+			r.Get("/devices/{id}/browser-clients", browserController.ListClients)
+			r.Delete("/devices/{id}/browser-clients/{clientId}", browserController.RevokeClient)
 
 			// List API routes
 			r.Get("/lists/{id}", listController.FindByID)

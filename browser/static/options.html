@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>blkhole extension settings</title>
+		<link rel="stylesheet" href="extension.css" />
+	</head>
+	<body>
+		<main>
+			<p class="eyebrow">blkhole</p>
+			<h1>Browser extension</h1>
+			<p data-status>Loading…</p>
+			<label for="api-origin">Web app origin</label>
+			<input id="api-origin" data-origin type="url" inputmode="url" />
+			<p class="hint">Changing the origin unpairs the extension and clears its rules.</p>
+			<p class="error" data-error role="alert"></p>
+			<div class="actions">
+				<button type="button" data-save>Save origin</button>
+				<button type="button" class="secondary" data-sync>Sync now</button>
+				<button type="button" class="secondary" data-unpair>Clear local pairing</button>
+			</div>
+		</main>
+		<script src="options.js"></script>
+	</body>
+</html>

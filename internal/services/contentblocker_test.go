@@ -414,6 +414,112 @@ func TestContentBlocker_IsBlocked(t *testing.T) {
 	}
 }
 
+func TestContentBlocker_EffectiveBlockedDomains(t *testing.T) {
+	database := setupTestDB(t)
+	defer database.Close()
+	users := repos.NewUserRepo(database)
+	devices := repos.NewDeviceRepo(database)
+	rules := repos.NewRuleRepo(database)
+	lists := repos.NewListRepo(database)
+	schedules := repos.NewScheduleRepo(database)
+	domains := repos.NewDomainRepo(database)
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
+
+	listID := createTestList(t, lists, rules, domains, userID, []string{"List.Example.com.", "duplicate.example.com"})
+	scheduleID := createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{listID}, []string{"direct.example.com", "Duplicate.Example.com"}, userID)
+
+	allowedDomainID, err := domains.CreateOrGet(&model.Domain{Name: "allowed.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowedRuleID, err := rules.CreateOrGet(&model.Rule{DomainID: allowedDomainID, Allowed: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := schedules.LinkRule(scheduleID, allowedRuleID); err != nil {
+		t.Fatal(err)
+	}
+
+	inactiveDomainID, err := domains.CreateOrGet(&model.Domain{Name: "inactive.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inactiveRuleID, err := rules.CreateOrGet(&model.Rule{DomainID: inactiveDomainID, Allowed: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inactive := &model.Schedule{Name: "Inactive", StartTime: "00:00", EndTime: "00:00", Active: false, UserID: userID, Monday: true, Tuesday: true, Wednesday: true, Thursday: true, Friday: true, Saturday: true, Sunday: true}
+	inactiveID, err := schedules.Create(inactive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	device, err := devices.FindByHash(deviceHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := schedules.LinkDevice(inactiveID, device.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := schedules.LinkRule(inactiveID, inactiveRuleID); err != nil {
+		t.Fatal(err)
+	}
+
+	blocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
+	if err := blocker.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	got, err := blocker.EffectiveBlockedDomains(deviceHash)
+	if err != nil {
+		t.Fatalf("EffectiveBlockedDomains: %v", err)
+	}
+	want := []string{"allowed.example.com", "direct.example.com", "duplicate.example.com", "list.example.com"}
+	if len(got) != len(want) {
+		t.Fatalf("domains = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("domains = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestContentBlocker_ActiveParentIsNotShadowedByInactiveChild(t *testing.T) {
+	database := setupTestDB(t)
+	defer database.Close()
+	users := repos.NewUserRepo(database)
+	devices := repos.NewDeviceRepo(database)
+	rules := repos.NewRuleRepo(database)
+	lists := repos.NewListRepo(database)
+	schedules := repos.NewScheduleRepo(database)
+	domains := repos.NewDomainRepo(database)
+	userID := createTestUser(t, users)
+	deviceHash := createTestDevice(t, devices, userID)
+
+	parentListID := createTestList(t, lists, rules, domains, userID, []string{"example.com"})
+	createTestSchedule(t, schedules, rules, domains, devices, deviceHash, []int{parentListID}, nil, userID)
+
+	childID, err := domains.CreateOrGet(&model.Domain{Name: "known.example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rules.CreateOrGet(&model.Rule{DomainID: childID, Allowed: false}); err != nil {
+		t.Fatal(err)
+	}
+
+	blocker := NewContentBlocker(devices, rules, schedules, domains, cache.NewDeviceCache())
+	if err := blocker.Init(); err != nil {
+		t.Fatal(err)
+	}
+	blocked, err := blocker.IsBlocked("known.example.com", deviceHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !blocked {
+		t.Fatal("active parent rule was shadowed by a globally known inactive child")
+	}
+}
+
 func TestContentBlocker_ReloadFailureKeepsPublishedCache(t *testing.T) {
 	db := setupTestDB(t)
 
