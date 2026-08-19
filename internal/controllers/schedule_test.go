@@ -19,6 +19,9 @@ type MockContentBlocker struct {
 
 func (m *MockContentBlocker) Init() error   { return nil }
 func (m *MockContentBlocker) Reload() error { return nil }
+func (m *MockContentBlocker) EffectiveBlockedDomains(string) ([]string, error) {
+	return []string{}, nil
+}
 func (m *MockContentBlocker) IsBlocked(domain, deviceHash string) (bool, error) {
 	if m.IsBlockedFunc != nil {
 		return m.IsBlockedFunc(domain, deviceHash)

@@ -23,6 +23,9 @@ func (m *mockContentBlocker) IsBlocked(domain, deviceHash string) (bool, error) 
 	}
 	return false, nil
 }
+func (m *mockContentBlocker) EffectiveBlockedDomains(string) ([]string, error) {
+	return []string{}, nil
+}
 
 // mockStatsCache implements cache.StatsCache for resolver tests
 type mockStatsCache struct {

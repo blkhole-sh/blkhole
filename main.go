@@ -25,6 +25,7 @@ import (
 	"github.com/blkhole-sh/blkhole/internal/cache"
 	"github.com/blkhole-sh/blkhole/internal/controllers"
 	schema "github.com/blkhole-sh/blkhole/internal/db"
+	"github.com/blkhole-sh/blkhole/internal/middleware"
 	"github.com/blkhole-sh/blkhole/internal/repos"
 	"github.com/blkhole-sh/blkhole/internal/routes"
 	"github.com/blkhole-sh/blkhole/internal/servers"
@@ -66,6 +67,7 @@ var (
 	schedules repos.ScheduleRepo
 	domains   repos.DomainRepo
 	queryLogs repos.QueryLogRepo
+	browsers  repos.BrowserRepo
 
 	// Services
 	contentBlocker services.ContentBlocker
@@ -74,6 +76,7 @@ var (
 	listService    services.ListService
 	authService    services.AuthService
 	queryLogBuffer *services.QueryLogBuffer
+	browserService services.BrowserService
 	tokenAuth      *jwtauth.JWTAuth
 
 	// Caches
@@ -93,6 +96,7 @@ var (
 	settingsController     controllers.SettingsController
 	webController          controllers.WebController
 	queryLogController     controllers.QueryLogController
+	browserController      controllers.BrowserController
 )
 
 func envOrDefault(key, def string) string {
@@ -161,7 +165,7 @@ func initDatabase() *sql.DB {
 	dbPath := filepath.Join(configDir, "blkhole", "blkhole.db")
 	os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -190,6 +194,7 @@ func initRepos(db *sql.DB) {
 	users = repos.NewUserRepo(db)
 	domains = repos.NewDomainRepo(db)
 	queryLogs = repos.NewQueryLogRepo(db)
+	browsers = repos.NewBrowserRepo(db)
 }
 
 func initCaches() {
@@ -206,6 +211,7 @@ func initServices(secret []byte, upstreamDNS string) {
 
 	tokenAuth = jwtauth.New("HS256", secret, nil)
 	authService = services.NewAuthService(users, schedules, cryptoService, tokenAuth)
+	browserService = services.NewBrowserService(browsers, devices, contentBlocker)
 }
 
 func initControllers(domain, upstreamDNS string) {
@@ -223,6 +229,7 @@ func initControllers(domain, upstreamDNS string) {
 	statsController = controllers.NewStatsController(statsCache, devices, queryLogs, authService)
 	settingsController = controllers.NewSettingsController(upstreamDNS)
 	queryLogController = controllers.NewQueryLogController(queryLogs, authService)
+	browserController = controllers.NewBrowserController(browserService, devices, authService)
 }
 
 func initWeb() {
@@ -353,6 +360,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	// Add some middleware for better logging and recovery
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(middleware.BrowserExtensionPreflight)
 
 	// Determine allowed origins based on mode
 	var allowedOrigins []string
@@ -377,7 +385,7 @@ func initRouter(cfg *Config) *chi.Mux {
 	}))
 
 	// Initialize routes
-	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, webController, queryLogController, tokenAuth)
+	routes.InitAPI(r, authController, userController, deviceController, listController, scheduleController, statsController, quoteController, mobileConfigController, settingsController, webController, queryLogController, browserController, tokenAuth)
 	routes.InitWeb(r, webController, &webFS, devMode)
 	routes.InitDoH(r, dohController, cfg.Domain, devMode)
 

@@ -4,6 +4,7 @@ package services
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync/atomic"
 
@@ -19,6 +20,37 @@ type ContentBlocker interface {
 	Init() error
 	Reload() error
 	IsBlocked(domain string, deviceHash string) (bool, error)
+	EffectiveBlockedDomains(deviceHash string) ([]string, error)
+}
+
+// EffectiveBlockedDomains returns the normalized blocking domains currently
+// effective for a device, using the same device and schedule snapshots as DNS.
+func (cb *contentBlocker) EffectiveBlockedDomains(deviceHash string) ([]string, error) {
+	caches := cb.currentCaches()
+	deviceID, ok := caches.deviceCache.GetDeviceID(deviceHash)
+	if !ok {
+		return []string{}, nil
+	}
+
+	scheduleIDs := caches.scheduleCache.FilterActiveSchedules(caches.deviceCache.GetSchedules(deviceID))
+	ruleIDs := caches.scheduleCache.EffectiveRuleIDs(scheduleIDs)
+	domains := caches.domainCache.RuleDomains(ruleIDs)
+
+	seen := make(map[string]struct{}, len(domains))
+	result := make([]string, 0, len(domains))
+	for _, domain := range domains {
+		normalized := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(domain), "."))
+		if normalized == "" || !domainRegex.MatchString(normalized) {
+			continue
+		}
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	sort.Strings(result)
+	return result, nil
 }
 
 type contentBlockerSnapshot struct {
@@ -162,19 +194,13 @@ func (cb *contentBlocker) IsBlocked(domain, deviceHash string) (bool, error) {
 		return false, nil
 	}
 
-	// 3. Resolve domain to ID using longest-prefix match
-	domainID, ok := caches.domainCache.LookupDomainID(domain)
-	if !ok {
-		return false, nil
+	// Check known domains from most specific to parent. A globally known child
+	// must not hide an active parent rule for this device.
+	for _, domainID := range caches.domainCache.LookupDomainIDs(domain) {
+		domainRules := caches.domainCache.GetRules(domainID)
+		if caches.scheduleCache.HasRuleIntersection(activeScheduleIDs, domainRules) {
+			return true, nil
+		}
 	}
-
-	// 4. Get rules for the domain
-	domainRules := caches.domainCache.GetRules(domainID)
-	if len(domainRules) == 0 {
-		return false, nil
-	}
-
-	// 5. Check for intersection: active schedules → rules → domain rules
-	result := caches.scheduleCache.HasRuleIntersection(activeScheduleIDs, domainRules)
-	return result, nil
+	return false, nil
 }

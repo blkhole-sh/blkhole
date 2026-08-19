@@ -1,0 +1,42 @@
+{
+	"manifest_version": 3,
+	"name": "blkhole",
+	"version": "0.1.0",
+	"description": "Shows a clear block page for domains blocked by blkhole.",
+	"icons": {
+		"48": "images/icon-48.png",
+		"96": "images/icon-96.png",
+		"128": "images/icon-128.png"
+	},
+	"permissions": [
+		"alarms",
+		"declarativeNetRequest",
+		"storage",
+		"tabs",
+		"webNavigation"
+	],
+	"host_permissions": ["<all_urls>"],
+	"background": { "service_worker": "background.js" },
+	"action": {
+		"default_title": "blkhole settings",
+		"default_icon": {
+			"48": "images/icon-48.png",
+			"96": "images/icon-96.png"
+		}
+	},
+	"options_page": "options.html",
+	"content_scripts": [
+		{
+			"matches": ["https://*/*"],
+			"js": ["content-bridge.js"],
+			"run_at": "document_start",
+			"all_frames": false
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["blocked.html", "blocked.js", "extension.css"],
+			"matches": ["<all_urls>"]
+		}
+	]
+}
