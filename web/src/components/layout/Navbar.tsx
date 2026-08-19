@@ -1,69 +1,37 @@
-import { useLocation, useNavigate } from "@solidjs/router";
-import { useAuth } from "~/context/AuthContext";
+import { type JSX, Show } from "solid-js";
 import ActionButton from "../ui/ActionButton";
-import Logo from "../ui/Logo";
 
-export default function Navbar() {
-	const auth = useAuth();
-	const location = useLocation();
-	const navigate = useNavigate();
+interface Props {
+	title: string;
+	description: string;
+	cta?: string | undefined;
+	onCTA?: (() => void) | undefined;
+	actions?: JSX.Element | undefined;
+}
 
-	const isActive = (path: string) => location.pathname === path;
-
-	const signOut = async () => {
-		await auth.logout();
-		navigate("/auth/signin");
-	};
-
+export default function Navbar(props: Props) {
 	return (
-		<div class="sticky top-0 z-10 px-24 py-8 flex flex-row justify-between items-baseline text-sm text-zinc-500 bg-white">
-			<div class="flex flex-row items-center gap-12">
-				<a href="/" class="text-black">
-					<Logo class="h-5" />
-				</a>
-				<nav>
-					<ul class="flex flex-row gap-8 tracking-wider">
-						<li>
-							<a href="/" classList={{ "text-black underline": isActive("/") }}>
-								DASHBOARD
-							</a>
-						</li>
-						<li>
-							<a
-								href="/devices"
-								classList={{ "text-black underline": isActive("/devices") }}
-							>
-								DEVICES
-							</a>
-						</li>
-						<li>
-							<a
-								href="/lists"
-								classList={{ "text-black underline": isActive("/lists") }}
-							>
-								BLOCKLISTS
-							</a>
-						</li>
-						<li>
-							<a
-								href="/schedules"
-								classList={{ "text-black underline": isActive("/schedules") }}
-							>
-								SCHEDULES
-							</a>
-						</li>
-						<li>
-							<a
-								href="/settings"
-								classList={{ "text-black underline": isActive("/settings") }}
-							>
-								SETTINGS
-							</a>
-						</li>
-					</ul>
-				</nav>
+		<header class="sticky top-0 z-10 h-16 px-12 flex flex-row items-center justify-between gap-12 border-b border-zinc-200 bg-white">
+			<div class="min-w-0 flex flex-row items-center gap-6">
+				<h1 class="flex-shrink-0 font-display text-2xl leading-tight tracking-tight">
+					{props.title}
+				</h1>
+				<span class="w-px h-5 flex-shrink-0 bg-zinc-200" />
+				<p class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-zinc-500">
+					{props.description}
+				</p>
 			</div>
-			<ActionButton onclick={signOut}>SIGN OUT</ActionButton>
-		</div>
+			<div class="flex-shrink-0 flex flex-row items-center gap-6">
+				<Show when={props.cta}>
+					<ActionButton
+						onclick={() => props.onCTA?.()}
+						class="text-zinc-500 hover:text-black"
+					>
+						{props.cta}
+					</ActionButton>
+				</Show>
+				<Show when={props.actions}>{props.actions}</Show>
+			</div>
+		</header>
 	);
 }
