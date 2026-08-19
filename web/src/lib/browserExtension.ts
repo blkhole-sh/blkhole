@@ -117,10 +117,9 @@ export async function pairBrowserExtension(
 	if (!response || typeof response.success !== "boolean") {
 		return { success: false, error: "The extension did not respond." };
 	}
-	return {
-		success: response.success,
-		error: typeof response.error === "string" ? response.error : undefined,
-	};
+	return typeof response.error === "string"
+		? { success: response.success, error: response.error }
+		: { success: response.success };
 }
 
 export function getExtensionInstallTarget(
@@ -133,27 +132,30 @@ export function getExtensionInstallTarget(
 		return { browser: "unsupported", name: "Safari on iOS" };
 	}
 	if (/Firefox|FxiOS/i.test(userAgent)) {
+		const url = import.meta.env.VITE_BLKHOLE_EXTENSION_FIREFOX_URL;
 		return {
 			browser: "firefox",
 			name: "Firefox Add-ons",
-			url: import.meta.env.VITE_BLKHOLE_EXTENSION_FIREFOX_URL,
+			...(url ? { url } : {}),
 		};
 	}
 	if (
 		/Safari/i.test(userAgent) &&
 		!/Chrome|Chromium|CriOS|Edg|OPR|FxiOS/i.test(userAgent)
 	) {
+		const url = import.meta.env.VITE_BLKHOLE_EXTENSION_SAFARI_URL;
 		return {
 			browser: "safari",
 			name: "App Store",
-			url: import.meta.env.VITE_BLKHOLE_EXTENSION_SAFARI_URL,
+			...(url ? { url } : {}),
 		};
 	}
 	if (/Chrome|Chromium|CriOS|Edg|OPR/i.test(userAgent)) {
+		const url = import.meta.env.VITE_BLKHOLE_EXTENSION_CHROMIUM_URL;
 		return {
 			browser: "chromium",
 			name: "Chrome Web Store",
-			url: import.meta.env.VITE_BLKHOLE_EXTENSION_CHROMIUM_URL,
+			...(url ? { url } : {}),
 		};
 	}
 	return { browser: "unsupported", name: "browser extension store" };
