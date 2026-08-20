@@ -1,5 +1,4 @@
 import type { JSX, ParentProps } from "solid-js";
-import Divider from "../ui/Divider";
 import Navbar from "./Navbar";
 
 interface Props extends ParentProps {
@@ -20,10 +19,7 @@ export default function PageShell(props: Props) {
 				onCTA={props.onCTA}
 				actions={props.actions}
 			/>
-			<div class="px-24 py-4 flex flex-col flex-1">
-				{props.children}
-				<Divider class="mt-auto" />
-			</div>
+			<div class="p-12 flex flex-col flex-1">{props.children}</div>
 		</>
 	);
 }

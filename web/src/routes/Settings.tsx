@@ -10,7 +10,7 @@ export default function Settings() {
 
 	return (
 		<PageShell title="Settings" description="Fine-tune your singularity.">
-			<div class="py-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
 				<AccountSettings />
 				<div class="flex flex-col gap-12">
 					<DNSSettings />
