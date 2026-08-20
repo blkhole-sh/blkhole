@@ -77,12 +77,7 @@ export default function ScheduleTile(props: Props) {
 			class="py-5 flex flex-row items-center gap-6"
 			classList={{ "opacity-50": !active() }}
 		>
-			<Show
-				when={!props.schedule.isDefault}
-				fallback={<span class="w-10 flex-shrink-0" />}
-			>
-				<Switch checked={active()} onChange={handleToggleActive} />
-			</Show>
+			<Switch checked={active()} onChange={handleToggleActive} />
 			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">
 				{props.schedule.name}
 			</p>
@@ -103,7 +98,7 @@ export default function ScheduleTile(props: Props) {
 					)}
 				</For>
 			</div>
-			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-end gap-2">
+			<div class="pr-4 flex-1 min-w-0 flex flex-row flex-wrap justify-end gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag
