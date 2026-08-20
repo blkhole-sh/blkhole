@@ -83,7 +83,7 @@ export default function ScheduleTile(props: Props) {
 				{props.schedule.name}
 			</p>
 			<div class="flex flex-row items-center flex-shrink-0">
-				<p class="w-24 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
+				<p class="w-24 flex-shrink-0 text-right text-sm text-zinc-500 whitespace-nowrap">
 					{isAllDay(props.schedule.startTime, props.schedule.endTime)
 						? "All Day"
 						: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
