@@ -82,7 +82,7 @@ export default function ScheduleTile(props: Props) {
 			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">
 				{props.schedule.name}
 			</p>
-			<div class="flex flex-row items-center gap-2 flex-shrink-0">
+			<div class="flex flex-row items-center flex-shrink-0">
 				<p class="w-24 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
 					{isAllDay(props.schedule.startTime, props.schedule.endTime)
 						? "All Day"
@@ -101,7 +101,7 @@ export default function ScheduleTile(props: Props) {
 					</For>
 				</div>
 			</div>
-			<div class="ml-6 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
+			<div class="ml-8 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag
