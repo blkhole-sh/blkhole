@@ -38,14 +38,8 @@ func TestOpenEnablesForeignKeysOnEveryConnection(t *testing.T) {
 	}
 }
 
-func TestInitUpgradesLegacyScheduleSchema(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "legacy.db")
-	legacy, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		t.Fatalf("open legacy db: %v", err)
-	}
-
-	queries := []string{
+func legacySchema() []string {
+	return []string{
 		`CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, password_hash TEXT NOT NULL)`,
 		`CREATE TABLE device (id INTEGER PRIMARY KEY, name TEXT NOT NULL, os TEXT NOT NULL, hash TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE)`,
 		`CREATE TABLE domain (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)`,
@@ -59,6 +53,17 @@ func TestInitUpgradesLegacyScheduleSchema(t *testing.T) {
 		`CREATE TABLE query_log (id INTEGER PRIMARY KEY, device_hash TEXT NOT NULL, domain TEXT NOT NULL, blocked INTEGER NOT NULL DEFAULT 0, timestamp INTEGER NOT NULL)`,
 		`CREATE TABLE goose_db_version (id INTEGER PRIMARY KEY AUTOINCREMENT, version_id BIGINT NOT NULL, is_applied BOOLEAN NOT NULL, tstamp TIMESTAMP DEFAULT (datetime('now')))`,
 		`INSERT INTO goose_db_version (version_id, is_applied) VALUES (1, 1)`,
+	}
+}
+
+func TestInitUpgradesLegacyScheduleSchema(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "legacy.db")
+	legacy, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+
+	queries := append(legacySchema(),
 		`INSERT INTO user (id, name, email, password_hash) VALUES (1, 'One', 'one@example.com', 'hash'), (2, 'Two', 'two@example.com', 'hash')`,
 		`INSERT INTO device (id, name, os, hash, user_id) VALUES (1, 'One Device', 'test', 'one', 1), (2, 'Two Device', 'test', 'two', 2)`,
 		`INSERT INTO domain (id, name) VALUES (1, 'example.com')`,
@@ -69,7 +74,7 @@ func TestInitUpgradesLegacyScheduleSchema(t *testing.T) {
 		`INSERT INTO list_schedule (list_id, schedule_id) VALUES (1, 1), (999, 1)`,
 		`INSERT INTO list_rule (list_id, rule_id) VALUES (1, 1), (999, 1)`,
 		`INSERT INTO schedule_rule (schedule_id, rule_id) VALUES (1, 1), (999, 1)`,
-	}
+	)
 	for _, query := range queries {
 		if _, err := legacy.Exec(query); err != nil {
 			legacy.Close()
@@ -113,6 +118,62 @@ func TestInitUpgradesLegacyScheduleSchema(t *testing.T) {
 	assertRelationCount(t, db, "list_schedule", 1)
 	assertRelationCount(t, db, "list_rule", 1)
 	assertRelationCount(t, db, "schedule_rule", 1)
+
+	var violations int
+	if err := db.QueryRow("SELECT COUNT(*) FROM pragma_foreign_key_check").Scan(&violations); err != nil {
+		t.Fatalf("foreign key check: %v", err)
+	}
+	if violations != 0 {
+		t.Fatalf("foreign key violations after migration = %d", violations)
+	}
+}
+
+func TestInitRemovesRowsOrphanedByDeletedUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "orphans.db")
+	legacy, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+
+	queries := append(legacySchema(),
+		`INSERT INTO user (id, name, email, password_hash) VALUES (1, 'One', 'one@example.com', 'hash')`,
+		`INSERT INTO domain (id, name) VALUES (1, 'example.com')`,
+		`INSERT INTO rule (id, allowed, domain_id) VALUES (1, 0, 1)`,
+		// user 7 is gone; foreign keys were off when it was deleted, so its rows survived.
+		`INSERT INTO device (id, name, os, hash, user_id) VALUES (1, 'Kept', 'test', 'kept', 1), (2, 'Orphan', 'test', 'orphan', 7)`,
+		`INSERT INTO list (id, name, user_id) VALUES (1, 'Kept', 1), (16, 'Orphan', 7)`,
+		`INSERT INTO schedule (id, name, start_time, end_time, days, active, user_id) VALUES (1, 'Kept', '08:00', '17:00', 31, 1, 1), (2, 'Orphan', '08:00', '17:00', 31, 1, 7)`,
+		`INSERT INTO list_rule (list_id, rule_id) VALUES (1, 1), (16, 1)`,
+		`INSERT INTO schedule_rule (schedule_id, rule_id) VALUES (1, 1), (2, 1)`,
+		`INSERT INTO list_schedule (list_id, schedule_id) VALUES (16, 2)`,
+		`INSERT INTO device_schedule (device_id, schedule_id) VALUES (2, 2)`,
+	)
+	for _, query := range queries {
+		if _, err := legacy.Exec(query); err != nil {
+			legacy.Close()
+			t.Fatalf("legacy setup %q: %v", query, err)
+		}
+	}
+	if err := legacy.Close(); err != nil {
+		t.Fatalf("close legacy db: %v", err)
+	}
+
+	db, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer db.Close()
+	if err := Init(db); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	assertRelationCount(t, db, "device", 1)
+	assertRelationCount(t, db, "list", 1)
+	assertRelationCount(t, db, "schedule", 1)
+	assertRelationCount(t, db, "list_rule", 1)
+	assertRelationCount(t, db, "schedule_rule", 1)
+	assertRelationCount(t, db, "list_schedule", 0)
+	assertRelationCount(t, db, "device_schedule", 0)
 
 	var violations int
 	if err := db.QueryRow("SELECT COUNT(*) FROM pragma_foreign_key_check").Scan(&violations); err != nil {

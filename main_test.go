@@ -1,9 +1,43 @@
 package main
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"testing"
 )
+
+func TestConfigPathIsAbsolute(t *testing.T) {
+	// A relative path would resolve against the working directory, so a service
+	// started from / and a shell session would use different databases.
+	got := configPath("blkhole.db")
+	if !filepath.IsAbs(got) {
+		t.Errorf("configPath() = %q; want an absolute path", got)
+	}
+	if want := filepath.Join("blkhole", "blkhole.db"); !strings.HasSuffix(got, want) {
+		t.Errorf("configPath() = %q; want it to end in %q", got, want)
+	}
+}
+
+func TestConfigPathExitsWithoutConfigDir(t *testing.T) {
+	if os.Getenv("BLKHOLE_TEST_CONFIG_PATH") == "1" {
+		configPath("blkhole.db")
+		return
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestConfigPathExitsWithoutConfigDir")
+	// os.UserConfigDir only fails when it has neither variable to work from.
+	cmd.Env = append(os.Environ(), "BLKHOLE_TEST_CONFIG_PATH=1", "HOME=", "XDG_CONFIG_HOME=")
+	output, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("configPath returned a path without a config directory: %s", output)
+	}
+	if !strings.Contains(string(output), "failed to locate config directory") {
+		t.Errorf("unexpected failure output: %s", output)
+	}
+}
 
 func TestRevisionFromBuildInfoIgnoresModuleVersion(t *testing.T) {
 	info := &debug.BuildInfo{
