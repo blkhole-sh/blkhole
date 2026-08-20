@@ -2,8 +2,11 @@ package repos
 
 import (
 	"database/sql"
+	"errors"
+	"path/filepath"
 	"testing"
 
+	appdb "github.com/blkhole-sh/blkhole/internal/db"
 	"github.com/blkhole-sh/blkhole/internal/model"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -86,6 +89,34 @@ func TestScheduleRepo_Create(t *testing.T) {
 	}
 }
 
+func TestScheduleRepo_SeedDefaultsAfterMigration(t *testing.T) {
+	db, err := appdb.Open(filepath.Join(t.TempDir(), "schedules.db"))
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+	if err := appdb.Init(db); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+	userID := insertSchedUser(t, db)
+
+	repo := NewScheduleRepo(db)
+	if err := repo.SeedDefaults(userID); err != nil {
+		t.Fatalf("SeedDefaults: %v", err)
+	}
+
+	schedules, err := repo.FindByUser(userID)
+	if err != nil {
+		t.Fatalf("FindByUser: %v", err)
+	}
+	if len(schedules) != 1 {
+		t.Fatalf("default schedules = %d, want 1", len(schedules))
+	}
+	if schedules[0].StartTime != "00:00" || schedules[0].EndTime != "00:00" || !schedules[0].IsDefault {
+		t.Fatalf("default schedule = %+v", schedules[0])
+	}
+}
+
 func TestScheduleRepo_FindByID(t *testing.T) {
 	db := setupScheduleTestDB(t)
 	defer db.Close()
@@ -144,6 +175,112 @@ func TestScheduleRepo_Update(t *testing.T) {
 	}
 	if found.Active {
 		t.Error("expected Active=false after update")
+	}
+}
+
+func TestScheduleRepo_UpdateRollsBackInvalidRelations(t *testing.T) {
+	db := setupScheduleTestDB(t)
+	defer db.Close()
+	userID := insertSchedUser(t, db)
+
+	deviceResult, err := db.Exec("INSERT INTO device (hash, name, os, user_id) VALUES ('device-1', 'Device', 'test', ?)", userID)
+	if err != nil {
+		t.Fatalf("insert device: %v", err)
+	}
+	deviceID, _ := deviceResult.LastInsertId()
+	listResult, err := db.Exec("INSERT INTO list (name, user_id) VALUES ('List', ?)", userID)
+	if err != nil {
+		t.Fatalf("insert list: %v", err)
+	}
+	listID, _ := listResult.LastInsertId()
+
+	repo := NewScheduleRepo(db)
+	s := newTestSchedule(userID)
+	s.DeviceIDs = []int{int(deviceID)}
+	s.ListIDs = []int{int(listID)}
+	scheduleID, err := repo.Create(s)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	updated := newTestSchedule(userID)
+	updated.Name = "Must Roll Back"
+	updated.StartTime = "09:00"
+	updated.EndTime = "18:00"
+	updated.DeviceIDs = []int{int(deviceID)}
+	updated.ListIDs = []int{999}
+	if err := repo.Update(scheduleID, updated); !errors.Is(err, ErrInvalidScheduleRelation) {
+		t.Fatalf("Update error = %v, want ErrInvalidScheduleRelation", err)
+	}
+
+	found, err := repo.FindByID(scheduleID)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Name != "Test Schedule" || found.StartTime != "08:00" || found.EndTime != "17:00" {
+		t.Fatalf("schedule was partially updated: %+v", found)
+	}
+	if len(found.DeviceIDs) != 1 || found.DeviceIDs[0] != int(deviceID) {
+		t.Fatalf("device relations changed: %v", found.DeviceIDs)
+	}
+	if len(found.ListIDs) != 1 || found.ListIDs[0] != int(listID) {
+		t.Fatalf("list relations changed: %v", found.ListIDs)
+	}
+
+	updated.DeviceIDs = []int{999}
+	updated.ListIDs = []int{int(listID)}
+	if err := repo.Update(scheduleID, updated); !errors.Is(err, ErrInvalidScheduleRelation) {
+		t.Fatalf("Update error = %v, want ErrInvalidScheduleRelation", err)
+	}
+	found, err = repo.FindByID(scheduleID)
+	if err != nil {
+		t.Fatalf("FindByID after invalid device: %v", err)
+	}
+	if found.Name != "Test Schedule" || len(found.DeviceIDs) != 1 || found.DeviceIDs[0] != int(deviceID) || len(found.ListIDs) != 1 || found.ListIDs[0] != int(listID) {
+		t.Fatalf("schedule changed after invalid device: %+v", found)
+	}
+}
+
+func TestScheduleRepo_CreateRejectsCrossUserRelationsAtomically(t *testing.T) {
+	db := setupScheduleTestDB(t)
+	defer db.Close()
+	userID := insertSchedUser(t, db)
+	otherResult, err := db.Exec("INSERT INTO user (name, email, password_hash) VALUES ('Other', 'other@example.com', 'hash')")
+	if err != nil {
+		t.Fatalf("insert other user: %v", err)
+	}
+	otherUserID, _ := otherResult.LastInsertId()
+
+	deviceResult, err := db.Exec("INSERT INTO device (hash, name, os, user_id) VALUES ('other-device', 'Other Device', 'test', ?)", otherUserID)
+	if err != nil {
+		t.Fatalf("insert device: %v", err)
+	}
+	deviceID, _ := deviceResult.LastInsertId()
+	listResult, err := db.Exec("INSERT INTO list (name, user_id) VALUES ('Other List', ?)", otherUserID)
+	if err != nil {
+		t.Fatalf("insert list: %v", err)
+	}
+	listID, _ := listResult.LastInsertId()
+
+	repo := NewScheduleRepo(db)
+	invalidDevice := newTestSchedule(userID)
+	invalidDevice.DeviceIDs = []int{int(deviceID)}
+	if _, err := repo.Create(invalidDevice); !errors.Is(err, ErrInvalidScheduleRelation) {
+		t.Fatalf("Create with cross-user device error = %v, want ErrInvalidScheduleRelation", err)
+	}
+
+	invalidList := newTestSchedule(userID)
+	invalidList.ListIDs = []int{int(listID)}
+	if _, err := repo.Create(invalidList); !errors.Is(err, ErrInvalidScheduleRelation) {
+		t.Fatalf("Create with cross-user list error = %v, want ErrInvalidScheduleRelation", err)
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM schedule").Scan(&count); err != nil {
+		t.Fatalf("count schedules: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("partially created schedules = %d, want 0", count)
 	}
 }
 

@@ -161,7 +161,7 @@ func initDatabase() *sql.DB {
 	dbPath := filepath.Join(configDir, "blkhole", "blkhole.db")
 	os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := schema.Open(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
