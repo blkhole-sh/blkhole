@@ -49,12 +49,12 @@ export default function Dashboard() {
 				</SelectInput>
 			}
 		>
-			<div class="py-8 flex flex-1 flex-row items-stretch divide-x divide-zinc-200">
-				<div class="pr-16 flex flex-col flex-1 divide-y divide-zinc-200">
+			<div class="flex flex-1 flex-row items-stretch divide-x divide-zinc-200">
+				<div class="pr-12 flex flex-col flex-1 divide-y divide-zinc-200">
 					<StatsPanel stats={stats()} />
 					<QueriesPanel stats={stats()} range={range()} />
 				</div>
-				<div class="pl-16 w-xs flex flex-col flex-col divide-y divide-zinc-200">
+				<div class="pl-12 w-60 flex flex-col divide-y divide-zinc-200">
 					<SchedulesPanel schedules={schedules()} />
 					<DevicesPanel devices={devices()} />
 				</div>

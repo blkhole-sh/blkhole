@@ -87,7 +87,7 @@ export default function QueriesPanel(props: Props) {
 				<p class="font-medium text-zinc-500 text-sm tracking-wider flex-1">
 					QUERIES PER SECOND
 				</p>
-				<div class="flex flex-row items-center gap-5">
+				<div class="flex flex-row items-center gap-6">
 					<div class="flex flex-row items-center gap-2">
 						<svg width="20" height="10" aria-hidden="true">
 							<line

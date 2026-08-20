@@ -49,7 +49,7 @@ export default function Schedules() {
 					</Show>
 				}
 			>
-				<div class="divide-y divide-zinc-200">
+				<div class="-mt-8 divide-y divide-zinc-200 border-b border-zinc-200">
 					<For each={schedules()}>
 						{(schedule) => (
 							<ScheduleTile
