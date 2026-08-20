@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -117,6 +118,10 @@ func (sc *scheduleController) Create(w http.ResponseWriter, r *http.Request) {
 	// Store schedule into db
 	if _, err := sc.schedules.Create(&s); err != nil {
 		log.Printf("failed to create schedule: %v", err)
+		if errors.Is(err, repos.ErrInvalidScheduleRelation) {
+			http.Error(w, "Invalid device or list selection", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, "Unable to create schedule", http.StatusInternalServerError)
 		return
 	}
@@ -231,6 +236,10 @@ func (sc *scheduleController) Update(w http.ResponseWriter, r *http.Request) {
 	// Update schedule in db
 	if err := sc.schedules.Update(id, &s); err != nil {
 		log.Printf("failed to update schedule with id %d: %v", id, err)
+		if errors.Is(err, repos.ErrInvalidScheduleRelation) {
+			http.Error(w, "Invalid device or list selection", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, "Unable to update schedule", http.StatusInternalServerError)
 		return
 	}

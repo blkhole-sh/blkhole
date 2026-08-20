@@ -3,12 +3,19 @@ package repos
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/blkhole-sh/blkhole/internal/model"
 
 	"github.com/georgysavva/scany/v2/sqlscan"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var ErrInvalidScheduleRelation = errors.New("device or list does not belong to schedule owner")
+
+type scheduleExecer interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
 
 // ScheduleRepo defines the interface for schedule repository operations
 type ScheduleRepo interface {
@@ -115,39 +122,56 @@ func (row *dbSchedule) toSchedule() *model.Schedule {
 
 // Create stores a new schedule into the database
 func (sr *scheduleRepo) Create(s *model.Schedule) (int, error) {
+	tx, err := sr.db.BeginTx(sr.ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
 	days := encodeDaysToInt(s)
 	isDefault := 0
 	if s.IsDefault {
 		isDefault = 1
 	}
 	query := "INSERT INTO schedule (name, start_time, end_time, days, active, user_id, is_default) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id"
-	err := sr.db.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, s.UserID, isDefault).Scan(&s.ID)
+	var id int
+	err = tx.QueryRowContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, s.UserID, isDefault).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
 
 	// Link devices
 	for _, deviceID := range s.DeviceIDs {
-		if err := sr.LinkDevice(s.ID, deviceID); err != nil {
+		if err := sr.linkDevice(tx, id, deviceID); err != nil {
 			return 0, err
 		}
 	}
 
 	// Link lists
 	for _, listID := range s.ListIDs {
-		if err := sr.LinkList(s.ID, listID); err != nil {
+		if err := sr.linkList(tx, id, listID); err != nil {
 			return 0, err
 		}
 	}
 
-	return s.ID, nil
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	s.ID = id
+	return id, nil
 }
 
 // Update modifies an existing schedule with given ID in the database
 func (sr *scheduleRepo) Update(id int, s *model.Schedule) error {
+	tx, err := sr.db.BeginTx(sr.ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	days := encodeDaysToInt(s)
 	query := "UPDATE schedule SET name=?, start_time=?, end_time=?, days=?, active=? WHERE id=?"
-	_, err := sr.db.ExecContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, id)
+	_, err = tx.ExecContext(sr.ctx, query, s.Name, s.StartTime, s.EndTime, days, s.Active, id)
 	if err != nil {
 		return err
 	}
@@ -155,12 +179,12 @@ func (sr *scheduleRepo) Update(id int, s *model.Schedule) error {
 	// Update device relationships
 	// Delete existing device links
 	deleteDevicesQuery := "DELETE FROM device_schedule WHERE schedule_id=?"
-	if _, err := sr.db.ExecContext(sr.ctx, deleteDevicesQuery, id); err != nil {
+	if _, err := tx.ExecContext(sr.ctx, deleteDevicesQuery, id); err != nil {
 		return err
 	}
 	// Insert new device links
 	for _, deviceID := range s.DeviceIDs {
-		if err := sr.LinkDevice(id, deviceID); err != nil {
+		if err := sr.linkDevice(tx, id, deviceID); err != nil {
 			return err
 		}
 	}
@@ -168,17 +192,17 @@ func (sr *scheduleRepo) Update(id int, s *model.Schedule) error {
 	// Update list relationships
 	// Delete existing list links
 	deleteListsQuery := "DELETE FROM list_schedule WHERE schedule_id=?"
-	if _, err := sr.db.ExecContext(sr.ctx, deleteListsQuery, id); err != nil {
+	if _, err := tx.ExecContext(sr.ctx, deleteListsQuery, id); err != nil {
 		return err
 	}
 	// Insert new list links
 	for _, listID := range s.ListIDs {
-		if err := sr.LinkList(id, listID); err != nil {
+		if err := sr.linkList(tx, id, listID); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // Delete removes an existing schedule with given ID from the database
@@ -190,9 +214,25 @@ func (sr *scheduleRepo) Delete(id int) error {
 
 // LinkDevice links a device with given ID to a schedule with given ID
 func (sr *scheduleRepo) LinkDevice(scheduleID int, deviceID int) error {
-	query := "INSERT INTO device_schedule (device_id, schedule_id) VALUES (?, ?)"
-	_, err := sr.db.ExecContext(sr.ctx, query, deviceID, scheduleID)
-	return err
+	return sr.linkDevice(sr.db, scheduleID, deviceID)
+}
+
+func (sr *scheduleRepo) linkDevice(exec scheduleExecer, scheduleID int, deviceID int) error {
+	query := `INSERT INTO device_schedule (device_id, schedule_id)
+		SELECT d.id, s.id FROM device d JOIN schedule s ON d.user_id = s.user_id
+		WHERE d.id = ? AND s.id = ?`
+	result, err := exec.ExecContext(sr.ctx, query, deviceID, scheduleID)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrInvalidScheduleRelation
+	}
+	return nil
 }
 
 // LinkRule links a rule with given ID to a schedule with given ID
@@ -204,9 +244,25 @@ func (sr *scheduleRepo) LinkRule(id int, ruleID int) error {
 
 // LinkList links a list with given ID to a schedule with given ID
 func (sr *scheduleRepo) LinkList(id int, listID int) error {
-	query := "INSERT INTO list_schedule (list_id, schedule_id) VALUES (?, ?)"
-	_, err := sr.db.ExecContext(sr.ctx, query, listID, id)
-	return err
+	return sr.linkList(sr.db, id, listID)
+}
+
+func (sr *scheduleRepo) linkList(exec scheduleExecer, scheduleID int, listID int) error {
+	query := `INSERT INTO list_schedule (list_id, schedule_id)
+		SELECT l.id, s.id FROM list l JOIN schedule s ON l.user_id = s.user_id
+		WHERE l.id = ? AND s.id = ?`
+	result, err := exec.ExecContext(sr.ctx, query, listID, scheduleID)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrInvalidScheduleRelation
+	}
+	return nil
 }
 
 // LoadDeviceIDs returns ids of all devices linked to schedule with given id

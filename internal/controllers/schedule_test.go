@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/blkhole-sh/blkhole/internal/model"
+	"github.com/blkhole-sh/blkhole/internal/repos"
 )
 
 // MockContentBlocker satisfies services.ContentBlocker
@@ -29,10 +30,24 @@ func (m *MockContentBlocker) IsBlocked(domain, deviceHash string) (bool, error) 
 // MockScheduleRepoFull extends MockScheduleRepo with configurable FindByID/FindByUser
 type MockScheduleRepoFull struct {
 	MockScheduleRepo
+	CreateFn     func(s *model.Schedule) (int, error)
+	UpdateFn     func(id int, s *model.Schedule) error
 	FindByIDFn   func(id int) (*model.Schedule, error)
 	FindByUserFn func(userID int) ([]*model.Schedule, error)
 }
 
+func (m *MockScheduleRepoFull) Create(s *model.Schedule) (int, error) {
+	if m.CreateFn != nil {
+		return m.CreateFn(s)
+	}
+	return 0, nil
+}
+func (m *MockScheduleRepoFull) Update(id int, s *model.Schedule) error {
+	if m.UpdateFn != nil {
+		return m.UpdateFn(id, s)
+	}
+	return nil
+}
 func (m *MockScheduleRepoFull) FindByID(id int) (*model.Schedule, error) {
 	if m.FindByIDFn != nil {
 		return m.FindByIDFn(id)
@@ -122,6 +137,43 @@ func TestScheduleController_Create_InvalidJSON(t *testing.T) {
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestScheduleController_Create_InvalidRelation(t *testing.T) {
+	schedRepo := &MockScheduleRepoFull{
+		CreateFn: func(s *model.Schedule) (int, error) {
+			return 0, repos.ErrInvalidScheduleRelation
+		},
+	}
+	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
+
+	req := httptest.NewRequest(http.MethodPost, "/schedules", bytes.NewBufferString(`{"name":"Morning","startTime":"08:00","endTime":"12:00","deviceIds":[99]}`))
+	rr := httptest.NewRecorder()
+	controller.Create(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestScheduleController_Update_InvalidRelation(t *testing.T) {
+	schedRepo := &MockScheduleRepoFull{
+		UpdateFn: func(id int, s *model.Schedule) error {
+			return repos.ErrInvalidScheduleRelation
+		},
+		FindByIDFn: func(id int) (*model.Schedule, error) {
+			return &model.Schedule{ID: id, UserID: 1}, nil
+		},
+	}
+	controller := NewScheduleController(schedRepo, &MockDeviceRepo{}, &MockListRepo{}, &MockContentBlocker{}, mockAuth(1))
+
+	req := withParam(httptest.NewRequest(http.MethodPatch, "/schedules/1", bytes.NewBufferString(`{"name":"Morning","startTime":"08:00","endTime":"12:00","listIds":[99]}`)), "id", "1")
+	rr := httptest.NewRecorder()
+	controller.Update(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 
