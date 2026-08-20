@@ -1,1 +1,0 @@
-import{t as r,f as o,g as s}from"./vendor-CZIt1qld.js";import{c as a}from"./index-avXgxBwn.js";var t=r("<hr>");function e(r){return e=t(),o(()=>s(e,a("w-full border-t border-zinc-200",r.class))),e;var e}export{e as D};
