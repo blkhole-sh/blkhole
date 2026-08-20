@@ -156,9 +156,19 @@ func initUpstreamDNS(addr string) (string, error) {
 	return addr, nil
 }
 
+// configPath resolves a path inside the blkhole config directory. It exits
+// rather than falling back to a relative path, which would silently point at a
+// different database or certificate cache depending on the working directory.
+func configPath(elem ...string) string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		log.Fatalf("failed to locate config directory: %v (set HOME or XDG_CONFIG_HOME)", err)
+	}
+	return filepath.Join(append([]string{configDir, "blkhole"}, elem...)...)
+}
+
 func initDatabase() *sql.DB {
-	configDir, _ := os.UserConfigDir()
-	dbPath := filepath.Join(configDir, "blkhole", "blkhole.db")
+	dbPath := configPath("blkhole.db")
 	os.MkdirAll(filepath.Dir(dbPath), 0o755)
 
 	db, err := schema.Open(dbPath)
@@ -280,8 +290,7 @@ func initTLS(domain string) *tls.Config {
 		return nil
 	}
 
-	configDir, _ := os.UserConfigDir()
-	certDir := filepath.Join(configDir, "blkhole", "certs")
+	certDir := configPath("certs")
 	log.Printf("TLS: using certificate cache directory: %s", certDir)
 	log.Printf("TLS: allowing root domain and single-level subdomains for: %s", domain)
 
