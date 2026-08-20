@@ -1,9 +1,14 @@
 import { createSignal } from "solid-js";
 import { useAuth } from "~/context/AuthContext";
 import UpdatePasswordModal from "../modal/UpdatePasswordModal";
+import ActionButton from "../ui/ActionButton";
 import Divider from "../ui/Divider";
 
-export default function AccountSettings() {
+interface Props {
+	onDelete: () => void;
+}
+
+export default function AccountSettings(props: Props) {
 	const { user } = useAuth();
 	const [passwordModalOpen, setPasswordModalOpen] = createSignal(false);
 
@@ -17,13 +22,12 @@ export default function AccountSettings() {
 				</p>
 				<Divider />
 			</div>
-			<button
-				type="button"
-				class="text-sm text-black font-medium underline tracking-wider hover:text-zinc-600 cursor-pointer self-start"
-				onclick={() => setPasswordModalOpen(true)}
-			>
-				CHANGE PASSWORD
-			</button>
+			<div class="flex flex-row items-center gap-6">
+				<ActionButton onclick={() => setPasswordModalOpen(true)}>
+					CHANGE PASSWORD
+				</ActionButton>
+				<ActionButton onclick={props.onDelete}>DELETE ACCOUNT</ActionButton>
+			</div>
 			<UpdatePasswordModal
 				open={passwordModalOpen()}
 				onClose={() => setPasswordModalOpen(false)}

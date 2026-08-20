@@ -14,7 +14,7 @@ export default function ActionButton(props: Props) {
 			type={props.type ?? "button"}
 			class={cx(
 				"font-medium text-sm tracking-wider cursor-pointer",
-				props.class || "text-zinc-500",
+				props.class || "text-zinc-500 hover:text-black",
 			)}
 			onclick={props.onclick}
 			tabindex={props.tabindex}

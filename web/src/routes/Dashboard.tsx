@@ -3,7 +3,7 @@ import DevicesPanel from "~/components/dashboard/DevicesPanel";
 import QueriesPanel from "~/components/dashboard/QueriesPanel";
 import SchedulesPanel from "~/components/dashboard/SchedulesPanel";
 import StatsPanel from "~/components/dashboard/StatsPanel";
-import SelectInput from "~/components/form/SelectInput";
+import ChevronDown from "~/components/icons/ChevronDown";
 import PageShell from "~/components/layout/PageShell";
 import { getDevices, getQueryStats, getSchedules } from "~/lib/api";
 
@@ -38,15 +38,21 @@ export default function Dashboard() {
 			title="Dashboard"
 			description={`Your DNS universe, observed on ${formatDate()}.`}
 			actions={
-				<SelectInput
-					value={range()}
-					onChange={(e) => setRange(e.currentTarget.value as TimeRange)}
-					class="w-40"
-				>
-					<option value="24h">Last 24 hours</option>
-					<option value="7d">Last 7 days</option>
-					<option value="30d">Last 30 days</option>
-				</SelectInput>
+				<div class="flex flex-shrink-0 flex-row items-center gap-2">
+					<select
+						aria-label="Range"
+						value={range()}
+						onChange={(event) =>
+							setRange(event.currentTarget.value as TimeRange)
+						}
+						class="text-sm font-medium tracking-wider text-zinc-500 hover:text-black outline-none bg-transparent appearance-none cursor-pointer"
+					>
+						<option value="24h">24 HOURS</option>
+						<option value="7d">7 DAYS</option>
+						<option value="30d">30 DAYS</option>
+					</select>
+					<ChevronDown class="size-4 flex-shrink-0 text-zinc-400 pointer-events-none" />
+				</div>
 			}
 		>
 			<div class="flex flex-1 flex-row items-stretch divide-x divide-zinc-200">

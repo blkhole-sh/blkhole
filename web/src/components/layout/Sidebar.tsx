@@ -29,15 +29,16 @@ export default function Sidebar() {
 					<Logo class="h-5" />
 				</a>
 			</div>
-			<nav class="pt-10">
+			<nav class="pt-12">
 				<ul class="flex flex-col text-sm tracking-wider">
 					<For each={routes}>
-						{(route) => (
+						{(route, index) => (
 							<li>
 								<a
 									href={route.href}
 									class="block py-2.5 pr-8 pl-7.5 border-l-2"
 									classList={{
+										"pt-0 pb-2.5": index() === 0,
 										"border-black text-black font-medium":
 											location.pathname === route.href,
 										"border-transparent text-zinc-500 hover:text-black":

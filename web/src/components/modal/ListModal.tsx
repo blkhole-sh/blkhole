@@ -1,10 +1,16 @@
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { createList, updateList } from "~/lib/api";
 import type { List } from "~/lib/model";
-import { compose, url as isUrl, required } from "~/lib/validate";
+import {
+	compose,
+	domain as isDomain,
+	url as isUrl,
+	required,
+} from "~/lib/validate";
 import FileInput from "../form/FileInput";
-import TextAreaInput from "../form/TextAreaInput";
 import TextInput from "../form/TextInput";
+import ActionButton from "../ui/ActionButton";
+import Divider from "../ui/Divider";
 import TabBar from "../ui/TabBar";
 import Modal from "./Modal";
 
@@ -25,24 +31,60 @@ interface Props {
 
 export default function ListModal(props: Props) {
 	const [name, setName] = createSignal("");
-	const [description, setDescription] = createSignal("");
 	const [urlValue, setUrlValue] = createSignal("");
-	const [manualValue, setManualValue] = createSignal("");
-	const [source, setSource] = createSignal("");
+	const [fileValue, setFileValue] = createSignal("");
+	const [manualDraft, setManualDraft] = createSignal("");
+	const [manualDomains, setManualDomains] = createSignal<string[]>([]);
 	const [sourceTab, setSourceTab] = createSignal<SourceTab>("manual");
 	const [submitted, setSubmitted] = createSignal(false);
 	const [error, setError] = createSignal("");
+	const [manualError, setManualError] = createSignal("");
 
 	const isEditMode = () => !!props.list;
 	const title = () => (isEditMode() ? "Edit Blocklist" : "Create Blocklist");
+	const sourceValue = () => {
+		switch (sourceTab()) {
+			case "url":
+				return urlValue();
+			case "file":
+				return fileValue();
+			default:
+				return manualDomains().join("\n");
+		}
+	};
+
+	const reset = () => {
+		setName("");
+		setUrlValue("");
+		setFileValue("");
+		setManualDraft("");
+		setManualDomains([]);
+		setSourceTab("manual");
+		setSubmitted(false);
+		setError("");
+		setManualError("");
+	};
+
+	const addManualDomain = () => {
+		const value = manualDraft().trim().toLowerCase();
+		const validationError = isDomain()(value);
+		if (validationError) {
+			setManualError(validationError);
+			return;
+		}
+		if (manualDomains().includes(value)) {
+			setManualError("Domain already added");
+			return;
+		}
+		setManualDomains((domains) => [...domains, value]);
+		setManualDraft("");
+		setManualError("");
+	};
 
 	// Pre-fill form when opening in edit mode
 	createEffect(() => {
 		if (props.list && props.open) {
 			setName(props.list.name);
-			setDescription(props.list.description);
-			setSource(props.list.source);
-			// Determine source tab from source content
 			if (
 				props.list.source.startsWith("http://") ||
 				props.list.source.startsWith("https://")
@@ -51,51 +93,40 @@ export default function ListModal(props: Props) {
 				setUrlValue(props.list.source);
 			} else {
 				setSourceTab("manual");
-				setManualValue(props.list.source);
+				setManualDomains(
+					props.list.source
+						.split(/\r?\n/)
+						.map((value) => value.trim())
+						.filter(Boolean),
+				);
 			}
 		} else if (!props.open) {
-			// Reset when modal closes
-			setName("");
-			setDescription("");
-			setUrlValue("");
-			setManualValue("");
-			setSource("");
-			setSourceTab("manual");
-			setSubmitted(false);
-			setError("");
+			reset();
 		}
 	});
 
 	const handleClose = () => {
-		setSubmitted(false);
-		setName("");
-		setDescription("");
-		setUrlValue("");
-		setManualValue("");
-		setSource("");
-		setSourceTab("manual");
-		setError("");
+		reset();
 		props.onClose();
 	};
 
 	const handleSubmit = async () => {
 		setSubmitted(true);
-		if (!name().trim() || !source().trim()) return;
+		if (sourceTab() === "manual" && manualDomains().length === 0) {
+			setManualError("Add at least one domain");
+			return;
+		}
+		const source = sourceValue();
+		if (!name().trim() || !source.trim()) return;
 		try {
 			setError("");
 			const list = props.list;
 			if (list) {
-				await updateList(list.id, name(), description(), source());
+				await updateList(list.id, name(), list.description, source);
 			} else {
-				await createList(name(), description(), source());
+				await createList(name(), "", source);
 			}
-			setName("");
-			setDescription("");
-			setUrlValue("");
-			setManualValue("");
-			setSource("");
-			setSourceTab("manual");
-			setSubmitted(false);
+			reset();
 			props.onSaved();
 		} catch {
 			setError(`Failed to ${isEditMode() ? "update" : "create"} blocklist.`);
@@ -114,7 +145,10 @@ export default function ListModal(props: Props) {
 					<TabBar
 						tabs={SOURCE_TABS}
 						active={sourceTab()}
-						onChange={setSourceTab}
+						onChange={(tab) => {
+							setSourceTab(tab);
+							setManualError("");
+						}}
 					/>
 				</Show>
 				<TextInput
@@ -125,24 +159,13 @@ export default function ListModal(props: Props) {
 					validate={required()}
 					showError={submitted()}
 				/>
-				<TextAreaInput
-					label="DESCRIPTION"
-					placeholder="Blocks ads and tracking scripts."
-					value={description()}
-					class="min-h-24 max-h-64"
-					onInput={(e) => setDescription(e.currentTarget.value)}
-					showError={submitted()}
-				/>
 				<Show when={sourceTab() === "url"}>
 					<TextInput
 						label="URL"
 						placeholder="https://raw.githubusercontent.com/..."
 						hint="Supports hosts files, Adblock Plus filter lists, and plain domain lists."
 						value={urlValue()}
-						onInput={(e) => {
-							setUrlValue(e.currentTarget.value);
-							setSource(e.currentTarget.value);
-						}}
+						onInput={(e) => setUrlValue(e.currentTarget.value)}
 						validate={compose(required(), isUrl())}
 						showError={submitted()}
 					/>
@@ -152,24 +175,73 @@ export default function ListModal(props: Props) {
 						label="FILE"
 						accept=".txt,.csv,.list"
 						hint="Supports hosts files, Adblock Plus filter lists, and plain domain lists."
-						onChange={(content) => setSource(content)}
+						onChange={setFileValue}
 						showError={submitted()}
 					/>
 				</Show>
 				<Show when={sourceTab() === "manual"}>
-					<TextAreaInput
-						label="DOMAINS"
-						placeholder={"example.com\nads.example.com"}
-						value={manualValue()}
-						class="min-h-32"
-						hint="One domain per line."
-						onInput={(e) => {
-							setManualValue(e.currentTarget.value);
-							setSource(e.currentTarget.value);
-						}}
-						validate={required()}
-						showError={submitted()}
-					/>
+					<div class="flex flex-col gap-1">
+						<div class="flex flex-row items-baseline justify-between gap-4">
+							<label
+								for="blocklist-domain"
+								class="font-medium text-zinc-700 text-sm tracking-wider"
+							>
+								DOMAINS
+							</label>
+							<p class="text-sm tracking-wider text-zinc-400">
+								{manualDomains().length}
+							</p>
+						</div>
+						<Show when={manualDomains().length > 0}>
+							<div class="py-2 flex flex-col">
+								<For each={manualDomains()}>
+									{(domain) => (
+										<div class="py-2 flex flex-row items-center justify-between gap-4 border-b border-zinc-100">
+											<span class="min-w-0 truncate text-sm tracking-wider">
+												{domain}
+											</span>
+											<ActionButton
+												onclick={() =>
+													setManualDomains((domains) =>
+														domains.filter((entry) => entry !== domain),
+													)
+												}
+											>
+												REMOVE
+											</ActionButton>
+										</div>
+									)}
+								</For>
+							</div>
+						</Show>
+						<div class="flex flex-row items-center gap-6">
+							<input
+								id="blocklist-domain"
+								type="text"
+								placeholder="example.com"
+								value={manualDraft()}
+								class="flex-1 min-w-0 py-2 text-sm leading-snug tracking-wider outline-none"
+								onInput={(event) => {
+									setManualDraft(event.currentTarget.value);
+									setManualError("");
+								}}
+								onKeyDown={(event) => {
+									if (event.key === "Enter") {
+										event.preventDefault();
+										addManualDomain();
+									}
+								}}
+							/>
+							<ActionButton onclick={addManualDomain}>ADD</ActionButton>
+						</div>
+						<Divider />
+						<Show when={manualError()}>
+							<p class="text-xs text-red-700">{manualError()}</p>
+						</Show>
+						<p class="text-xs text-zinc-400">
+							Press Enter or ADD to add the domain.
+						</p>
+					</div>
 				</Show>
 			</div>
 			{error() && <p class="text-sm text-red-700">{error()}</p>}
