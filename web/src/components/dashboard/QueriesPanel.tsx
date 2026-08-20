@@ -87,35 +87,37 @@ export default function QueriesPanel(props: Props) {
 				<p class="font-medium text-zinc-500 text-sm tracking-wider flex-1">
 					QUERIES PER SECOND
 				</p>
-				<div class="flex flex-row items-center gap-6">
-					<div class="flex flex-row items-center gap-2">
-						<svg width="20" height="10" aria-hidden="true">
-							<line
-								x1="0"
-								y1="5"
-								x2="20"
-								y2="5"
-								stroke="black"
-								stroke-width="2"
-							/>
-						</svg>
-						<span class="text-zinc-400 text-xs tracking-wider">TOTAL</span>
+				<Show when={hasData()}>
+					<div class="flex flex-row items-center gap-6">
+						<div class="flex flex-row items-center gap-2">
+							<svg width="20" height="10" aria-hidden="true">
+								<line
+									x1="0"
+									y1="5"
+									x2="20"
+									y2="5"
+									stroke="black"
+									stroke-width="2"
+								/>
+							</svg>
+							<span class="text-zinc-400 text-xs tracking-wider">TOTAL</span>
+						</div>
+						<div class="flex flex-row items-center gap-2">
+							<svg width="20" height="10" aria-hidden="true">
+								<line
+									x1="0"
+									y1="5"
+									x2="20"
+									y2="5"
+									stroke="#a1a1aa"
+									stroke-width="2"
+									stroke-dasharray="4 3"
+								/>
+							</svg>
+							<span class="text-zinc-400 text-xs tracking-wider">BLOCKED</span>
+						</div>
 					</div>
-					<div class="flex flex-row items-center gap-2">
-						<svg width="20" height="10" aria-hidden="true">
-							<line
-								x1="0"
-								y1="5"
-								x2="20"
-								y2="5"
-								stroke="#a1a1aa"
-								stroke-width="2"
-								stroke-dasharray="4 3"
-							/>
-						</svg>
-						<span class="text-zinc-400 text-xs tracking-wider">BLOCKED</span>
-					</div>
-				</div>
+				</Show>
 			</div>
 			<div class="flex-1">
 				<Show
