@@ -45,7 +45,7 @@ export default function Dashboard() {
 						onChange={(event) =>
 							setRange(event.currentTarget.value as TimeRange)
 						}
-						class="text-sm font-medium tracking-wider text-zinc-500 outline-none bg-transparent appearance-none cursor-pointer"
+						class="text-sm font-medium tracking-wider text-zinc-500 hover:text-black outline-none bg-transparent appearance-none cursor-pointer"
 					>
 						<option value="24h">24 HOURS</option>
 						<option value="7d">7 DAYS</option>

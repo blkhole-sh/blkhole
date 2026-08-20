@@ -38,7 +38,7 @@ export default function Sidebar() {
 									href={route.href}
 									class="block py-2.5 pr-8 pl-7.5 border-l-2"
 									classList={{
-										"pt-0 pb-5": index() === 0,
+										"pt-0 pb-2.5": index() === 0,
 										"border-black text-black font-medium":
 											location.pathname === route.href,
 										"border-transparent text-zinc-500 hover:text-black":
