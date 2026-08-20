@@ -98,7 +98,7 @@ export default function ScheduleTile(props: Props) {
 					)}
 				</For>
 			</div>
-			<div class="pl-2 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
+			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-center gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag

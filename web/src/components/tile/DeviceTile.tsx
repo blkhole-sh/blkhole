@@ -33,7 +33,7 @@ export default function DeviceTile(props: Props) {
 				</p>
 			</div>
 			<p class="w-24 flex-shrink-0 text-sm text-zinc-500">Connected</p>
-			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-end gap-2">
+			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-center gap-2">
 				<Show
 					when={props.device.scheduleNames.length > 0}
 					fallback={<p class="text-zinc-500">—</p>}
