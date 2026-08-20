@@ -11,6 +11,7 @@ import DeviceSetupModal from "../modal/DeviceSetupModal";
 
 interface Props {
 	device: Device;
+	first?: boolean;
 	onEdit: (device: Device) => void;
 	onDeleted: () => void;
 }
@@ -25,6 +26,7 @@ export default function DeviceTile(props: Props) {
 		<div
 			id={`device-${props.device.id}`}
 			class="py-5 flex flex-row items-center gap-8"
+			classList={{ "pt-0": props.first }}
 		>
 			<div class="flex-shrink-0 flex flex-row items-center gap-4 min-h-6.5">
 				<OSIcon os={props.device.os} />

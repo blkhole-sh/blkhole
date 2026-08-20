@@ -10,6 +10,7 @@ import { formatTime, isAllDay } from "~/lib/utils";
 
 interface Props {
 	schedule: Schedule;
+	first?: boolean;
 	onEdit: (schedule: Schedule) => void;
 	onDeleted: () => void;
 	onUpdated: () => void;
@@ -75,7 +76,7 @@ export default function ScheduleTile(props: Props) {
 		<div
 			id={`schedule-${props.schedule.id}`}
 			class="py-5 flex flex-row items-center gap-6"
-			classList={{ "opacity-50": !active() }}
+			classList={{ "opacity-50": !active(), "pt-0": props.first }}
 		>
 			<Switch checked={active()} onChange={handleToggleActive} />
 			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">

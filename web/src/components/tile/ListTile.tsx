@@ -7,6 +7,7 @@ import DeleteModal from "../modal/DeleteModal";
 
 interface Props {
 	list: List;
+	first?: boolean;
 	onEdit: (list: List) => void;
 	onDeleted: () => void;
 }
@@ -19,6 +20,7 @@ export default function ListTile(props: Props) {
 		<div
 			id={`list-${props.list.id}`}
 			class="py-5 flex flex-row items-center gap-8"
+			classList={{ "pt-0": props.first }}
 		>
 			<div class="flex-1 min-w-0 flex flex-col gap-1">
 				<p class="min-h-6.5 font-medium tracking-wider truncate">

@@ -47,11 +47,12 @@ export default function Devices() {
 					</Show>
 				}
 			>
-				<div class="-mt-5 divide-y divide-zinc-200">
+				<div class="divide-y divide-zinc-200">
 					<For each={devices()}>
-						{(device) => (
+						{(device, index) => (
 							<DeviceTile
 								device={device}
+								first={index() === 0}
 								onEdit={handleEdit}
 								onDeleted={refetch}
 							/>

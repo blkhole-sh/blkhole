@@ -49,11 +49,12 @@ export default function Schedules() {
 					</Show>
 				}
 			>
-				<div class="-mt-5 divide-y divide-zinc-200">
+				<div class="divide-y divide-zinc-200">
 					<For each={schedules()}>
-						{(schedule) => (
+						{(schedule, index) => (
 							<ScheduleTile
 								schedule={schedule}
+								first={index() === 0}
 								onEdit={handleEdit}
 								onDeleted={refetch}
 								onUpdated={refetch}

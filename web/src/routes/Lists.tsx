@@ -47,10 +47,15 @@ export default function Lists() {
 					</Show>
 				}
 			>
-				<div class="-mt-5 divide-y divide-zinc-200">
+				<div class="divide-y divide-zinc-200">
 					<For each={lists()}>
-						{(list) => (
-							<ListTile list={list} onEdit={handleEdit} onDeleted={refetch} />
+						{(list, index) => (
+							<ListTile
+								list={list}
+								first={index() === 0}
+								onEdit={handleEdit}
+								onDeleted={refetch}
+							/>
 						)}
 					</For>
 				</div>
