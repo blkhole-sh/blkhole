@@ -33,6 +33,10 @@ func upScheduleIntegrity(ctx context.Context, tx *sql.Tx) error {
 	}
 
 	cleanup := []string{
+		// Builds before foreign keys were enabled left these behind when a user was deleted.
+		`DELETE FROM device WHERE NOT EXISTS (SELECT 1 FROM user WHERE user.id = device.user_id)`,
+		`DELETE FROM list WHERE NOT EXISTS (SELECT 1 FROM user WHERE user.id = list.user_id)`,
+		`DELETE FROM schedule WHERE NOT EXISTS (SELECT 1 FROM user WHERE user.id = schedule.user_id)`,
 		`DELETE FROM device_schedule WHERE NOT EXISTS (SELECT 1 FROM device WHERE device.id = device_schedule.device_id) OR NOT EXISTS (SELECT 1 FROM schedule WHERE schedule.id = device_schedule.schedule_id)`,
 		`DELETE FROM list_schedule WHERE NOT EXISTS (SELECT 1 FROM list WHERE list.id = list_schedule.list_id) OR NOT EXISTS (SELECT 1 FROM schedule WHERE schedule.id = list_schedule.schedule_id)`,
 		`DELETE FROM list_rule WHERE NOT EXISTS (SELECT 1 FROM list WHERE list.id = list_rule.list_id) OR NOT EXISTS (SELECT 1 FROM rule WHERE rule.id = list_rule.rule_id)`,
@@ -64,7 +68,7 @@ func upScheduleIntegrity(ctx context.Context, tx *sql.Tx) error {
 		if err := rows.Scan(&table, &rowID, &parent, &foreignKeyID); err != nil {
 			return err
 		}
-		return fmt.Errorf("foreign key violation in %s row %v referencing %s", table, rowID, parent)
+		return fmt.Errorf("foreign key violation in %s row %d referencing %s", table, rowID.Int64, parent)
 	}
 	return rows.Err()
 }
