@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { createEffect, type ParentProps, Show } from "solid-js";
 import Footer from "~/components/layout/Footer";
-import Navbar from "~/components/layout/Navbar";
+import Sidebar from "~/components/layout/Sidebar";
 import { useAuth } from "~/context/AuthContext";
 
 export default function AuthLayout(props: ParentProps) {
@@ -16,10 +16,12 @@ export default function AuthLayout(props: ParentProps) {
 
 	return (
 		<Show when={auth.isAuthenticated()}>
-			<div class="min-h-screen flex flex-col">
-				<Navbar />
-				<div class="flex-1 flex flex-col">{props.children}</div>
-				<Footer />
+			<div class="min-h-screen flex flex-row">
+				<Sidebar />
+				<div class="min-w-0 flex-1 flex flex-col">
+					<div class="flex-1 flex flex-col">{props.children}</div>
+					<Footer />
+				</div>
 			</div>
 		</Show>
 	);
