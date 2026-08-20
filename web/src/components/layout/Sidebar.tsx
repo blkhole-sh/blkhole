@@ -26,10 +26,10 @@ export default function Sidebar() {
 		<aside class="sticky top-0 h-screen w-60 flex-shrink-0 flex flex-col border-r border-zinc-200 bg-white">
 			<div class="h-16 px-8 flex-shrink-0 flex items-center border-b border-zinc-200">
 				<a href="/" class="text-black">
-					<Logo class="h-5" />
+					<Logo class="h-[18px]" />
 				</a>
 			</div>
-			<nav class="pt-10">
+			<nav class="pt-12">
 				<ul class="flex flex-col text-sm tracking-wider">
 					<For each={routes}>
 						{(route) => (

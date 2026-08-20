@@ -1,5 +1,6 @@
 import { createSignal, Show } from "solid-js";
 import ActionButton from "~/components/ui/ActionButton";
+import Tag from "~/components/ui/Tag";
 import { deleteList } from "~/lib/api";
 import { useScrollToHash } from "~/lib/hooks";
 import type { List } from "~/lib/model";
@@ -16,46 +17,34 @@ export default function ListTile(props: Props) {
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 
 	return (
-		<div id={`list-${props.list.id}`} class="py-8 flex flex-col gap-5">
-			<p class="font-medium tracking-wider">{props.list.name}</p>
-			<div class="flex flex-row">
-				<Show
-					when={props.list.isDefault}
-					fallback={
-						<div class="flex-1 grid grid-cols-[3fr_1fr] text-zinc-500">
-							<p class="pb-2 text-sm tracking-wider">DESCRIPTION</p>
-							<p class="pb-2 text-sm tracking-wider">DOMAINS</p>
-							<p class="max-w-3xl text-sm">{props.list.description || "-"}</p>
-							<p class="max-w-xs text-black tracking-wider">
-								{props.list.rules.toLocaleString()}
-							</p>
-						</div>
-					}
-				>
-					<div class="flex-1 text-zinc-500">
-						<p class="pb-2 text-sm tracking-wider">DESCRIPTION</p>
-						<p class="max-w-3xl text-sm">{props.list.description || "-"}</p>
-					</div>
+		<div
+			id={`list-${props.list.id}`}
+			class="py-5 flex flex-row items-center gap-8"
+		>
+			<div class="flex-1 min-w-0 flex flex-col gap-1">
+				<div class="min-h-6.5 flex flex-row items-center gap-3">
+					<p class="font-medium tracking-wider truncate">{props.list.name}</p>
+					<Show when={props.list.isDefault}>
+						<Tag>DEFAULT</Tag>
+					</Show>
+				</div>
+				<Show when={props.list.isDefault}>
+					<p class="max-w-xl text-sm leading-normal text-zinc-500">
+						{props.list.description}
+					</p>
 				</Show>
-				<Show
-					when={props.list.isDefault}
-					fallback={
-						<div class="flex flex-row gap-6">
-							<ActionButton onclick={() => props.onEdit(props.list)}>
-								EDIT
-							</ActionButton>
-							<ActionButton onclick={() => setDeleteOpen(true)}>
-								DELETE
-							</ActionButton>
-						</div>
-					}
-				>
-					<div class="text-right text-zinc-500">
-						<p class="pb-2 text-sm tracking-wider">DOMAINS</p>
-						<p class="text-black tracking-wider">
-							{props.list.rules.toLocaleString()}
-						</p>
-					</div>
+			</div>
+			<p class="w-35 flex-shrink-0 tracking-wider">
+				{props.list.rules.toLocaleString()} rules
+			</p>
+			<div class="w-35 flex-shrink-0 flex flex-row justify-end gap-6">
+				<Show when={!props.list.isDefault}>
+					<ActionButton onclick={() => props.onEdit(props.list)}>
+						EDIT
+					</ActionButton>
+					<ActionButton onclick={() => setDeleteOpen(true)}>
+						DELETE
+					</ActionButton>
 				</Show>
 			</div>
 			<DeleteModal

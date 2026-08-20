@@ -72,122 +72,81 @@ export default function ScheduleTile(props: Props) {
 	};
 
 	return (
-		<div id={`schedule-${props.schedule.id}`} class="py-8 flex flex-col gap-6">
-			<div class="flex flex-col gap-1">
-				<div class="flex flex-row justify-between items-center">
-					<p
-						class="font-medium tracking-wider"
-						classList={{ "opacity-50": !active() }}
-					>
-						{props.schedule.name}
-					</p>
-					<Show when={!props.schedule.isDefault}>
-						<Switch checked={active()} onChange={handleToggleActive} />
-					</Show>
-				</div>
-				<p
-					class="text-zinc-500 text-sm"
-					classList={{ "opacity-50": !active() }}
-				>
-					{active() ? "Active" : "Inactive"}
-				</p>
+		<div
+			id={`schedule-${props.schedule.id}`}
+			class="py-5 flex flex-row items-center gap-6"
+			classList={{ "opacity-50": !active() }}
+		>
+			<div class="w-10 flex-shrink-0 flex items-center">
+				<Show when={!props.schedule.isDefault}>
+					<Switch checked={active()} onChange={handleToggleActive} />
+				</Show>
 			</div>
-
-			<table
-				class="w-full table-fixed text-zinc-500"
-				classList={{ "opacity-50": !active() }}
-			>
-				<thead>
-					<tr class="text-sm tracking-wider">
-						<th scope="col" class="w-5/12 pb-2 text-left font-normal">
-							TIMING
-						</th>
-						<th scope="col" class="w-3/12 pb-2 text-left font-normal">
-							DEVICES
-						</th>
-						<th scope="col" class="w-[16%] pb-2 text-left font-normal">
-							BLOCKLISTS
-						</th>
-						<th scope="col" class="w-[17%] pb-2">
-							<span class="sr-only">ACTIONS</span>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr class="align-top">
-						<td class="pb-4">
-							<p class="text-black">
-								{isAllDay(props.schedule.startTime, props.schedule.endTime)
-									? "All Day"
-									: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
-							</p>
-							<div class="flex flex-row gap-3 text-zinc-300 mt-2">
-								<For each={days}>
-									{({ label, key }) => (
-										<span classList={{ "text-black": props.schedule[key] }}>
-											{label}
-										</span>
-									)}
-								</For>
-							</div>
-						</td>
-						<td class="pb-4">
-							<div class="flex flex-row flex-wrap gap-2 max-w-sm">
-								<Show
-									when={props.schedule.deviceNames.length > 0}
-									fallback={<p>-</p>}
-								>
-									<Index each={props.schedule.deviceNames}>
-										{(name, i) => (
-											<Tag
-												onclick={() =>
-													navigate(
-														`/devices#device-${props.schedule.deviceIds[i]}`,
-													)
-												}
-											>
-												{name()}
-											</Tag>
-										)}
-									</Index>
-								</Show>
-							</div>
-						</td>
-						<td class="pb-4">
-							<div class="flex flex-row flex-wrap gap-2 max-w-sm">
-								<Show
-									when={props.schedule.listNames.length > 0}
-									fallback={<p>-</p>}
-								>
-									<Index each={props.schedule.listNames}>
-										{(name, i) => (
-											<Tag
-												onclick={() =>
-													navigate(`/lists#list-${props.schedule.listIds[i]}`)
-												}
-											>
-												{name()}
-											</Tag>
-										)}
-									</Index>
-								</Show>
-							</div>
-						</td>
-						<td class="pb-4 whitespace-nowrap align-top pl-6">
-							<div class="flex flex-row gap-6 justify-end">
-								<ActionButton onclick={() => props.onEdit(props.schedule)}>
-									EDIT
-								</ActionButton>
-								<Show when={!props.schedule.isDefault}>
-									<ActionButton onclick={() => setDeleteOpen(true)}>
-										DELETE
-									</ActionButton>
-								</Show>
-							</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
+			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">
+				{props.schedule.name}
+			</p>
+			<p class="w-25 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
+				{isAllDay(props.schedule.startTime, props.schedule.endTime)
+					? "All Day"
+					: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
+			</p>
+			<div class="w-[134px] flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
+				<For each={days}>
+					{({ label, key }) => (
+						<span
+							class="w-3.5 text-center"
+							classList={{ "text-black": props.schedule[key] }}
+						>
+							{label}
+						</span>
+					)}
+				</For>
+			</div>
+			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-end gap-2">
+				<Index each={props.schedule.deviceNames}>
+					{(name, i) => (
+						<Tag
+							onclick={() =>
+								navigate(`/devices#device-${props.schedule.deviceIds[i]}`)
+							}
+						>
+							{name()}
+						</Tag>
+					)}
+				</Index>
+				<Index each={props.schedule.listNames}>
+					{(name, i) => (
+						<Tag
+							onclick={() =>
+								navigate(`/lists#list-${props.schedule.listIds[i]}`)
+							}
+						>
+							{name()}
+						</Tag>
+					)}
+				</Index>
+				<Show
+					when={
+						props.schedule.deviceNames.length === 0 &&
+						props.schedule.listNames.length === 0
+					}
+				>
+					<p class="text-zinc-500">—</p>
+				</Show>
+			</div>
+			<div class="w-35 flex-shrink-0 flex flex-row justify-end gap-6">
+				<ActionButton onclick={() => props.onEdit(props.schedule)}>
+					EDIT
+				</ActionButton>
+				<Show
+					when={!props.schedule.isDefault}
+					fallback={<span class="w-[55px] flex-shrink-0" />}
+				>
+					<ActionButton onclick={() => setDeleteOpen(true)}>
+						DELETE
+					</ActionButton>
+				</Show>
+			</div>
 			<DeleteModal
 				open={deleteOpen()}
 				name={props.schedule.name}

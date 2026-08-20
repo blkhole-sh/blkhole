@@ -34,7 +34,7 @@ export default function Schedules() {
 	return (
 		<PageShell
 			title="Schedules"
-			description="Control when your black hole is hungry."
+			description="When the void opens and closes."
 			cta="CREATE SCHEDULE"
 			onCTA={handleCreate}
 		>
@@ -49,7 +49,7 @@ export default function Schedules() {
 					</Show>
 				}
 			>
-				<div class="-mt-8 divide-y divide-zinc-200 border-b border-zinc-200">
+				<div class="-mt-5 divide-y divide-zinc-200">
 					<For each={schedules()}>
 						{(schedule) => (
 							<ScheduleTile

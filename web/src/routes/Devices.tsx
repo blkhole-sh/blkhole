@@ -47,7 +47,7 @@ export default function Devices() {
 					</Show>
 				}
 			>
-				<div class="-mt-8 divide-y divide-zinc-200 border-b border-zinc-200">
+				<div class="-mt-5 divide-y divide-zinc-200">
 					<For each={devices()}>
 						{(device) => (
 							<DeviceTile
