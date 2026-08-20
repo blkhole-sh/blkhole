@@ -31,7 +31,7 @@ export default function ListTile(props: Props) {
 				</Show>
 			</div>
 			<p
-				class="flex-shrink-0 tracking-wider"
+				class="flex-shrink-0 text-sm text-zinc-500"
 				classList={{
 					"w-36": !props.list.isDefault,
 					"ml-auto": props.list.isDefault,
