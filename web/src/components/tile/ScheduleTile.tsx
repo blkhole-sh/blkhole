@@ -81,24 +81,26 @@ export default function ScheduleTile(props: Props) {
 			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">
 				{props.schedule.name}
 			</p>
-			<p class="w-24 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
-				{isAllDay(props.schedule.startTime, props.schedule.endTime)
-					? "All Day"
-					: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
-			</p>
-			<div class="-ml-2 w-36 flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
-				<For each={days}>
-					{({ label, key }) => (
-						<span
-							class="w-3.5 text-center"
-							classList={{ "text-black": props.schedule[key] }}
-						>
-							{label}
-						</span>
-					)}
-				</For>
+			<div class="flex flex-row items-center gap-4 flex-shrink-0">
+				<p class="w-24 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
+					{isAllDay(props.schedule.startTime, props.schedule.endTime)
+						? "All Day"
+						: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
+				</p>
+				<div class="w-36 flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
+					<For each={days}>
+						{({ label, key }) => (
+							<span
+								class="w-3.5 text-center"
+								classList={{ "text-black": props.schedule[key] }}
+							>
+								{label}
+							</span>
+						)}
+					</For>
+				</div>
 			</div>
-			<div class="ml-2 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
+			<div class="ml-4 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag
