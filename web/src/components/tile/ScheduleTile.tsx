@@ -86,7 +86,7 @@ export default function ScheduleTile(props: Props) {
 					? "All Day"
 					: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
 			</p>
-			<div class="w-36 flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
+			<div class="ml-2 w-36 flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
 				<For each={days}>
 					{({ label, key }) => (
 						<span
@@ -98,7 +98,7 @@ export default function ScheduleTile(props: Props) {
 					)}
 				</For>
 			</div>
-			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
+			<div class="-ml-2 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag
