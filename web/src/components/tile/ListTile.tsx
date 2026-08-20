@@ -30,19 +30,25 @@ export default function ListTile(props: Props) {
 					</p>
 				</Show>
 			</div>
-			<p class="w-36 flex-shrink-0 tracking-wider">
+			<p
+				class="flex-shrink-0 tracking-wider"
+				classList={{
+					"w-36": !props.list.isDefault,
+					"ml-auto": props.list.isDefault,
+				}}
+			>
 				{props.list.rules.toLocaleString()} rules
 			</p>
-			<div class="w-36 flex-shrink-0 flex flex-row justify-end gap-6">
-				<Show when={!props.list.isDefault}>
+			<Show when={!props.list.isDefault}>
+				<div class="w-36 flex-shrink-0 flex flex-row justify-end gap-6">
 					<ActionButton onclick={() => props.onEdit(props.list)}>
 						EDIT
 					</ActionButton>
 					<ActionButton onclick={() => setDeleteOpen(true)}>
 						DELETE
 					</ActionButton>
-				</Show>
-			</div>
+				</div>
+			</Show>
 			<DeleteModal
 				open={deleteOpen()}
 				name={props.list.name}
