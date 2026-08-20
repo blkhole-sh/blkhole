@@ -38,20 +38,20 @@ export default function Dashboard() {
 			title="Dashboard"
 			description={`Your DNS universe, observed on ${formatDate()}.`}
 			actions={
-				<div class="relative flex-shrink-0">
+				<div class="flex flex-shrink-0 flex-row items-center gap-2">
 					<select
 						aria-label="Range"
 						value={range()}
 						onChange={(event) =>
 							setRange(event.currentTarget.value as TimeRange)
 						}
-						class="pr-5 text-sm font-medium tracking-wider text-zinc-500 outline-none bg-transparent appearance-none cursor-pointer"
+						class="text-sm font-medium tracking-wider text-zinc-500 outline-none bg-transparent appearance-none cursor-pointer"
 					>
 						<option value="24h">24 HOURS</option>
 						<option value="7d">7 DAYS</option>
 						<option value="30d">30 DAYS</option>
 					</select>
-					<ChevronDown class="size-4 absolute right-0 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+					<ChevronDown class="size-4 flex-shrink-0 text-zinc-400 pointer-events-none" />
 				</div>
 			}
 		>

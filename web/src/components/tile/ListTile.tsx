@@ -1,6 +1,5 @@
 import { createSignal, Show } from "solid-js";
 import ActionButton from "~/components/ui/ActionButton";
-import Tag from "~/components/ui/Tag";
 import { deleteList } from "~/lib/api";
 import { useScrollToHash } from "~/lib/hooks";
 import type { List } from "~/lib/model";
@@ -22,22 +21,19 @@ export default function ListTile(props: Props) {
 			class="py-5 flex flex-row items-center gap-8"
 		>
 			<div class="flex-1 min-w-0 flex flex-col gap-1">
-				<div class="min-h-6.5 flex flex-row items-center gap-3">
-					<p class="font-medium tracking-wider truncate">{props.list.name}</p>
-					<Show when={props.list.isDefault}>
-						<Tag>DEFAULT</Tag>
-					</Show>
-				</div>
+				<p class="min-h-6.5 font-medium tracking-wider truncate">
+					{props.list.name}
+				</p>
 				<Show when={props.list.isDefault}>
 					<p class="max-w-xl text-sm leading-normal text-zinc-500">
 						{props.list.description}
 					</p>
 				</Show>
 			</div>
-			<p class="w-35 flex-shrink-0 tracking-wider">
+			<p class="w-36 flex-shrink-0 tracking-wider">
 				{props.list.rules.toLocaleString()} rules
 			</p>
-			<div class="w-35 flex-shrink-0 flex flex-row justify-end gap-6">
+			<div class="w-36 flex-shrink-0 flex flex-row justify-end gap-6">
 				<Show when={!props.list.isDefault}>
 					<ActionButton onclick={() => props.onEdit(props.list)}>
 						EDIT

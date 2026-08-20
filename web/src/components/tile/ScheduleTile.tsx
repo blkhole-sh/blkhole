@@ -77,20 +77,21 @@ export default function ScheduleTile(props: Props) {
 			class="py-5 flex flex-row items-center gap-6"
 			classList={{ "opacity-50": !active() }}
 		>
-			<div class="w-10 flex-shrink-0 flex items-center">
-				<Show when={!props.schedule.isDefault}>
-					<Switch checked={active()} onChange={handleToggleActive} />
-				</Show>
-			</div>
+			<Show
+				when={!props.schedule.isDefault}
+				fallback={<span class="w-10 flex-shrink-0" />}
+			>
+				<Switch checked={active()} onChange={handleToggleActive} />
+			</Show>
 			<p class="w-28 flex-shrink-0 font-medium tracking-wider truncate">
 				{props.schedule.name}
 			</p>
-			<p class="w-25 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
+			<p class="w-24 flex-shrink-0 text-sm text-zinc-500 whitespace-nowrap">
 				{isAllDay(props.schedule.startTime, props.schedule.endTime)
 					? "All Day"
 					: `${formatTime(props.schedule.startTime)} – ${formatTime(props.schedule.endTime)}`}
 			</p>
-			<div class="w-[134px] flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
+			<div class="w-36 flex-shrink-0 flex flex-row gap-1.5 text-sm tracking-wider text-zinc-300">
 				<For each={days}>
 					{({ label, key }) => (
 						<span
@@ -134,13 +135,13 @@ export default function ScheduleTile(props: Props) {
 					<p class="text-zinc-500">—</p>
 				</Show>
 			</div>
-			<div class="w-35 flex-shrink-0 flex flex-row justify-end gap-6">
+			<div class="w-36 flex-shrink-0 flex flex-row justify-end gap-6">
 				<ActionButton onclick={() => props.onEdit(props.schedule)}>
 					EDIT
 				</ActionButton>
 				<Show
 					when={!props.schedule.isDefault}
-					fallback={<span class="w-[55px] flex-shrink-0" />}
+					fallback={<span class="w-14 flex-shrink-0" />}
 				>
 					<ActionButton onclick={() => setDeleteOpen(true)}>
 						DELETE
