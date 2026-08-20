@@ -98,7 +98,7 @@ export default function ScheduleTile(props: Props) {
 					)}
 				</For>
 			</div>
-			<div class="pr-4 flex-1 min-w-0 flex flex-row flex-wrap justify-end gap-2">
+			<div class="flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2">
 				<Index each={props.schedule.deviceNames}>
 					{(name, i) => (
 						<Tag
@@ -134,10 +134,7 @@ export default function ScheduleTile(props: Props) {
 				<ActionButton onclick={() => props.onEdit(props.schedule)}>
 					EDIT
 				</ActionButton>
-				<Show
-					when={!props.schedule.isDefault}
-					fallback={<span class="w-14 flex-shrink-0" />}
-				>
+				<Show when={!props.schedule.isDefault}>
 					<ActionButton onclick={() => setDeleteOpen(true)}>
 						DELETE
 					</ActionButton>
