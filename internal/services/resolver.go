@@ -3,7 +3,9 @@ package services
 import (
 	"fmt"
 	"log"
+	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/blkhole-sh/blkhole/internal/cache"
@@ -15,18 +17,26 @@ type Resolver interface {
 	Resolve(*dns.Msg, string) (*dns.Msg, error)
 }
 
+// MutableResolver supports changing the upstream DNS server without restarting.
+type MutableResolver interface {
+	Resolver
+	SetUpstreamDNS(string)
+	UpstreamDNS() string
+}
+
 // resolver implements the Resolver interface
 type resolver struct {
 	contentBlocker ContentBlocker
 	statsCache     cache.StatsCache
 	deviceCache    cache.DeviceCache
 	upstreamDNS    string
+	upstreamMu     sync.RWMutex
 	dnsClient      *dns.Client
 	queryLog       *QueryLogBuffer
 }
 
 // NewResolver creates a new Resolver instance
-func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, deviceCache cache.DeviceCache, upstreamDNS string, queryLog *QueryLogBuffer) Resolver {
+func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, deviceCache cache.DeviceCache, upstreamDNS string, queryLog *QueryLogBuffer) MutableResolver {
 	return &resolver{
 		contentBlocker: contentBlocker,
 		statsCache:     statsCache,
@@ -38,6 +48,33 @@ func NewResolver(contentBlocker ContentBlocker, statsCache cache.StatsCache, dev
 			SingleInflight: true,
 		},
 	}
+}
+
+// ValidateUpstreamDNS validates an IP address and port used as an upstream DNS server.
+func ValidateUpstreamDNS(addr string) (string, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", fmt.Errorf("invalid upstream DNS format (expected host:port): %w", err)
+	}
+	if ip := net.ParseIP(host); ip == nil {
+		return "", fmt.Errorf("invalid IP address: %s", host)
+	}
+	if _, err := net.LookupPort("tcp", port); err != nil {
+		return "", fmt.Errorf("invalid port: %s", port)
+	}
+	return addr, nil
+}
+
+func (r *resolver) SetUpstreamDNS(value string) {
+	r.upstreamMu.Lock()
+	r.upstreamDNS = value
+	r.upstreamMu.Unlock()
+}
+
+func (r *resolver) UpstreamDNS() string {
+	r.upstreamMu.RLock()
+	defer r.upstreamMu.RUnlock()
+	return r.upstreamDNS
 }
 
 // Resolve proccesses a DNS message and returns the answer message
@@ -93,7 +130,7 @@ func (r *resolver) Resolve(msg *dns.Msg, deviceHash string) (*dns.Msg, error) {
 	}
 
 	// Forward the DNS query to the upstream server
-	res, _, err := r.dnsClient.Exchange(msg, r.upstreamDNS)
+	res, _, err := r.dnsClient.Exchange(msg, r.UpstreamDNS())
 	if err != nil {
 		// Set SERVFAIL in case of an upstream failure
 		response.SetRcode(msg, dns.RcodeServerFailure)

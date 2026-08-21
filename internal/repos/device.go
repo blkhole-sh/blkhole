@@ -130,7 +130,12 @@ func (dr *deviceRepo) FindByHash(hash string) (*model.Device, error) {
 
 // FindByUser returns all existing devices with given user id from the database
 func (dr *deviceRepo) FindByUser(userID int) ([]*model.Device, error) {
-	query := "SELECT id, hash, name, os, user_id FROM device WHERE user_id=?"
+	query := `
+		SELECT d.id, d.hash, d.name, d.os, d.user_id, MAX(ql.timestamp) AS last_query_at
+		FROM device d
+		LEFT JOIN query_log ql ON ql.device_hash = d.hash
+		WHERE d.user_id = ?
+		GROUP BY d.id, d.hash, d.name, d.os, d.user_id`
 	var devices []*model.Device
 
 	err := sqlscan.Select(dr.ctx, dr.db, &devices, query, userID)

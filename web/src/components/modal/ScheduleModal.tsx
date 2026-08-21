@@ -235,7 +235,7 @@ export default function ScheduleModal(props: Props) {
 			{(lists()?.length ?? 0) > 0 && (
 				<MultiStepModal.Step>
 					<div class="flex flex-col gap-1">
-						<p class="font-medium text-zinc-700 text-sm tracking-wider">
+						<p class="font-medium text-zinc-500 text-sm tracking-wider">
 							SELECT BLOCKLISTS
 						</p>
 						<div class="flex flex-col divide-y divide-zinc-100">
@@ -259,7 +259,7 @@ export default function ScheduleModal(props: Props) {
 			{(devices()?.length ?? 0) > 0 && (
 				<MultiStepModal.Step>
 					<div class="flex flex-col gap-1">
-						<p class="font-medium text-zinc-700 text-sm tracking-wider">
+						<p class="font-medium text-zinc-500 text-sm tracking-wider">
 							APPLY TO DEVICES
 						</p>
 						<div class="flex flex-col divide-y divide-zinc-100">

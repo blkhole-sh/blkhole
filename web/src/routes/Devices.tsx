@@ -30,42 +30,45 @@ export default function Devices() {
 	};
 
 	return (
-		<PageShell
-			title="Devices"
-			description="Devices caught in your gravitational field."
-			cta="ADD DEVICE"
-			onCTA={handleAdd}
-		>
-			<Show
-				when={(devices()?.length ?? 0) > 0}
-				fallback={
-					<Show when={!devices.loading}>
-						<EmptyState
-							message="blkhole has nothing in orbit"
-							subtitle="Add your first device to start blocking"
-						/>
-					</Show>
-				}
+		<div class="h-screen flex flex-col overflow-hidden">
+			<PageShell
+				title="Devices"
+				description="Devices caught in your gravitational field."
+				cta="ADD DEVICE"
+				onCTA={handleAdd}
+				contentClass="p-12 overflow-y-auto"
 			>
-				<div class="divide-y divide-zinc-200">
-					<For each={devices()}>
-						{(device, index) => (
-							<DeviceTile
-								device={device}
-								first={index() === 0}
-								onEdit={handleEdit}
-								onDeleted={refetch}
+				<Show
+					when={(devices()?.length ?? 0) > 0}
+					fallback={
+						<Show when={!devices.loading}>
+							<EmptyState
+								message="blkhole has nothing in orbit"
+								subtitle="Add your first device to start blocking"
 							/>
-						)}
-					</For>
-				</div>
-			</Show>
-			<DeviceModal
-				open={modalOpen()}
-				device={editingDevice()}
-				onClose={() => setModalOpen(false)}
-				onSaved={handleSaved}
-			/>
-		</PageShell>
+						</Show>
+					}
+				>
+					<div class="grid grid-cols-[max-content_6rem_minmax(0,1fr)_12rem] gap-x-8 divide-y divide-zinc-200">
+						<For each={devices()}>
+							{(device, index) => (
+								<DeviceTile
+									device={device}
+									first={index() === 0}
+									onEdit={handleEdit}
+									onDeleted={refetch}
+								/>
+							)}
+						</For>
+					</div>
+				</Show>
+				<DeviceModal
+					open={modalOpen()}
+					device={editingDevice()}
+					onClose={() => setModalOpen(false)}
+					onSaved={handleSaved}
+				/>
+			</PageShell>
+		</div>
 	);
 }

@@ -18,7 +18,7 @@ export default function SelectInput(props: Props) {
 			<Show when={props.label}>
 				<label
 					for={props.label}
-					class="font-medium text-zinc-700 text-sm tracking-wider"
+					class="font-medium text-zinc-500 text-sm tracking-wider"
 				>
 					{props.label}
 				</label>

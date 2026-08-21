@@ -1,24 +1,23 @@
-import { createResource, Show } from "solid-js";
-import { getSettings } from "~/lib/api";
-import Divider from "../ui/Divider";
+import TextInput from "../form/TextInput";
 
-export default function DNSSettings() {
-	const [settings] = createResource(getSettings);
+interface Props {
+	upstreamDNS: string;
+	onUpstreamDNSInput: (value: string) => void;
+	error?: string | undefined;
+}
 
+export default function DNSSettings(props: Props) {
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-medium tracking-wider">DNS CONFIGURATION</h2>
-			<div class="flex flex-col gap-1">
-				<p class="font-medium text-zinc-700 text-sm tracking-wider">
-					UPSTREAM DNS SERVER
-				</p>
-				<p class="py-2 text-sm leading-snug tracking-wider text-zinc-500">
-					<Show when={!settings.loading} fallback="Loading...">
-						{settings()?.upstreamDns ?? "—"}
-					</Show>
-				</p>
-				<Divider />
-			</div>
+			<h2 class="font-medium text-sm tracking-wider text-zinc-700">
+				DNS CONFIGURATION
+			</h2>
+			<TextInput
+				label="UPSTREAM DNS SERVER"
+				value={props.upstreamDNS}
+				onInput={(event) => props.onUpstreamDNSInput(event.currentTarget.value)}
+				error={props.error}
+			/>
 		</section>
 	);
 }

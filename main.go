@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -66,10 +65,11 @@ var (
 	schedules repos.ScheduleRepo
 	domains   repos.DomainRepo
 	queryLogs repos.QueryLogRepo
+	settings  repos.SettingsRepo
 
 	// Services
 	contentBlocker services.ContentBlocker
-	resolver       services.Resolver
+	resolver       services.MutableResolver
 	cryptoService  services.CryptoService
 	listService    services.ListService
 	authService    services.AuthService
@@ -137,23 +137,7 @@ func initConfig() (*Config, error) {
 }
 
 func initUpstreamDNS(addr string) (string, error) {
-	// Parse the address to validate format
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return "", fmt.Errorf("invalid upstream DNS format (expected host:port): %w", err)
-	}
-
-	// Validate IP address
-	if ip := net.ParseIP(host); ip == nil {
-		return "", fmt.Errorf("invalid IP address: %s", host)
-	}
-
-	// Validate port
-	if _, err := net.LookupPort("tcp", port); err != nil {
-		return "", fmt.Errorf("invalid port: %s", port)
-	}
-
-	return addr, nil
+	return services.ValidateUpstreamDNS(addr)
 }
 
 // configPath resolves a path inside the blkhole config directory. It exits
@@ -200,6 +184,7 @@ func initRepos(db *sql.DB) {
 	users = repos.NewUserRepo(db)
 	domains = repos.NewDomainRepo(db)
 	queryLogs = repos.NewQueryLogRepo(db)
+	settings = repos.NewSettingsRepo(db)
 }
 
 func initCaches() {
@@ -231,7 +216,7 @@ func initControllers(domain, upstreamDNS string) {
 	quoteController = controllers.NewQuoteController()
 	authController = controllers.NewAuthController(authService, listService, secureCookies)
 	statsController = controllers.NewStatsController(statsCache, devices, queryLogs, authService)
-	settingsController = controllers.NewSettingsController(upstreamDNS)
+	settingsController = controllers.NewSettingsController(settings, resolver, authService)
 	queryLogController = controllers.NewQueryLogController(queryLogs, authService)
 }
 
@@ -349,6 +334,14 @@ func initDependencies(cfg *Config) {
 	}
 
 	initRepos(db)
+	upstreamDNS, err = settings.GetUpstreamDNS(upstreamDNS)
+	if err != nil {
+		log.Fatalf("failed to load upstream dns setting: %v", err)
+	}
+	upstreamDNS, err = initUpstreamDNS(upstreamDNS)
+	if err != nil {
+		log.Fatalf("invalid persisted upstream dns setting: %v", err)
+	}
 	initCaches()
 	initServices(secret, upstreamDNS)
 	initControllers(cfg.Domain, upstreamDNS)

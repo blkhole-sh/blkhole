@@ -4,10 +4,12 @@
 import type {
 	Device,
 	List,
+	QueryLogPage,
 	QueryStats,
 	Quote,
 	Schedule,
 	Settings,
+	User,
 } from "./model";
 
 const API_BASE = "/api";
@@ -319,9 +321,48 @@ export const createSchedule = (
 /** Get query statistics for the current user - returns total and blocked query counts over time */
 export const getQueryStats = (
 	range: "24h" | "7d" | "30d" = "24h",
+	deviceId?: string,
 ): Promise<QueryStats> => {
 	const user = getCurrentUser();
-	return api(`/users/${user.id}/stats/queries?range=${range}`);
+	const params = new URLSearchParams({ range });
+	if (deviceId) params.set("deviceId", deviceId);
+	return api(`/users/${user.id}/stats/queries?${params}`);
+};
+
+export const getQueryLogs = (options: {
+	range: "1h" | "24h" | "7d" | "30d";
+	deviceId?: string;
+	limit?: number;
+	offset?: number;
+}): Promise<QueryLogPage> => {
+	const user = getCurrentUser();
+	const params = new URLSearchParams({
+		range: options.range,
+		limit: String(options.limit ?? 8),
+		offset: String(options.offset ?? 0),
+	});
+	if (options.deviceId) params.set("deviceId", options.deviceId);
+	return api(`/users/${user.id}/logs?${params}`);
+};
+
+export const exportQueryLogs = async (
+	deviceIds: string[],
+	range: "1h" | "24h" | "7d" | "30d",
+) => {
+	const user = getCurrentUser();
+	const params = new URLSearchParams({ range });
+	if (deviceIds.length > 0) params.set("deviceIds", deviceIds.join(","));
+	const response = await fetch(
+		`${API_BASE}/users/${user.id}/logs/export?${params}`,
+		{ credentials: "include" },
+	);
+	if (!response.ok) throw new Error(`API Error: ${response.status}`);
+	const blobUrl = URL.createObjectURL(await response.blob());
+	const link = document.createElement("a");
+	link.href = blobUrl;
+	link.download = `query_log_${user.id}.csv`;
+	link.click();
+	URL.revokeObjectURL(blobUrl);
 };
 
 /** Get server settings (upstream DNS, etc.) — no auth required */
@@ -331,6 +372,24 @@ export const getSettings = (): Promise<Settings> => {
 		return r.json();
 	});
 };
+
+/** Update the current user's email address. */
+export const updateEmail = async (email: string): Promise<User> => {
+	const user = getCurrentUser();
+	const updated = await api<User>(`/users/${user.id}`, {
+		method: "PATCH",
+		body: JSON.stringify({ email }),
+	});
+	localStorage.setItem("user", JSON.stringify(updated));
+	return updated;
+};
+
+/** Persist and immediately apply editable server settings. */
+export const updateSettings = (upstreamDns: string): Promise<Settings> =>
+	api("/settings", {
+		method: "PATCH",
+		body: JSON.stringify({ upstreamDns }),
+	});
 
 /**
  * Change the current user's password

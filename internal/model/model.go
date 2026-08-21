@@ -1,6 +1,8 @@
 // Package model defines the data structures used throughout the blkhole DNS blocker application.
 package model
 
+import "time"
+
 // User represents a user in the system
 type User struct {
 	ID           int    `json:"id"`
@@ -31,6 +33,7 @@ type Device struct {
 	OS          OS     `json:"os"`
 	UserID      int    `json:"userId"`
 	ScheduleIDs []int  `json:"scheduleIds"`
+	LastQueryAt *int64 `json:"-"`
 }
 
 // Domain represents a domain with its id in the system
@@ -90,6 +93,23 @@ type QueryLog struct {
 	Timestamp  int64  `json:"timestamp"`
 }
 
+// QueryLogDTO adds display-ready device data to a query log entry.
+type QueryLogDTO struct {
+	ID         int    `json:"id"`
+	DeviceID   int    `json:"deviceId"`
+	DeviceName string `json:"deviceName"`
+	Domain     string `json:"domain"`
+	Blocked    bool   `json:"blocked"`
+	Timestamp  int64  `json:"timestamp"`
+}
+
+// DomainStat contains the query totals used by dashboard domain rankings.
+type DomainStat struct {
+	Domain  string `json:"domain"`
+	Count   int    `json:"count"`
+	Blocked int    `json:"blocked"`
+}
+
 // DeviceSchedule represents the many-to-many relationship between devices and schedules
 type DeviceSchedule struct {
 	DeviceID   int `json:"deviceId"`
@@ -140,6 +160,11 @@ func (d Device) ToDTO(scheduleIDs []int, scheduleNames []string) DeviceDTO {
 	if scheduleNames == nil {
 		scheduleNames = []string{}
 	}
+	var lastQueryAt *time.Time
+	if d.LastQueryAt != nil {
+		value := time.Unix(*d.LastQueryAt, 0).UTC()
+		lastQueryAt = &value
+	}
 	return DeviceDTO{
 		ID:            d.ID,
 		Hash:          d.Hash,
@@ -148,6 +173,7 @@ func (d Device) ToDTO(scheduleIDs []int, scheduleNames []string) DeviceDTO {
 		UserID:        d.UserID,
 		ScheduleIDs:   scheduleIDs,
 		ScheduleNames: scheduleNames,
+		LastQueryAt:   lastQueryAt,
 	}
 }
 

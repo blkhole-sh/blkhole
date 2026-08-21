@@ -82,9 +82,9 @@ export default function QueriesPanel(props: Props) {
 	};
 
 	return (
-		<div class="pt-8 flex flex-col flex-1">
+		<div class="pt-8 h-full flex flex-col">
 			<div class="flex flex-row items-center pb-4">
-				<p class="font-medium text-zinc-500 text-sm tracking-wider flex-1">
+				<p class="font-medium text-zinc-700 text-sm tracking-wider flex-1">
 					QUERIES PER SECOND
 				</p>
 				<Show when={hasData()}>

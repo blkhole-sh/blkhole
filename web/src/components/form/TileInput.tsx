@@ -18,7 +18,7 @@ export default function TileInput(props: Props) {
 	return (
 		<div class="flex flex-col gap-1">
 			<Show when={props.label}>
-				<p class="font-medium text-zinc-700 text-sm tracking-wider">
+				<p class="font-medium text-zinc-500 text-sm tracking-wider">
 					{props.label}
 				</p>
 			</Show>

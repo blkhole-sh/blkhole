@@ -4,6 +4,15 @@ import (
 	"testing"
 )
 
+func TestDeviceToDTOIncludesLastQueryAt(t *testing.T) {
+	timestamp := int64(1_756_000_000)
+	dto := (Device{LastQueryAt: &timestamp}).ToDTO(nil, nil)
+
+	if dto.LastQueryAt == nil || dto.LastQueryAt.Unix() != timestamp {
+		t.Fatalf("expected last query timestamp %d, got %v", timestamp, dto.LastQueryAt)
+	}
+}
+
 func TestListToDTO(t *testing.T) {
 	// Case 1: Rules populated, RuleCount 0 (legacy/manual)
 	l1 := List{

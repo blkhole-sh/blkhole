@@ -34,7 +34,7 @@ export default function FileInput(props: Props) {
 
 	return (
 		<div class="flex flex-col gap-2">
-			<p class="font-medium text-zinc-700 text-sm tracking-wider">
+			<p class="font-medium text-zinc-500 text-sm tracking-wider">
 				{props.label}
 			</p>
 			<label

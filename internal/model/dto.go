@@ -12,10 +12,20 @@ type StatCount struct {
 // the peak queries-per-second sample of each 5-minute window over the last
 // 24 hours, at the timestamp of the second where the peak occurred.
 type QueryStatsDTO struct {
-	Total      []StatCount `json:"total"`
-	Blocked    []StatCount `json:"blocked"`
-	QPS        []StatCount `json:"qps,omitempty"`
-	BlockedQPS []StatCount `json:"blockedQps,omitempty"`
+	Total      []StatCount         `json:"total"`
+	Blocked    []StatCount         `json:"blocked"`
+	QPS        []StatCount         `json:"qps,omitempty"`
+	BlockedQPS []StatCount         `json:"blockedQps,omitempty"`
+	Domains    []DomainStat        `json:"domains"`
+	Activity   []DeviceActivityDTO `json:"activity"`
+}
+
+// DeviceActivityDTO contains one device's hourly query totals and last report time.
+type DeviceActivityDTO struct {
+	DeviceID    int        `json:"deviceId"`
+	DeviceName  string     `json:"deviceName"`
+	Hours       []int      `json:"hours"`
+	LastQueryAt *time.Time `json:"lastQueryAt,omitempty"`
 }
 
 // UserDTO represents a user data transfer object
@@ -31,13 +41,14 @@ type UserDTO struct {
 
 // DeviceDTO represents a device data transfer object
 type DeviceDTO struct {
-	ID            int      `json:"id"`
-	Name          string   `json:"name"`
-	OS            OS       `json:"os"`
-	Hash          string   `json:"hash"`
-	UserID        int      `json:"userId"`
-	ScheduleIDs   []int    `json:"scheduleIds"`
-	ScheduleNames []string `json:"scheduleNames"`
+	ID            int        `json:"id"`
+	Name          string     `json:"name"`
+	OS            OS         `json:"os"`
+	Hash          string     `json:"hash"`
+	UserID        int        `json:"userId"`
+	ScheduleIDs   []int      `json:"scheduleIds"`
+	ScheduleNames []string   `json:"scheduleNames"`
+	LastQueryAt   *time.Time `json:"lastQueryAt,omitempty"`
 }
 
 // ListDTO represents a list data transfer object

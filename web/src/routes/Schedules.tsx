@@ -32,43 +32,46 @@ export default function Schedules() {
 	};
 
 	return (
-		<PageShell
-			title="Schedules"
-			description="When the void opens and closes."
-			cta="CREATE SCHEDULE"
-			onCTA={handleCreate}
-		>
-			<Show
-				when={(schedules()?.length ?? 0) > 0}
-				fallback={
-					<Show when={!schedules.loading}>
-						<EmptyState
-							message="blkhole exists outside of time"
-							subtitle="Create a schedule to control when blocking occurs"
-						/>
-					</Show>
-				}
+		<div class="h-screen flex flex-col overflow-hidden">
+			<PageShell
+				title="Schedules"
+				description="When the void opens and closes."
+				cta="CREATE SCHEDULE"
+				onCTA={handleCreate}
+				contentClass="p-12 overflow-y-auto"
 			>
-				<div class="divide-y divide-zinc-200">
-					<For each={schedules()}>
-						{(schedule, index) => (
-							<ScheduleTile
-								schedule={schedule}
-								first={index() === 0}
-								onEdit={handleEdit}
-								onDeleted={refetch}
-								onUpdated={refetch}
+				<Show
+					when={(schedules()?.length ?? 0) > 0}
+					fallback={
+						<Show when={!schedules.loading}>
+							<EmptyState
+								message="blkhole exists outside of time"
+								subtitle="Create a schedule to control when blocking occurs"
 							/>
-						)}
-					</For>
-				</div>
-			</Show>
-			<ScheduleModal
-				open={modalOpen()}
-				schedule={editingSchedule()}
-				onClose={() => setModalOpen(false)}
-				onSaved={handleSaved}
-			/>
-		</PageShell>
+						</Show>
+					}
+				>
+					<div class="divide-y divide-zinc-200">
+						<For each={schedules()}>
+							{(schedule, index) => (
+								<ScheduleTile
+									schedule={schedule}
+									first={index() === 0}
+									onEdit={handleEdit}
+									onDeleted={refetch}
+									onUpdated={refetch}
+								/>
+							)}
+						</For>
+					</div>
+				</Show>
+				<ScheduleModal
+					open={modalOpen()}
+					schedule={editingSchedule()}
+					onClose={() => setModalOpen(false)}
+					onSaved={handleSaved}
+				/>
+			</PageShell>
+		</div>
 	);
 }

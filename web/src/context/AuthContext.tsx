@@ -19,6 +19,7 @@ type AuthStore = {
 	logout: () => Promise<void>;
 	isAuthenticated: () => boolean;
 	checkAuth: () => Promise<void>;
+	updateUser: (user: User) => void;
 };
 
 const AuthContext = createContext<AuthStore>();
@@ -70,6 +71,10 @@ export default function AuthProvider(props: ParentProps) {
 	};
 
 	const isAuthenticated = () => Boolean(user());
+	const updateUser = (updated: User) => {
+		localStorage.setItem("user", JSON.stringify(updated));
+		setUser(updated);
+	};
 
 	const store: AuthStore = {
 		user,
@@ -78,6 +83,7 @@ export default function AuthProvider(props: ParentProps) {
 		logout,
 		isAuthenticated,
 		checkAuth,
+		updateUser,
 	};
 
 	return (
