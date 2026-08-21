@@ -24,13 +24,13 @@ export default function StatsCards(props: Props) {
 	return (
 		<div class="pb-8 grid grid-cols-2 items-start gap-8">
 			<div>
-				<p class="pb-4 font-medium text-zinc-500 text-sm tracking-wider">
+				<p class="pb-4 font-medium text-zinc-700 text-sm tracking-wider">
 					TOTAL QUERIES
 				</p>
 				<p class="font-display text-5xl">{totalQueries()}</p>
 			</div>
 			<div>
-				<p class="pb-4 font-medium text-zinc-500 text-sm tracking-wider">
+				<p class="pb-4 font-medium text-zinc-700 text-sm tracking-wider">
 					BLOCK RATE
 				</p>
 				<p class="font-display text-5xl">{blockRate()}</p>

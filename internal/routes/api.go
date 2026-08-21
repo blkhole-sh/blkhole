@@ -49,6 +49,7 @@ func InitAPI(
 			r.Get("/users/{id}", userController.FindByID)
 			r.Patch("/users/{id}", userController.Update)
 			r.Delete("/users/{id}", userController.Delete)
+			r.Patch("/settings", settingsController.UpdateSettings)
 
 			// Device API routes
 			r.Get("/devices/{id}", deviceController.FindByID)

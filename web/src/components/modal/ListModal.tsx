@@ -184,7 +184,7 @@ export default function ListModal(props: Props) {
 						<div class="flex flex-row items-baseline justify-between gap-4">
 							<label
 								for="blocklist-domain"
-								class="font-medium text-zinc-700 text-sm tracking-wider"
+								class="font-medium text-zinc-500 text-sm tracking-wider"
 							>
 								DOMAINS
 							</label>

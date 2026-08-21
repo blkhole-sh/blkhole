@@ -30,42 +30,45 @@ export default function Lists() {
 	};
 
 	return (
-		<PageShell
-			title="Blocklists"
-			description="Domains that get pulled into the void."
-			cta="CREATE BLOCKLIST"
-			onCTA={handleCreate}
-		>
-			<Show
-				when={(lists()?.length ?? 0) > 0}
-				fallback={
-					<Show when={!lists.loading}>
-						<EmptyState
-							message="blkhole is letting everything escape"
-							subtitle="Create a blocklist to start pulling domains into the void"
-						/>
-					</Show>
-				}
+		<div class="h-screen flex flex-col overflow-hidden">
+			<PageShell
+				title="Blocklists"
+				description="Domains that get pulled into the void."
+				cta="CREATE BLOCKLIST"
+				onCTA={handleCreate}
+				contentClass="p-12 overflow-y-auto"
 			>
-				<div class="divide-y divide-zinc-200">
-					<For each={lists()}>
-						{(list, index) => (
-							<ListTile
-								list={list}
-								first={index() === 0}
-								onEdit={handleEdit}
-								onDeleted={refetch}
+				<Show
+					when={(lists()?.length ?? 0) > 0}
+					fallback={
+						<Show when={!lists.loading}>
+							<EmptyState
+								message="blkhole is letting everything escape"
+								subtitle="Create a blocklist to start pulling domains into the void"
 							/>
-						)}
-					</For>
-				</div>
-			</Show>
-			<ListModal
-				open={modalOpen()}
-				list={editingList()}
-				onClose={() => setModalOpen(false)}
-				onSaved={handleSaved}
-			/>
-		</PageShell>
+						</Show>
+					}
+				>
+					<div class="divide-y divide-zinc-200">
+						<For each={lists()}>
+							{(list, index) => (
+								<ListTile
+									list={list}
+									first={index() === 0}
+									onEdit={handleEdit}
+									onDeleted={refetch}
+								/>
+							)}
+						</For>
+					</div>
+				</Show>
+				<ListModal
+					open={modalOpen()}
+					list={editingList()}
+					onClose={() => setModalOpen(false)}
+					onSaved={handleSaved}
+				/>
+			</PageShell>
+		</div>
 	);
 }

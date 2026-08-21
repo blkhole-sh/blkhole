@@ -65,6 +65,23 @@ func newTestDNSMsg(domain string) *dns.Msg {
 	return msg
 }
 
+func TestResolverUpdatesUpstreamDNS(t *testing.T) {
+	r := NewResolver(&mockContentBlocker{}, &mockStatsCache{}, newTestDeviceCache(), "9.9.9.9:53", nil)
+	r.SetUpstreamDNS("1.1.1.1:53")
+	if got := r.UpstreamDNS(); got != "1.1.1.1:53" {
+		t.Fatalf("UpstreamDNS() = %q, want 1.1.1.1:53", got)
+	}
+}
+
+func TestValidateUpstreamDNS(t *testing.T) {
+	if _, err := ValidateUpstreamDNS("1.1.1.1:53"); err != nil {
+		t.Fatalf("valid upstream DNS rejected: %v", err)
+	}
+	if _, err := ValidateUpstreamDNS("example.com:53"); err == nil {
+		t.Fatal("hostname upstream DNS accepted")
+	}
+}
+
 func TestResolver_BlockedDomain_ReturnsNXDOMAIN(t *testing.T) {
 	blocker := &mockContentBlocker{
 		isBlockedFunc: func(domain, _ string) (bool, error) {

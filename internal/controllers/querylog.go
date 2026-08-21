@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/blkhole-sh/blkhole/internal/model"
 	"github.com/blkhole-sh/blkhole/internal/repos"
 	"github.com/blkhole-sh/blkhole/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -64,8 +66,25 @@ func (c *queryLogController) GetLogs(w http.ResponseWriter, r *http.Request) {
 			limit = parsed
 		}
 	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := 0
+	if rawOffset := r.URL.Query().Get("offset"); rawOffset != "" {
+		parsed, err := strconv.Atoi(rawOffset)
+		if err != nil || parsed < 0 {
+			http.Error(w, "Invalid offset", http.StatusBadRequest)
+			return
+		}
+		offset = parsed
+	}
+	filter, ok := queryLogFilter(r, limit, offset)
+	if !ok {
+		http.Error(w, "Invalid query log filter", http.StatusBadRequest)
+		return
+	}
 
-	logs, err := c.queryLogs.FindByUser(userID, limit)
+	logs, total, err := c.queryLogs.FindFilteredByUser(userID, filter)
 	if err != nil {
 		log.Printf("failed to fetch query logs for user %d: %v", userID, err)
 		http.Error(w, "Unable to fetch query logs", http.StatusInternalServerError)
@@ -73,7 +92,10 @@ func (c *queryLogController) GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(logs); err != nil {
+	if err := json.NewEncoder(w).Encode(struct {
+		Items []*model.QueryLogDTO `json:"items"`
+		Total int                  `json:"total"`
+	}{Items: logs, Total: total}); err != nil {
 		log.Printf("failed to encode query logs: %v", err)
 	}
 }
@@ -84,7 +106,12 @@ func (c *queryLogController) ExportLogs(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	logs, err := c.queryLogs.FindByUser(userID, 100000)
+	filter, ok := queryLogFilter(r, 100000, 0)
+	if !ok {
+		http.Error(w, "Invalid query log filter", http.StatusBadRequest)
+		return
+	}
+	logs, _, err := c.queryLogs.FindFilteredByUser(userID, filter)
 	if err != nil {
 		log.Printf("failed to fetch query logs for user %d: %v", userID, err)
 		http.Error(w, "Unable to fetch query logs", http.StatusInternalServerError)
@@ -95,21 +122,64 @@ func (c *queryLogController) ExportLogs(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="query_log_%d.csv"`, userID))
 
 	cw := csv.NewWriter(w)
-	cw.Write([]string{"timestamp", "domain", "device_hash", "blocked"})
+	cw.Write([]string{"timestamp", "device", "domain", "verdict"})
 	for _, entry := range logs {
-		blockedStr := "false"
+		verdict := "Allowed"
 		if entry.Blocked {
-			blockedStr = "true"
+			verdict = "Blocked"
 		}
 		cw.Write([]string{
 			time.Unix(entry.Timestamp, 0).UTC().Format(time.RFC3339),
+			entry.DeviceName,
 			entry.Domain,
-			entry.DeviceHash,
-			blockedStr,
+			verdict,
 		})
 	}
 	cw.Flush()
 	if err := cw.Error(); err != nil {
 		log.Printf("failed to write query log export: %v", err)
 	}
+}
+
+func queryLogFilter(r *http.Request, limit, offset int) (repos.QueryLogFilter, bool) {
+	deviceIDs := []int{}
+	rawDeviceIDs := r.URL.Query().Get("deviceIds")
+	if rawDeviceIDs == "" {
+		rawDeviceIDs = r.URL.Query().Get("deviceId")
+	}
+	if rawDeviceIDs != "" {
+		for _, rawID := range strings.Split(rawDeviceIDs, ",") {
+			id, err := strconv.Atoi(strings.TrimSpace(rawID))
+			if err != nil || id <= 0 {
+				return repos.QueryLogFilter{}, false
+			}
+			deviceIDs = append(deviceIDs, id)
+		}
+	}
+
+	rangeValue := r.URL.Query().Get("range")
+	if rangeValue == "" {
+		rangeValue = "24h"
+	}
+	var span time.Duration
+	switch rangeValue {
+	case "1h":
+		span = time.Hour
+	case "24h":
+		span = 24 * time.Hour
+	case "7d":
+		span = 7 * 24 * time.Hour
+	case "30d":
+		span = 30 * 24 * time.Hour
+	default:
+		return repos.QueryLogFilter{}, false
+	}
+	to := time.Now()
+	return repos.QueryLogFilter{
+		DeviceIDs: deviceIDs,
+		From:      to.Add(-span),
+		To:        to,
+		Limit:     limit,
+		Offset:    offset,
+	}, true
 }

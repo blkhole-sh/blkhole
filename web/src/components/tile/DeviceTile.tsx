@@ -21,20 +21,44 @@ export default function DeviceTile(props: Props) {
 	useScrollToHash();
 	const [setupDeviceOpen, setSetupDeviceOpen] = createSignal(false);
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
+	const lastQueryAt = () => {
+		if (!props.device.lastQueryAt) return "No queries";
+		const seconds = Math.max(
+			0,
+			Math.floor(
+				(Date.now() - new Date(props.device.lastQueryAt).getTime()) / 1000,
+			),
+		);
+		if (seconds < 60) return "Just now";
+		const minutes = Math.floor(seconds / 60);
+		if (minutes < 60) return `${minutes}m ago`;
+		const hours = Math.floor(minutes / 60);
+		if (hours < 24) return `${hours}h ago`;
+		return `${Math.floor(hours / 24)}d ago`;
+	};
 
 	return (
 		<div
 			id={`device-${props.device.id}`}
-			class="py-5 flex flex-row items-center gap-8"
+			class="py-5 col-span-full grid grid-cols-subgrid items-center gap-x-8"
 			classList={{ "pt-0": props.first }}
 		>
 			<div class="flex-shrink-0 flex flex-row items-center gap-4 min-h-6.5">
 				<OSIcon os={props.device.os} />
-				<p class="w-44 flex-shrink-0 font-medium tracking-wider truncate">
+				<p class="min-w-44 flex-shrink-0 whitespace-nowrap font-medium tracking-wider">
 					{props.device.name}
 				</p>
 			</div>
-			<p class="w-24 flex-shrink-0 text-sm text-zinc-500">Connected</p>
+			<p
+				class="w-24 flex-shrink-0 whitespace-nowrap text-sm text-zinc-500"
+				title={
+					props.device.lastQueryAt
+						? new Date(props.device.lastQueryAt).toLocaleString()
+						: undefined
+				}
+			>
+				{lastQueryAt()}
+			</p>
 			<div class="ml-30 flex-1 min-w-0 flex flex-row flex-wrap justify-start gap-2 pl-1">
 				<Show
 					when={props.device.scheduleNames.length > 0}

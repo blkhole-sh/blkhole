@@ -30,7 +30,7 @@ export default function Sidebar() {
 				</a>
 			</div>
 			<nav class="pt-12">
-				<ul class="flex flex-col text-sm tracking-wider">
+				<ul class="flex flex-col text-sm font-medium tracking-wider">
 					<For each={routes}>
 						{(route, index) => (
 							<li>
@@ -39,9 +39,8 @@ export default function Sidebar() {
 									class="block py-2.5 pr-8 pl-7.5 border-l-2"
 									classList={{
 										"pt-0 pb-2.5": index() === 0,
-										"border-black text-black font-medium":
-											location.pathname === route.href,
-										"border-transparent text-zinc-500 hover:text-black":
+										"border-black text-black": location.pathname === route.href,
+										"border-transparent text-zinc-700 hover:text-black":
 											location.pathname !== route.href,
 									}}
 								>
@@ -53,9 +52,7 @@ export default function Sidebar() {
 				</ul>
 			</nav>
 			<div class="mt-auto px-8 pb-8">
-				<ActionButton onclick={signOut} class="text-zinc-500 hover:text-black">
-					SIGN OUT
-				</ActionButton>
+				<ActionButton onclick={signOut}>SIGN OUT</ActionButton>
 			</div>
 		</aside>
 	);

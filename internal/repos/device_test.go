@@ -20,6 +20,7 @@ func setupDeviceTestDB(t *testing.T) *sql.DB {
 		`CREATE TABLE device (id INTEGER PRIMARY KEY, hash TEXT UNIQUE NOT NULL, name TEXT NOT NULL, os TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE)`,
 		`CREATE TABLE schedule (id INTEGER PRIMARY KEY, name TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, days INTEGER NOT NULL DEFAULT 127, active INTEGER NOT NULL DEFAULT 1, user_id INTEGER NOT NULL REFERENCES user(id) ON DELETE CASCADE)`,
 		`CREATE TABLE device_schedule (device_id INTEGER NOT NULL REFERENCES device(id) ON DELETE CASCADE, schedule_id INTEGER NOT NULL REFERENCES schedule(id) ON DELETE CASCADE, PRIMARY KEY(device_id, schedule_id))`,
+		`CREATE TABLE query_log (id INTEGER PRIMARY KEY, device_hash TEXT NOT NULL, domain TEXT NOT NULL, blocked INTEGER NOT NULL DEFAULT 0, timestamp INTEGER NOT NULL)`,
 	}
 	for _, q := range queries {
 		if _, err := db.Exec(q); err != nil {
@@ -147,6 +148,11 @@ func TestDeviceRepo_FindByUser(t *testing.T) {
 	repo := NewDeviceRepo(db)
 	repo.Create(&model.Device{Hash: "h1", Name: "D1", OS: model.IOS, UserID: userID})
 	repo.Create(&model.Device{Hash: "h2", Name: "D2", OS: model.IOS, UserID: userID})
+	if _, err := db.Exec(`INSERT INTO query_log (device_hash, domain, timestamp) VALUES
+		('h1', 'first.example', 100),
+		('h1', 'latest.example', 200)`); err != nil {
+		t.Fatalf("insert query logs: %v", err)
+	}
 
 	devices, err := repo.FindByUser(userID)
 	if err != nil {
@@ -154,6 +160,14 @@ func TestDeviceRepo_FindByUser(t *testing.T) {
 	}
 	if len(devices) != 2 {
 		t.Errorf("expected 2 devices, got %d", len(devices))
+	}
+	for _, device := range devices {
+		if device.Hash == "h1" && (device.LastQueryAt == nil || *device.LastQueryAt != 200) {
+			t.Errorf("expected last query timestamp 200, got %v", device.LastQueryAt)
+		}
+		if device.Hash == "h2" && device.LastQueryAt != nil {
+			t.Errorf("expected no last query timestamp, got %v", *device.LastQueryAt)
+		}
 	}
 }
 

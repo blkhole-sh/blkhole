@@ -17,6 +17,7 @@ export interface Device {
 	userId: string;
 	scheduleIds: number[];
 	scheduleNames: string[];
+	lastQueryAt?: string;
 }
 
 // Define Rule interface
@@ -87,4 +88,33 @@ export interface QueryStats {
 	blocked: StatCount[];
 	qps?: StatCount[];
 	blockedQps?: StatCount[];
+	domains: DomainStat[];
+	activity: DeviceActivity[];
+}
+
+export interface DomainStat {
+	domain: string;
+	count: number;
+	blocked: number;
+}
+
+export interface DeviceActivity {
+	deviceId: number;
+	deviceName: string;
+	hours: number[];
+	lastQueryAt?: string;
+}
+
+export interface QueryLog {
+	id: number;
+	deviceId: number;
+	deviceName: string;
+	domain: string;
+	blocked: boolean;
+	timestamp: number;
+}
+
+export interface QueryLogPage {
+	items: QueryLog[];
+	total: number;
 }

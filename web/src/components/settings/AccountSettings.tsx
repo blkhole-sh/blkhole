@@ -1,27 +1,28 @@
 import { createSignal } from "solid-js";
-import { useAuth } from "~/context/AuthContext";
+import TextInput from "../form/TextInput";
 import UpdatePasswordModal from "../modal/UpdatePasswordModal";
 import ActionButton from "../ui/ActionButton";
-import Divider from "../ui/Divider";
 
 interface Props {
+	email: string;
+	onEmailInput: (value: string) => void;
+	emailError?: string;
 	onDelete: () => void;
 }
 
 export default function AccountSettings(props: Props) {
-	const { user } = useAuth();
 	const [passwordModalOpen, setPasswordModalOpen] = createSignal(false);
 
 	return (
 		<section class="flex flex-col gap-6">
-			<h2 class="font-medium tracking-wider">ACCOUNT</h2>
-			<div class="flex flex-col gap-1">
-				<p class="font-medium text-zinc-700 text-sm tracking-wider">EMAIL</p>
-				<p class="py-2 text-sm leading-snug tracking-wider text-zinc-500">
-					{user()?.email}
-				</p>
-				<Divider />
-			</div>
+			<h2 class="font-medium text-sm tracking-wider text-zinc-700">ACCOUNT</h2>
+			<TextInput
+				label="EMAIL"
+				type="email"
+				value={props.email}
+				onInput={(event) => props.onEmailInput(event.currentTarget.value)}
+				error={props.emailError}
+			/>
 			<div class="flex flex-row items-center gap-6">
 				<ActionButton onclick={() => setPasswordModalOpen(true)}>
 					CHANGE PASSWORD

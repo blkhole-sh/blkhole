@@ -79,9 +79,30 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	selectedDevices := devices
+	selectedDeviceID := 0
+	if rawDeviceID := r.URL.Query().Get("deviceId"); rawDeviceID != "" {
+		selectedDeviceID, err = strconv.Atoi(rawDeviceID)
+		if err != nil || selectedDeviceID <= 0 {
+			http.Error(w, "Invalid deviceId", http.StatusBadRequest)
+			return
+		}
+		selectedDevices = nil
+		for _, device := range devices {
+			if device.ID == selectedDeviceID {
+				selectedDevices = []*model.Device{device}
+				break
+			}
+		}
+		if len(selectedDevices) == 0 {
+			http.Error(w, "Device not found", http.StatusNotFound)
+			return
+		}
+	}
+
 	// Extract device hashes
-	deviceHashes := make([]string, 0, len(devices))
-	for _, device := range devices {
+	deviceHashes := make([]string, 0, len(selectedDevices))
+	for _, device := range selectedDevices {
 		deviceHashes = append(deviceHashes, device.Hash)
 	}
 
@@ -113,7 +134,35 @@ func (sc *statsController) GetQueryStats(w http.ResponseWriter, r *http.Request)
 		blocked = mergeCounts(blocked, dbBlocked)
 	}
 
-	stats := model.QueryStatsDTO{Total: total, Blocked: blocked}
+	stats := model.QueryStatsDTO{Total: total, Blocked: blocked, Domains: []model.DomainStat{}, Activity: []model.DeviceActivityDTO{}}
+	domains, err := sc.queryLogs.GetDomainStats(deviceHashes, start, end, selectedDeviceID == 0, 5)
+	if err != nil {
+		log.Printf("failed to get domain stats: %v", err)
+	} else {
+		stats.Domains = domains
+	}
+	activity, activityErr := sc.queryLogs.GetHourlyActivity(deviceHashes, start, end)
+	lastQueries, lastQueryErr := sc.queryLogs.GetLastQueries(deviceHashes)
+	if activityErr != nil {
+		log.Printf("failed to get hourly activity: %v", activityErr)
+		activity = map[string][]int{}
+	}
+	if lastQueryErr != nil {
+		log.Printf("failed to get last query times: %v", lastQueryErr)
+		lastQueries = map[string]time.Time{}
+	}
+	for _, device := range selectedDevices {
+		hours := activity[device.Hash]
+		if len(hours) != 24 {
+			hours = make([]int, 24)
+		}
+		row := model.DeviceActivityDTO{DeviceID: device.ID, DeviceName: device.Name, Hours: hours}
+		if lastQuery, ok := lastQueries[device.Hash]; ok {
+			seen := lastQuery
+			row.LastQueryAt = &seen
+		}
+		stats.Activity = append(stats.Activity, row)
+	}
 
 	// QPS series: peak queries/sec per tumbling window over the range. The
 	// cache only holds the last 24h of seconds; for longer ranges the query
