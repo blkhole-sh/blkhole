@@ -6,7 +6,7 @@ import ActionButton from "../ui/ActionButton";
 interface Props {
 	email: string;
 	onEmailInput: (value: string) => void;
-	emailError?: string;
+	emailError?: string | undefined;
 	onDelete: () => void;
 }
 

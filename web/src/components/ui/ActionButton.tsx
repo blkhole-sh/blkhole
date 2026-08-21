@@ -3,7 +3,7 @@ import { cx } from "~/lib/utils";
 
 interface Props extends ParentProps {
 	onclick?: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
-	class?: string;
+	class?: string | undefined;
 	tabindex?: number;
 	type?: "button" | "submit" | "reset";
 	disabled?: boolean;

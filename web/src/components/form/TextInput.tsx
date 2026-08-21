@@ -10,7 +10,7 @@ interface Props {
 	type?: "text" | "email" | "password";
 	placeholder?: string;
 	hint?: string;
-	error?: string;
+	error?: string | undefined;
 	validate?: (value: string) => string | undefined;
 	showError?: boolean;
 }

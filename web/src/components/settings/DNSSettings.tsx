@@ -3,7 +3,7 @@ import TextInput from "../form/TextInput";
 interface Props {
 	upstreamDNS: string;
 	onUpstreamDNSInput: (value: string) => void;
-	error?: string;
+	error?: string | undefined;
 }
 
 export default function DNSSettings(props: Props) {

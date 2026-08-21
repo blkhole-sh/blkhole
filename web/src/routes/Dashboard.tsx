@@ -50,7 +50,7 @@ export default function Dashboard() {
 		(source) =>
 			getQueryLogs({
 				range: source.range,
-				deviceId: source.deviceId || undefined,
+				...(source.deviceId ? { deviceId: source.deviceId } : {}),
 				limit: LOG_PAGE_SIZE,
 				offset: source.page * LOG_PAGE_SIZE,
 			}),
